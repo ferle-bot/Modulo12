@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Modulus (PWA) - Motor Z12</title>
+    
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#0a0a0c">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
     <style>
         :root {
             --bg-color: #0a0a0c;
@@ -148,13 +154,11 @@
                     
                     let shared = HarmonyEngine.calculateParsimony(currentMask, chord.mask);
                     
-                    // Si encontramos una progresión con buena parsimonia (ej. 2 notas en común)
                     if(shared > maxSharedTones) {
                         maxSharedTones = shared;
                         bestSuggestion = chord;
                     }
                 }
-                // Retorna la sugerencia solo si hay una conexión lógica fuerte (al menos 1 nota compartida)
                 return maxSharedTones > 0 ? bestSuggestion : null;
             }
         };
@@ -238,7 +242,6 @@
                 const detectedNotes = this.extractPitchClasses();
                 const currentMask = HarmonyEngine.createPitchClassSet(detectedNotes);
                 
-                // Procesar Tensión y Sugerencia de Ruta (Pathfinding)
                 const tensionData = HarmonyEngine.evaluateTension(detectedNotes);
                 const suggestedPath = HarmonyEngine.suggestNextPath(currentMask);
 
@@ -292,7 +295,6 @@
                 this.render(this.stateManager.state);
             }
 
-            // Utilidad matemática para obtener coordenadas circulares
             getCoords(index, centerX, centerY, radius) {
                 const angle = (index * Math.PI * 2) / 12 - (Math.PI / 2);
                 return {
@@ -321,11 +323,11 @@
                         }
                     }
                     this.ctx.closePath();
-                    this.ctx.setLineDash([5, 10]); // Línea punteada para sugerencia
+                    this.ctx.setLineDash([5, 10]);
                     this.ctx.strokeStyle = `rgba(255, 255, 255, 0.3)`;
                     this.ctx.lineWidth = 1;
                     this.ctx.stroke();
-                    this.ctx.setLineDash([]); // Reset
+                    this.ctx.setLineDash([]);
                 }
 
                 // 2. DIBUJAR POLÍGONO DEL ACORDE ACTUAL
@@ -359,7 +361,7 @@
                         this.ctx.shadowBlur = 20;
                         this.ctx.shadowColor = this.ctx.fillStyle;
                     } else if (isSuggested) {
-                        this.ctx.fillStyle = `rgba(255, 255, 255, 0.2)`; // Nodo sugerido tenue
+                        this.ctx.fillStyle = `rgba(255, 255, 255, 0.2)`;
                         this.ctx.shadowBlur = 10;
                         this.ctx.shadowColor = 'white';
                     } else {
@@ -371,7 +373,7 @@
                     this.ctx.strokeStyle = isSuggested ? 'rgba(255,255,255,0.5)' : '#333';
                     this.ctx.stroke();
 
-                    // Texto
+                    // Texto de la Nota
                     this.ctx.fillStyle = isActive ? '#000' : (isSuggested ? '#fff' : '#555');
                     this.ctx.font = isActive ? 'bold 16px monospace' : '12px monospace';
                     this.ctx.textAlign = 'center';
@@ -383,7 +385,7 @@
         }
 
         // ==========================================
-        // 7. INICIALIZACIÓN
+        // 7. INICIALIZACIÓN DEL ENTORNO
         // ==========================================
         const stateManager = new StateManager(INITIAL_MATRIX);
         const renderer = new VisualRenderer('harmonyCanvas', stateManager);
@@ -410,6 +412,21 @@
             await audioSentry.initialize();
             overlay.style.display = 'none';
         });
+
+        // ==========================================
+        // 8. REGISTRO DEL SERVICE WORKER (PWA)
+        // ==========================================
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                .then(registration => {
+                    console.log('Modulus: ServiceWorker registrado con éxito.', registration.scope);
+                })
+                .catch(error => {
+                    console.error('Modulus: Fallo en registro de ServiceWorker.', error);
+                });
+            });
+        }
 
     </script>
 </body>
