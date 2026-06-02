@@ -12,133 +12,86 @@
 
     <style>
         :root { --bg-color: #050508; --accent: #00ff00; --accent-hover: #00cc00; }
-        body, html {
-            margin: 0; padding: 0; width: 100%; height: 100%;
-            background-color: var(--bg-color); overflow: hidden;
-            display: flex; justify-content: center; align-items: center;
-            font-family: monospace; user-select: none; color: #fff;
-        }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background-color: var(--bg-color); overflow: hidden; display: flex; justify-content: center; align-items: center; font-family: monospace; user-select: none; color: #fff; }
         canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
         
-        #debug-panel {
-            position: absolute; top: 20px; left: 20px;
-            background: rgba(5, 5, 8, 0.9); padding: 15px;
-            border-radius: 8px; pointer-events: none; border: 1px solid #222;
-            z-index: 10; min-width: 250px; backdrop-filter: blur(4px);
-        }
+        #debug-panel { position: absolute; top: 20px; left: 20px; background: rgba(5, 5, 8, 0.9); padding: 15px; border-radius: 8px; pointer-events: none; border: 1px solid #222; z-index: 10; min-width: 250px; backdrop-filter: blur(4px); }
         
-        #overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(5, 5, 8, 0.98); display: flex; justify-content: center;
-            align-items: center; z-index: 20; flex-direction: column;
-        }
+        /* Indicadores HUD (Metrónomo y Grabación) */
+        #hud-indicators { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 10; }
+        .led-indicator { width: 16px; height: 16px; border-radius: 50%; background: #222; border: 2px solid #111; box-shadow: 0 0 5px #000 inset; transition: background 0.05s; }
+        .led-metro.beat { background: #0f0; box-shadow: 0 0 15px #0f0; }
+        .led-metro.sub-beat { background: #fa0; box-shadow: 0 0 10px #fa0; }
+        .led-rec.active { background: #f00; box-shadow: 0 0 15px #f00; animation: flash 1s infinite; }
+        @keyframes flash { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+
+        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 5, 8, 0.98); display: flex; justify-content: center; align-items: center; z-index: 20; flex-direction: column; }
         
-        button.primary-btn {
-            background-color: var(--accent); color: #000; border: none; padding: 15px 40px;
-            font-size: 18px; font-weight: bold; cursor: pointer; border-radius: 4px;
-            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3); transition: all 0.2s ease;
-            font-family: monospace; letter-spacing: 1px;
-        }
+        button.primary-btn { background-color: var(--accent); color: #000; border: none; padding: 15px 40px; font-size: 18px; font-weight: bold; cursor: pointer; border-radius: 4px; box-shadow: 0 0 20px rgba(0, 255, 0, 0.3); transition: all 0.2s ease; font-family: monospace; letter-spacing: 1px; }
         button.primary-btn:hover { background-color: var(--accent-hover); transform: scale(1.02); }
-        button.primary-btn:disabled { background-color: #333; box-shadow: none; cursor: not-allowed; color: #777; }
         
-        .menu-action-btn {
-            padding: 12px; font-size: 14px; width: 100%; margin-bottom: 12px;
-            text-align: center; box-shadow: none; letter-spacing: 0; font-family: monospace;
-            border-radius: 4px; border: none; cursor: pointer; transition: all 0.2s;
-        }
+        .menu-action-btn { padding: 12px; font-size: 14px; width: 100%; margin-bottom: 8px; text-align: center; font-family: monospace; border-radius: 4px; border: none; cursor: pointer; transition: all 0.2s; }
         .btn-pause { background-color: var(--accent); color: #000; }
         .btn-stop { background-color: #ff3333; color: #fff; }
-        .btn-stop:hover { background-color: #cc0000; }
         .btn-clear { background-color: transparent; color: #ff3333; border: 1px solid #ff3333; }
-        .btn-clear:hover { background-color: rgba(255,51,51,0.1); }
-        
-        .btn-history { background-color: #1a1a2e; color: #00ffcc; border: 1px solid #00ffcc; font-size: 16px; font-weight: bold; margin-bottom: 25px;}
-        .btn-history:hover { background-color: #00ffcc; color: #000; }
+        .btn-history { background-color: #1a1a2e; color: #00ffcc; border: 1px solid #00ffcc; font-size: 14px; font-weight: bold; }
+        .btn-synth { background-color: #331a33; color: #ff00ff; border: 1px solid #ff00ff; }
+        .btn-rec { background-color: #2a0a0a; color: #ff3333; border: 1px solid #ff3333; }
 
-        .btn-export { background-color: #222; color: #00ff00; border: 1px solid #00ff00; margin-top: 15px; }
-        .btn-export:hover { background-color: #00ff00; color: #000; }
+        .history-track { color: #888; font-size: 11px; margin-top: 12px; border-top: 1px solid #333; padding-top: 12px; line-height: 1.6; }
 
-        .history-track {
-            color: #888; font-size: 11px; margin-top: 12px;
-            border-top: 1px solid #333; padding-top: 12px; line-height: 1.6;
-        }
-
-        #menu-btn {
-            position: absolute; top: 20px; right: 20px; z-index: 30;
-            font-size: 28px; color: #fff; cursor: pointer;
-            text-shadow: 0 0 10px rgba(0,0,0,0.8); padding: 5px;
-        }
-        #sidebar {
-            position: fixed; top: 0; right: -320px; width: 280px; height: 100%;
-            background: rgba(10, 10, 12, 0.98); border-left: 1px solid #222;
-            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 40; padding: 25px;
-            box-shadow: -10px 0 30px rgba(0,0,0,0.8); box-sizing: border-box; overflow-y: auto;
-        }
+        #menu-btn { position: absolute; top: 20px; right: 20px; z-index: 30; font-size: 28px; color: #fff; cursor: pointer; text-shadow: 0 0 10px rgba(0,0,0,0.8); padding: 5px; }
+        #sidebar { position: fixed; top: 0; right: -340px; width: 300px; height: 100%; background: rgba(10, 10, 12, 0.98); border-left: 1px solid #222; transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 40; padding: 25px; box-shadow: -10px 0 30px rgba(0,0,0,0.8); box-sizing: border-box; overflow-y: auto; }
         #sidebar.active { right: 0; }
-        #close-btn { font-size: 32px; cursor: pointer; text-align: right; margin-bottom: 10px; color: #666; line-height: 1; }
-        #close-btn:hover { color: #fff; }
-
-        .config-group { margin-top: 25px; border-top: 1px solid #222; padding-top: 15px; }
-        .config-label { font-size: 12px; color: #aaa; margin-bottom: 10px; display: flex; justify-content: space-between; }
+        #close-btn { font-size: 32px; cursor: pointer; text-align: right; margin-bottom: 5px; color: #666; line-height: 1; }
         
-        select.menu-select {
-            background: #111; color: #fff; border: 1px solid #333; padding: 8px; 
-            border-radius: 4px; font-family: monospace; width: 100%; outline: none; margin-bottom: 10px;
-        }
-        
-        input[type=range] { width: 100%; -webkit-appearance: none; background: transparent; margin: 10px 0; }
+        .config-group { margin-top: 15px; border-top: 1px solid #222; padding-top: 15px; }
+        .config-label { font-size: 12px; color: #aaa; margin-bottom: 8px; display: flex; justify-content: space-between; }
+        select.menu-select { background: #111; color: #fff; border: 1px solid #333; padding: 8px; border-radius: 4px; font-family: monospace; width: 100%; outline: none; margin-bottom: 8px; }
+        input[type=range] { width: 100%; -webkit-appearance: none; background: transparent; margin: 8px 0; }
         input[type=range]:focus { outline: none; }
         input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #333; border-radius: 2px; }
         input[type=range]::-webkit-slider-thumb { height: 16px; width: 16px; border-radius: 50%; background: var(--accent); cursor: pointer; -webkit-appearance: none; margin-top: -6px; }
         
-        #calibration-msg { display: none; color: #ffaa00; margin-top: 20px; font-size: 14px; text-align: center; animation: pulse 1s infinite alternate; }
-        @keyframes pulse { from { opacity: 0.5; } to { opacity: 1; } }
-
-        /* Modal Lector de Sesión */
-        #session-modal {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(5, 5, 8, 0.98); z-index: 9999; flex-direction: column;
-            justify-content: center; align-items: center; backdrop-filter: blur(10px);
-        }
-        #session-container {
-            width: 90%; max-width: 800px; height: 85%; background: #0a0a0e;
-            border: 1px solid #333; border-radius: 8px; padding: 30px; display: flex; flex-direction: column;
-            box-shadow: 0 10px 50px rgba(0,0,0,0.9); box-sizing: border-box;
-        }
-        #session-content {
-            flex: 1; overflow-y: auto; font-size: 16px; line-height: 2.2; margin-top: 10px;
-            border: 1px solid #222; padding: 20px; background: #050508; color: #ddd; font-family: monospace;
-        }
-        .session-item { border-bottom: 1px dashed #333; padding: 8px 0; display: flex; align-items: center; }
-        .session-time { color: #666; font-size: 13px; margin-right: 20px; min-width: 80px; }
-        .session-chord { color: #00ffcc; font-weight: bold; min-width: 150px; }
+        #session-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 5, 8, 0.98); z-index: 9999; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
+        #session-container { width: 90%; max-width: 800px; height: 85%; background: #0a0a0e; border: 1px solid #333; border-radius: 8px; padding: 30px; display: flex; flex-direction: column; }
+        #session-content { flex: 1; overflow-y: auto; font-size: 14px; line-height: 2; margin-top: 10px; border: 1px solid #222; padding: 15px; background: #050508; color: #ddd; }
     </style>
 </head>
 <body>
 
+    <div id="hud-indicators">
+        <div id="metro-light" class="led-indicator led-metro" title="Metrónomo Visual"></div>
+        <div id="rec-light" class="led-indicator led-rec" title="Grabación Activa"></div>
+    </div>
+
     <div id="menu-btn">☰</div>
     <div id="sidebar">
         <div id="close-btn">×</div>
-        <h3 style="color: var(--accent); margin-top: 0; letter-spacing: 1px; font-size: 20px;">Modulo12</h3>
-        <hr style="border-color: #222; margin-bottom: 20px;">
+        <h3 style="color: var(--accent); margin-top: 0; font-size: 18px;">Modulo12 : Núcleo</h3>
+        <hr style="border-color: #222; margin-bottom: 15px;">
         
-        <button id="history-btn" class="menu-action-btn btn-history">▶ Lector de Sesión</button>
-        
-        <button id="pause-btn" class="menu-action-btn btn-pause">Pausar Detección</button>
-        <button id="stop-btn" class="menu-action-btn btn-stop">Detener Hardware</button>
-        <button id="clear-btn" class="menu-action-btn btn-clear">Purgar Memoria</button>
-        
-        <div class="config-group">
-            <div class="config-label"><span>Selector de Proyección (Visor)</span></div>
-            <select id="view-mode" class="menu-select">
-                <option value="radial">Gravedad Armónica (Sistema Solar)</option>
-                <option value="linear">Mapa de Notas (Espectro Lineal)</option>
+        <button id="history-btn" class="menu-action-btn btn-history">▶ Lector de Sesión Z12</button>
+        <button id="synth-btn" class="menu-action-btn btn-synth">♫ Reproducir Sesión (Synth)</button>
+        <div style="display: flex; gap: 5px; margin-bottom: 15px;">
+            <select id="synth-mode" class="menu-select" style="margin: 0; font-size: 12px;">
+                <option value="chord">Bloques</option>
+                <option value="arp">Arpegios</option>
             </select>
+        </div>
+        
+        <button id="rec-btn" class="menu-action-btn btn-rec">⏺ Grabar Audio (Mic)</button>
+        
+        <div class="config-group" style="margin-top: 10px;">
+            <button id="pause-btn" class="menu-action-btn btn-pause">Pausar Detección</button>
+            <div style="display:flex; gap:10px;">
+                <button id="stop-btn" class="menu-action-btn btn-stop" style="flex:1;">Hardware Off</button>
+                <button id="clear-btn" class="menu-action-btn btn-clear" style="flex:1;">Limpiar</button>
+            </div>
         </div>
 
         <div class="config-group">
-            <div class="config-label"><span>Filtro Diatónico y Escalas</span></div>
+            <div class="config-label"><span>Selector de Tono/Escala</span></div>
             <div style="display: flex; gap: 10px;">
                 <select id="scale-root" class="menu-select" style="flex: 1;">
                     <option value="0">C</option><option value="1">C#/Db</option>
@@ -149,7 +102,7 @@
                     <option value="10">A#/Bb</option><option value="11">B</option>
                 </select>
                 <select id="scale-type" class="menu-select" style="flex: 2;">
-                    <option value="Cromática">Off (Cromática)</option>
+                    <option value="Cromática">Cromática (Libre)</option>
                     <option value="Mayor">Mayor</option>
                     <option value="Menor Nat.">Menor Natural</option>
                     <option value="Menor Arm.">Menor Armónica</option>
@@ -167,8 +120,19 @@
         </div>
 
         <div class="config-group">
-            <div class="config-label"><span>Sensibilidad de Piso de Ruido</span><span id="sens-val">0 dB</span></div>
+            <div class="config-label"><span>Selector de Proyección</span></div>
+            <select id="view-mode" class="menu-select">
+                <option value="radial">Gravedad Armónica</option>
+                <option value="linear">Mapa de Notas (Piano Roll)</option>
+            </select>
+            <div class="config-label" style="margin-top: 10px;"><span>Piso de Ruido</span><span id="sens-val">0 dB</span></div>
             <input type="range" id="sens-slider" min="-20" max="20" value="0">
+        </div>
+
+        <div class="config-group">
+            <div class="config-label"><span>Metrónomo Visual</span><span id="bpm-val">120 BPM</span></div>
+            <input type="range" id="bpm-slider" min="40" max="240" value="120">
+            <button id="metro-btn" class="menu-action-btn" style="background:#222; color:#0f0; border:1px solid #0f0; margin-top:5px;">Activar Metrónomo</button>
         </div>
     </div>
 
@@ -178,10 +142,7 @@
                 <h2 style="color: #00ffcc; margin: 0; font-family: monospace;">LECTOR DE SESIÓN</h2>
                 <button id="close-modal" style="background: none; border: none; color: #888; font-size: 30px; cursor: pointer;">×</button>
             </div>
-            <p style="color: #666; font-size: 13px; margin-top: 5px;">Matriz persistida de eventos interceptados.</p>
-            
-            <button id="export-json-btn" class="menu-action-btn btn-export">⇩ Exportar Matriz JSON (Para ModuloScore)</button>
-            
+            <button id="export-json-btn" class="menu-action-btn" style="background:#111; color:#0f0; border:1px solid #0f0; width:auto; margin-top:10px;">⇩ Exportar JSON</button>
             <div id="session-content"></div>
         </div>
     </div>
@@ -189,7 +150,7 @@
     <div id="overlay">
         <h1 style="margin-bottom: 30px; color: var(--accent); letter-spacing: 4px; font-size: 2.5rem; text-shadow: 0 0 20px rgba(0,255,0,0.3);">Modulo12</h1>
         <button id="start-btn" class="primary-btn">INICIAR MOTOR</button>
-        <div id="calibration-msg">CALIBRANDO RUIDO DE FONDO<br><span style="font-size: 11px; color:#aaa;">(Mantén silencio por 2 segundos)</span></div>
+        <div id="calibration-msg" style="display:none; color:#fa0; margin-top:20px; font-size:14px; text-align:center;">CALIBRANDO ACÚSTICA<br><span style="font-size:11px; color:#aaa;">(Silencio por 2 segundos)</span></div>
     </div>
 
     <div id="debug-panel">Cargando dependencias matemáticas...</div>
@@ -199,7 +160,7 @@
         'use strict';
 
         // ==========================================
-        // 1. MOTOR MATEMÁTICO: DICCIONARIOS Y ESCALAS COMPLETAS
+        // 1. MOTOR MATEMÁTICO: DICCIONARIOS Y ESCALAS
         // ==========================================
         const noteNamesSharps = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
         const noteNamesFlats =  ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "Cb"];
@@ -208,68 +169,43 @@
         const createMask = (notes) => notes.reduce((m, n) => m | (1 << (n % 12)), 0);
         
         const Z12_DICTIONARY = Array.from({length: 12}).flatMap((_, i) => [
-            { name: `May`, mask: createMask([i, i+4, i+7]) },
-            { name: `min`, mask: createMask([i, i+3, i+7]) },
-            { name: `Maj7`, mask: createMask([i, i+4, i+7, i+11]) },
-            { name: `min7`, mask: createMask([i, i+3, i+7, i+10]) },
-            { name: `7`, mask: createMask([i, i+4, i+7, i+10]) },
-            { name: `dim7`, mask: createMask([i, i+3, i+6, i+9]) },
-            { name: `sus4`, mask: createMask([i, i+5, i+7]) },
-            { name: `sus2`, mask: createMask([i, i+2, i+7]) }
+            { name: `May`, mask: createMask([i, i+4, i+7]) }, { name: `min`, mask: createMask([i, i+3, i+7]) },
+            { name: `Maj7`, mask: createMask([i, i+4, i+7, i+11]) }, { name: `min7`, mask: createMask([i, i+3, i+7, i+10]) },
+            { name: `7`, mask: createMask([i, i+4, i+7, i+10]) }, { name: `dim7`, mask: createMask([i, i+3, i+6, i+9]) },
+            { name: `sus4`, mask: createMask([i, i+5, i+7]) }, { name: `sus2`, mask: createMask([i, i+2, i+7]) }
         ]);
 
         const SCALES_DEF = {
-            "Cromática": [0,1,2,3,4,5,6,7,8,9,10,11],
-            "Mayor": [0,2,4,5,7,9,11],
-            "Menor Nat.": [0,2,3,5,7,8,10],
-            "Menor Arm.": [0,2,3,5,7,8,11],
-            "Menor Melód.": [0,2,3,5,7,9,11],
-            "Dórica": [0,2,3,5,7,9,10],
-            "Frigia": [0,1,3,5,7,8,10],
-            "Lidia": [0,2,4,6,7,9,11],
-            "Mixolidia": [0,2,4,5,7,9,10],
-            "Locria": [0,1,3,5,6,8,10],
-            "Pentatónica May.": [0,2,4,7,9],
-            "Pentatónica Men.": [0,3,5,7,10],
-            "Blues": [0,3,5,6,7,10]
+            "Cromática": [0,1,2,3,4,5,6,7,8,9,10,11], "Mayor": [0,2,4,5,7,9,11],
+            "Menor Nat.": [0,2,3,5,7,8,10], "Menor Arm.": [0,2,3,5,7,8,11], "Menor Melód.": [0,2,3,5,7,9,11],
+            "Dórica": [0,2,3,5,7,9,10], "Frigia": [0,1,3,5,7,8,10], "Lidia": [0,2,4,6,7,9,11],
+            "Mixolidia": [0,2,4,5,7,9,10], "Locria": [0,1,3,5,6,8,10],
+            "Pentatónica May.": [0,2,4,7,9], "Pentatónica Men.": [0,3,5,7,10], "Blues": [0,3,5,6,7,10]
         };
 
         const HarmonyEngine = {
             createPitchClassSet: createMask,
-            getNoteName: (pitch, scaleRoot) => {
-                const useFlats = flatRoots.includes(scaleRoot) || (scaleRoot === 0 && pitch === 10); 
-                return useFlats ? noteNamesFlats[pitch] : noteNamesSharps[pitch];
-            },
-            getScaleMask: (root, type) => {
-                const intervals = SCALES_DEF[type] || SCALES_DEF["Cromática"];
-                return createMask(intervals.map(i => (i + root) % 12));
-            },
+            getNoteName: (pitch, scaleRoot) => (flatRoots.includes(scaleRoot) || (scaleRoot === 0 && pitch === 10)) ? noteNamesFlats[pitch] : noteNamesSharps[pitch],
+            getScaleMask: (root, type) => createMask((SCALES_DEF[type] || SCALES_DEF["Cromática"]).map(i => (i + root) % 12)),
             evaluateTension: (notes) => {
                 if (notes.length < 2) return { level: 0.0, color: {r: 0, g: 255, b: 0}, desc: "Reposo" };
-                let hasTritone = false, hasMinorSecond = false;
-                for (let i = 0; i < notes.length; i++) {
-                    for (let j = i + 1; j < notes.length; j++) {
-                        let interval = Math.abs(notes[i] - notes[j]) % 12;
-                        if (interval === 6) hasTritone = true;
-                        if (interval === 1 || interval === 11) hasMinorSecond = true;
-                    }
+                let t = false, ms = false;
+                for(let i=0; i<notes.length; i++) for(let j=i+1; j<notes.length; j++) {
+                    let iv = Math.abs(notes[i] - notes[j]) % 12;
+                    if(iv === 6) t = true; if(iv === 1 || iv === 11) ms = true;
                 }
-                if (hasTritone) return { level: 1.0, color: {r: 255, g: 0, b: 0}, desc: "Inestabilidad" };
-                if (hasMinorSecond) return { level: 0.7, color: {r: 255, g: 165, b: 0}, desc: "Tensión" };
+                if(t) return { level: 1.0, color: {r: 255, g: 0, b: 0}, desc: "Inestabilidad" };
+                if(ms) return { level: 0.7, color: {r: 255, g: 165, b: 0}, desc: "Tensión" };
                 return { level: 0.3, color: {r: 0, g: 200, b: 255}, desc: "Estabilidad matizada" };
             },
             suggestPath: (currentMask, scaleMask) => {
                 if(currentMask === 0) return null;
-                let best = null, maxShared = 0;
-                const isChromatic = scaleMask === 4095; 
-
+                let best = null, maxShared = 0; const isChr = scaleMask === 4095; 
                 for(const chord of Z12_DICTIONARY) {
                     if(chord.mask === currentMask) continue; 
-                    if (!isChromatic && (chord.mask & scaleMask) !== chord.mask) continue;
-
+                    if (!isChr && (chord.mask & scaleMask) !== chord.mask) continue;
                     let shared = 0;
-                    for (let intersection = currentMask & chord.mask; intersection > 0; intersection >>= 1) shared += intersection & 1;
-                    
+                    for(let inter = currentMask & chord.mask; inter > 0; inter >>= 1) shared += inter & 1;
                     if(shared > maxShared) { maxShared = shared; best = chord; }
                 }
                 return maxShared > 0 ? best : null;
@@ -277,42 +213,23 @@
         };
 
         // ==========================================
-        // 2. MATRIZ DE ESTADO PERSISTENTE
+        // 2. MATRIZ DE ESTADO (PERSISTENCIA Y MIDI)
         // ==========================================
         class StateManager {
             constructor() {
                 const initial = {
-                    active_mask: 0, notes_array: [], notes_detail: [], 
-                    tension_level: 0.0, color: {r: 34, g: 34, b: 34},
-                    description: "Silencio", suggestion: null, history: [],
-                    status: "standby", sens_offset: 0, view_mode: "radial",
-                    scale_root: 0, scale_type: "Cromática", scale_mask: 4095
+                    active_mask: 0, notes_array: [], notes_detail: [], tension_level: 0.0, color: {r: 34, g: 34, b: 34},
+                    description: "Silencio", suggestion: null, history: [], status: "standby",
+                    sens_offset: 0, view_mode: "radial", scale_root: 0, scale_type: "Cromática", scale_mask: 4095
                 };
-                
-                const saved = localStorage.getItem('modulus_state_v7');
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    this.state = { 
-                        ...initial, history: parsed.history || [], 
-                        sens_offset: parsed.sens_offset || 0,
-                        view_mode: parsed.view_mode || "radial",
-                        scale_root: parsed.scale_root || 0,
-                        scale_type: parsed.scale_type || "Cromática",
-                        scale_mask: HarmonyEngine.getScaleMask(parsed.scale_root || 0, parsed.scale_type || "Cromática")
-                    };
-                } else {
-                    this.state = initial;
-                }
+                const saved = localStorage.getItem('modulus_state_v8');
+                this.state = saved ? { ...initial, ...JSON.parse(saved), active_mask: 0, status: 'standby', scale_mask: HarmonyEngine.getScaleMask(JSON.parse(saved).scale_root||0, JSON.parse(saved).scale_type||"Cromática") } : initial;
                 this.listeners = [];
             }
-            
             update(newState) {
                 const prevMask = this.state.active_mask;
                 this.state = { ...this.state, ...newState };
-
-                if (newState.scale_root !== undefined || newState.scale_type !== undefined) {
-                    this.state.scale_mask = HarmonyEngine.getScaleMask(this.state.scale_root, this.state.scale_type);
-                }
+                if (newState.scale_root !== undefined || newState.scale_type !== undefined) this.state.scale_mask = HarmonyEngine.getScaleMask(this.state.scale_root, this.state.scale_type);
 
                 if (newState.active_mask !== undefined && newState.active_mask !== prevMask) {
                     if (this.state.status === 'active' && this.state.active_mask > 0) {
@@ -323,297 +240,265 @@
                         
                         const hist = this.state.history;
                         if (hist.length === 0 || hist[hist.length - 1].mask !== this.state.active_mask) {
-                            const timestamp = new Date().toLocaleTimeString('es-MX', { hour12: false, hour: '2-digit', minute: '2-digit', second:'2-digit' });
-                            hist.push({ mask: this.state.active_mask, name, time: timestamp, raw: this.state.notes_array, tension: this.state.tension_level });
+                            const time = new Date().toLocaleTimeString('es-MX', { hour12: false, hour: '2-digit', minute: '2-digit', second:'2-digit' });
+                            // Vital: Guardar 'midi_notes' para que el Synthesizer sepa qué frecuencias exactas reproducir
+                            const midi_notes = this.state.notes_detail.map(n => n.midi);
+                            hist.push({ mask: this.state.active_mask, name, time, midi_notes });
                             if (hist.length > 200) hist.shift();
                         }
                     }
                 }
-                
-                localStorage.setItem('modulus_state_v7', JSON.stringify({ 
-                    history: this.state.history, sens_offset: this.state.sens_offset,
-                    view_mode: this.state.view_mode, scale_root: this.state.scale_root, scale_type: this.state.scale_type
-                }));
+                localStorage.setItem('modulus_state_v8', JSON.stringify({ history: this.state.history, sens_offset: this.state.sens_offset, view_mode: this.state.view_mode, scale_root: this.state.scale_root, scale_type: this.state.scale_type }));
                 this.notify();
             }
-
             clearHistory() { this.state.history = []; this.update({}); }
             subscribe(cb) { this.listeners.push(cb); this.notify(); }
-            notify() {
-                const snap = JSON.parse(JSON.stringify(this.state));
-                this.listeners.forEach(cb => cb(snap));
-            }
+            notify() { const snap = JSON.parse(JSON.stringify(this.state)); this.listeners.forEach(cb => cb(snap)); }
         }
 
         // ==========================================
-        // 3. MOTOR ACÚSTICO OPTIMIZADO (THROTTLING + PERCENTIL)
+        // 3. MÓDULOS DE AUDIO (I/O)
         // ==========================================
         class AudioEngine {
             constructor(stateManager) {
-                this.stateManager = stateManager;
-                this.audioCtx = null; this.analyser = null;
-                this.dataArray = null; this.stream = null;
-                this.animationId = null; this.baseNoiseFloor = -60; 
-                this.lastAnalysisTime = 0;
-                this.ANALYSIS_FPS = 15; // Limitador de CPU para Main Thread
+                this.stateManager = stateManager; this.audioCtx = null; this.analyser = null;
+                this.dataArray = null; this.stream = null; this.animationId = null;
+                this.baseNoiseFloor = -60; this.ANALYSIS_FPS = 15; this.lastTime = 0;
+                
+                // Módulo de Grabación Nativo
+                this.mediaRecorder = null; this.audioChunks = []; this.isRecording = false;
             }
-
             async startAndCalibrate() {
                 try {
-                    const constraints = { audio: { echoCancellation: false, autoGainControl: false, noiseSuppression: false, channelCount: 1 } };
-                    this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    this.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, autoGainControl: false, noiseSuppression: false, channelCount: 1 } });
                     this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                     await this.audioCtx.resume();
-
                     const source = this.audioCtx.createMediaStreamSource(this.stream);
-                    this.analyser = this.audioCtx.createAnalyser();
-                    this.analyser.fftSize = 8192;
-                    this.analyser.smoothingTimeConstant = 0.6;
+                    this.analyser = this.audioCtx.createAnalyser(); this.analyser.fftSize = 8192; this.analyser.smoothingTimeConstant = 0.6;
                     source.connect(this.analyser);
                     this.dataArray = new Float32Array(this.analyser.frequencyBinCount);
-                    
                     this.stateManager.update({ status: 'calibrating' });
 
-                    // Calibración robusta (Percentil 85 en lugar de Max)
-                    let noiseSamples = [];
-                    const endTime = Date.now() + 2000;
-                    
+                    let noiseSamples = []; const endTime = Date.now() + 2000;
                     return new Promise((resolve) => {
-                        const calibrateTick = () => {
+                        const tick = () => {
                             this.analyser.getFloatFrequencyData(this.dataArray);
-                            let frameMax = -Infinity;
-                            for(let i=0; i<this.dataArray.length; i++) {
-                                if (this.dataArray[i] > frameMax && this.dataArray[i] < 0) frameMax = this.dataArray[i];
+                            let fMax = -Infinity; for(let i=0; i<this.dataArray.length; i++) if(this.dataArray[i] > fMax && this.dataArray[i] < 0) fMax = this.dataArray[i];
+                            if(fMax > -100) noiseSamples.push(fMax);
+                            if(Date.now() < endTime) requestAnimationFrame(tick);
+                            else {
+                                noiseSamples.sort((a,b)=>a-b);
+                                this.baseNoiseFloor = Math.max(-80, Math.min((noiseSamples[Math.floor(noiseSamples.length*0.85)]||-60) + 5, -30));
+                                this.stateManager.update({ status: 'active' }); this.processFrame(); resolve(true);
                             }
-                            if (frameMax > -100) noiseSamples.push(frameMax);
-
-                            if (Date.now() < endTime) {
-                                requestAnimationFrame(calibrateTick);
-                            } else {
-                                noiseSamples.sort((a, b) => a - b);
-                                const p85 = noiseSamples[Math.floor(noiseSamples.length * 0.85)] || -60;
-                                this.baseNoiseFloor = Math.max(-80, Math.min(p85 + 5, -30));
-                                
-                                this.stateManager.update({ status: 'active' });
-                                this.processFrame();
-                                resolve(true);
-                            }
-                        };
-                        calibrateTick();
+                        }; tick();
                     });
-                } catch (err) { alert("Error de hardware."); return false; }
+                } catch(e) { return false; }
             }
-
             processFrame() {
-                if (this.stateManager.state.status !== 'active') return;
-                
+                if(this.stateManager.state.status !== 'active') return;
                 const now = performance.now();
-                const frameInterval = 1000 / this.ANALYSIS_FPS;
-
-                if (now - this.lastAnalysisTime >= frameInterval) {
-                    this.lastAnalysisTime = now;
-                    this.analyser.getFloatFrequencyData(this.dataArray);
-                    const details = this.extractPitchesDynamic();
-                    const rawPitches = details.map(d => d.pitch);
+                if(now - this.lastTime >= 1000/this.ANALYSIS_FPS) {
+                    this.lastTime = now; this.analyser.getFloatFrequencyData(this.dataArray);
+                    const details = this.extract(); const rawPitches = details.map(d=>d.pitch);
                     const mask = HarmonyEngine.createPitchClassSet(rawPitches);
-                    const tension = HarmonyEngine.evaluateTension(rawPitches);
-                    const path = HarmonyEngine.suggestPath(mask, this.stateManager.state.scale_mask);
-
-                    this.stateManager.update({
-                        active_mask: mask, notes_array: rawPitches, notes_detail: details,
-                        tension_level: tension.level, color: tension.color, 
-                        description: tension.desc, suggestion: path
-                    });
+                    this.stateManager.update({ active_mask: mask, notes_array: rawPitches, notes_detail: details, tension_level: HarmonyEngine.evaluateTension(rawPitches).level, color: HarmonyEngine.evaluateTension(rawPitches).color, description: HarmonyEngine.evaluateTension(rawPitches).desc, suggestion: HarmonyEngine.suggestPath(mask, this.stateManager.state.scale_mask) });
                 }
-
                 this.animationId = requestAnimationFrame(() => this.processFrame());
             }
-
-            extractPitchesDynamic() {
-                const binCount = this.analyser.frequencyBinCount;
-                const sampleRate = this.audioCtx.sampleRate;
-                const offset = this.stateManager.state.sens_offset; 
-                const currentNoiseFloor = this.baseNoiseFloor - offset;
-                const scaleRoot = this.stateManager.state.scale_root; 
-
-                let detected = [];
-
-                for (let i = 2; i < binCount - 2; i++) {
+            extract() {
+                const limit = this.baseNoiseFloor - this.stateManager.state.sens_offset;
+                let det = [];
+                for(let i=2; i<this.analyser.frequencyBinCount-2; i++) {
                     const amp = this.dataArray[i];
-                    if (amp > currentNoiseFloor && amp > this.dataArray[i-1] && amp > this.dataArray[i+1]) {
-                        const freq = i * (sampleRate / (binCount * 2));
-                        if (freq < 50 || freq > 3000) continue; 
-                        
-                        const midi = Math.round(12 * Math.log2(freq / 440) + 69);
-                        const pitch = ((midi % 12) + 12) % 12;
-                        const oct = Math.floor(midi / 12) - 1;
-                        const spellName = HarmonyEngine.getNoteName(pitch, scaleRoot);
-                        
-                        detected.push({ pitch, octave: oct, midi, amp, name: `${spellName}${oct}` });
+                    if(amp > limit && amp > this.dataArray[i-1] && amp > this.dataArray[i+1]) {
+                        const freq = i * (this.audioCtx.sampleRate / (this.analyser.frequencyBinCount*2));
+                        if(freq < 50 || freq > 3000) continue;
+                        const midi = Math.round(12 * Math.log2(freq/440) + 69);
+                        det.push({ pitch: ((midi%12)+12)%12, octave: Math.floor(midi/12)-1, midi, amp, name: `${HarmonyEngine.getNoteName(((midi%12)+12)%12, this.stateManager.state.scale_root)}${Math.floor(midi/12)-1}` });
                     }
                 }
-
-                const map = new Map();
-                for (const d of detected) {
-                    if (!map.has(d.pitch) || map.get(d.pitch).amp < d.amp) map.set(d.pitch, d);
-                }
-                return Array.from(map.values()).sort((a, b) => a.midi - b.midi);
+                const map = new Map(); for(const d of det) if(!map.has(d.pitch) || map.get(d.pitch).amp < d.amp) map.set(d.pitch, d);
+                return Array.from(map.values()).sort((a,b)=>a.midi-b.midi);
             }
-
-            async setPause(pause) {
-                if (!this.audioCtx) return;
-                if (pause) {
-                    await this.audioCtx.suspend();
-                    if(this.animationId) cancelAnimationFrame(this.animationId);
-                    this.stateManager.update({ status: 'paused' });
-                } else {
-                    await this.audioCtx.resume();
-                    this.stateManager.update({ status: 'active' });
-                    this.processFrame();
-                }
+            async setPause(p) {
+                if(!this.audioCtx) return;
+                if(p) { await this.audioCtx.suspend(); if(this.animationId) cancelAnimationFrame(this.animationId); this.stateManager.update({status:'paused'}); }
+                else { await this.audioCtx.resume(); this.stateManager.update({status:'active'}); this.processFrame(); }
             }
-
             stop() {
-                if (this.animationId) cancelAnimationFrame(this.animationId);
-                if (this.stream) this.stream.getTracks().forEach(t => t.stop());
-                if (this.audioCtx) this.audioCtx.close();
-                this.stateManager.update({ status: 'standby', active_mask: 0, notes_detail: [], tension_level: 0, suggestion: null });
+                if(this.animationId) cancelAnimationFrame(this.animationId);
+                if(this.isRecording) this.toggleRecord(document.getElementById('rec-light'), document.getElementById('rec-btn'));
+                if(this.stream) this.stream.getTracks().forEach(t=>t.stop());
+                if(this.audioCtx) this.audioCtx.close();
+                this.stateManager.update({status:'standby', active_mask:0, notes_detail:[], tension_level:0, suggestion:null});
+            }
+
+            // Sistema de Grabación de Audio
+            toggleRecord(ledEl, btnEl) {
+                if(!this.stream) return;
+                if(!this.isRecording) {
+                    this.audioChunks = [];
+                    this.mediaRecorder = new MediaRecorder(this.stream);
+                    this.mediaRecorder.ondataavailable = e => { if(e.data.size > 0) this.audioChunks.push(e.data); };
+                    this.mediaRecorder.onstop = () => {
+                        const blob = new Blob(this.audioChunks, { type: 'audio/webm' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a'); a.href = url; a.download = `modulo12_rec_${Date.now()}.webm`;
+                        a.click(); URL.revokeObjectURL(url);
+                    };
+                    this.mediaRecorder.start();
+                    this.isRecording = true; ledEl.classList.add('active');
+                    btnEl.textContent = "⏹ Detener y Guardar Audio"; btnEl.style.color = "#fff";
+                } else {
+                    this.mediaRecorder.stop();
+                    this.isRecording = false; ledEl.classList.remove('active');
+                    btnEl.textContent = "⏺ Grabar Audio (Mic)"; btnEl.style.color = "#ff3333";
+                }
+            }
+        }
+
+        // Sintetizador Web Audio (Reproductor de Sesiones)
+        class SynthEngine {
+            constructor() {
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                this.isPlaying = false;
+            }
+            midiToFreq(m) { return 440 * Math.pow(2, (m - 69) / 12); }
+            playNote(midi, time, duration) {
+                const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain();
+                osc.type = 'sine'; osc.frequency.value = this.midiToFreq(midi);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                gain.gain.setValueAtTime(0, time);
+                gain.gain.linearRampToValueAtTime(0.2, time + 0.05); // Attack
+                gain.gain.setValueAtTime(0.2, time + duration - 0.1); // Sustain
+                gain.gain.linearRampToValueAtTime(0, time + duration); // Release
+                osc.start(time); osc.stop(time + duration);
+            }
+            async playHistory(history, mode) {
+                if(this.isPlaying || history.length === 0) return;
+                if(this.ctx.state === 'suspended') await this.ctx.resume();
+                this.isPlaying = true;
+                const startTime = this.ctx.currentTime + 0.1;
+                let offset = 0;
+                
+                history.forEach(evt => {
+                    if(!evt.midi_notes) return;
+                    if(mode === 'chord') {
+                        evt.midi_notes.forEach(m => this.playNote(m, startTime + offset, 1.2));
+                        offset += 1.5;
+                    } else if(mode === 'arp') {
+                        evt.midi_notes.forEach((m, i) => this.playNote(m, startTime + offset + (i * 0.3), 0.5));
+                        offset += (evt.midi_notes.length * 0.3) + 0.5;
+                    }
+                });
+                
+                setTimeout(() => { this.isPlaying = false; }, offset * 1000 + 500);
+            }
+        }
+
+        // Metrónomo Visual
+        class VisualMetronome {
+            constructor(ledEl) {
+                this.led = ledEl; this.intervalId = null; this.bpm = 120;
+                this.isOn = false; this.beatCount = 0;
+            }
+            setBPM(bpm) { this.bpm = bpm; if(this.isOn) this.restart(); }
+            toggle(btnEl) {
+                this.isOn = !this.isOn;
+                if(this.isOn) { this.restart(); btnEl.textContent = "Detener Metrónomo"; btnEl.style.background = "#000"; btnEl.style.color = "#f00"; btnEl.style.borderColor = "#f00"; }
+                else { clearInterval(this.intervalId); this.led.className = "led-indicator led-metro"; btnEl.textContent = "Activar Metrónomo"; btnEl.style.background = "#222"; btnEl.style.color = "#0f0"; btnEl.style.borderColor = "#0f0"; }
+            }
+            restart() {
+                clearInterval(this.intervalId); this.beatCount = 0;
+                const msPerBeat = 60000 / this.bpm;
+                this.intervalId = setInterval(() => {
+                    this.led.className = "led-indicator led-metro";
+                    void this.led.offsetWidth; // force reflow
+                    this.led.classList.add(this.beatCount % 4 === 0 ? 'beat' : 'sub-beat');
+                    this.beatCount++;
+                }, msPerBeat);
             }
         }
 
         // ==========================================
-        // 4. MOTOR DE PROYECCIÓN VISUAL
+        // 4. PROYECTOR VISUAL (SOLAR/LINEAL)
         // ==========================================
         class Renderer {
             constructor(canvasId, stateManager) {
-                this.canvas = document.getElementById(canvasId);
-                this.ctx = this.canvas.getContext('2d');
-                stateManager.subscribe(s => this.draw(s));
-                window.addEventListener('resize', () => this.resize(stateManager.state));
+                this.canvas = document.getElementById(canvasId); this.ctx = this.canvas.getContext('2d');
+                stateManager.subscribe(s => this.draw(s)); window.addEventListener('resize', () => this.resize(stateManager.state));
                 this.resize(stateManager.state);
             }
-
             resize(state) {
                 const dpr = window.devicePixelRatio || 1;
                 this.canvas.width = window.innerWidth * dpr; this.canvas.height = window.innerHeight * dpr;
                 this.canvas.style.width = `${window.innerWidth}px`; this.canvas.style.height = `${window.innerHeight}px`;
-                this.ctx.scale(dpr, dpr);
-                this.draw(state);
+                this.ctx.scale(dpr, dpr); this.draw(state);
             }
-
             drawNode(n, x, y, size, col, isDark, blur, stroke, alpha = 1) {
-                this.ctx.globalAlpha = alpha;
-                this.ctx.beginPath(); this.ctx.arc(x, y, size, 0, Math.PI * 2);
+                this.ctx.globalAlpha = alpha; this.ctx.beginPath(); this.ctx.arc(x, y, size, 0, Math.PI * 2);
                 this.ctx.fillStyle = col; this.ctx.shadowBlur = blur; this.ctx.shadowColor = col; this.ctx.fill();
                 this.ctx.lineWidth = 2; this.ctx.strokeStyle = stroke; this.ctx.stroke();
-                this.ctx.fillStyle = isDark ? '#000' : '#fff';
-                this.ctx.font = `bold ${size * 0.55}px monospace`; 
-                this.ctx.textAlign = 'center'; this.ctx.textBaseline = 'middle';
-                this.ctx.shadowBlur = 0; this.ctx.fillText(n, x, y);
+                this.ctx.fillStyle = isDark ? '#000' : '#fff'; this.ctx.font = `bold ${size * 0.55}px monospace`; 
+                this.ctx.textAlign = 'center'; this.ctx.textBaseline = 'middle'; this.ctx.shadowBlur = 0; this.ctx.fillText(n, x, y);
                 this.ctx.globalAlpha = 1; 
             }
-
             draw(state) {
-                if (state.view_mode === 'linear') this.drawLinearMap(state);
-                else this.drawRadialSystem(state);
+                if (state.view_mode === 'linear') this.drawLinearMap(state); else this.drawRadialSystem(state);
             }
-
             drawRadialSystem(state) {
-                const w = window.innerWidth, h = window.innerHeight;
-                this.ctx.clearRect(0, 0, w, h);
+                const w = window.innerWidth, h = window.innerHeight; this.ctx.clearRect(0, 0, w, h);
                 const { active_mask, notes_detail, color, suggestion, scale_mask, scale_root } = state;
-                const cx = w / 2, cy = h / 2;
-                const dim = Math.min(w, h);
+                const cx = w / 2, cy = h / 2, dim = Math.min(w, h);
                 const r1 = dim * 0.18, r2 = dim * 0.32, r3 = dim * 0.42;
 
                 const drawRing = (r, dash, op) => {
                     this.ctx.beginPath(); this.ctx.arc(cx, cy, r, 0, Math.PI * 2);
                     this.ctx.strokeStyle = `rgba(255,255,255,${op})`; this.ctx.lineWidth = 1;
-                    if(dash) this.ctx.setLineDash([4, 8]);
-                    this.ctx.stroke(); this.ctx.setLineDash([]);
+                    if(dash) this.ctx.setLineDash([4, 8]); this.ctx.stroke(); this.ctx.setLineDash([]);
                 };
-
                 drawRing(r1, false, 0.1); drawRing(r2, true, 0.15); drawRing(r3, false, 0.05);
 
                 const rgb = `rgb(${color.r},${color.g},${color.b})`;
-
                 if (active_mask === 0 || notes_detail.length === 0) {
                     for(let i=0; i<12; i++) {
-                        const a = (i * Math.PI*2)/12 - Math.PI/2;
-                        const alpha = (scale_mask & (1 << i)) !== 0 ? 1 : 0.1; 
-                        const name = HarmonyEngine.getNoteName(i, scale_root);
-                        this.drawNode(name, cx+Math.cos(a)*r3, cy+Math.sin(a)*r3, 14, '#0a0a0c', false, 0, '#222', alpha);
+                        const a = (i * Math.PI*2)/12 - Math.PI/2, alpha = (scale_mask & (1<<i)) !== 0 ? 1 : 0.1; 
+                        this.drawNode(HarmonyEngine.getNoteName(i, scale_root), cx+Math.cos(a)*r3, cy+Math.sin(a)*r3, 14, '#0a0a0c', false, 0, '#222', alpha);
                     }
                     return;
                 }
-
-                const root = notes_detail[0];
-                this.drawNode(root.name, cx, cy, 40, rgb, true, 30, '#fff');
+                const root = notes_detail[0]; this.drawNode(root.name, cx, cy, 40, rgb, true, 30, '#fff');
 
                 const planets = [], moons = [], space = [];
                 for(let i=0; i<12; i++) {
-                    if (i === root.pitch) continue;
-                    const spellName = HarmonyEngine.getNoteName(i, scale_root);
-                    if ((active_mask & (1<<i))) {
-                        const d = notes_detail.find(n => n.pitch === i);
-                        planets.push(d ? d : {pitch: i, name: spellName});
-                    } else if (suggestion && (suggestion.mask & (1<<i))) {
-                        moons.push({pitch: i, name: spellName});
-                    } else {
-                        space.push({pitch: i, name: spellName});
-                    }
+                    if (i === root.pitch) continue; const sName = HarmonyEngine.getNoteName(i, scale_root);
+                    if ((active_mask & (1<<i))) planets.push(notes_detail.find(n=>n.pitch===i) || {pitch:i, name:sName});
+                    else if (suggestion && (suggestion.mask & (1<<i))) moons.push({pitch:i, name:sName});
+                    else space.push({pitch:i, name:sName});
                 }
 
-                const dist = (arr, r, size, col, dark, blur, stroke, link, checkScale = false) => {
-                    const cnt = arr.length;
+                const dist = (arr, r, size, col, dark, blur, stroke, link, chkScale) => {
                     arr.forEach((n, i) => {
-                        const a = (i * Math.PI*2)/cnt - Math.PI/2;
-                        const nx = cx+Math.cos(a)*r, ny = cy+Math.sin(a)*r;
-                        if(link) {
-                            this.ctx.beginPath(); this.ctx.moveTo(cx, cy); this.ctx.lineTo(nx, ny);
-                            this.ctx.strokeStyle = `rgba(${color.r},${color.g},${color.b},0.4)`; 
-                            this.ctx.lineWidth = 2; this.ctx.stroke();
-                        }
-                        let alpha = checkScale ? ((scale_mask & (1 << n.pitch)) !== 0 ? 1 : 0.05) : 1;
-                        this.drawNode(n.name, nx, ny, size, col, dark, blur, stroke, alpha);
+                        const a = (i * Math.PI*2)/arr.length - Math.PI/2, nx = cx+Math.cos(a)*r, ny = cy+Math.sin(a)*r;
+                        if(link) { this.ctx.beginPath(); this.ctx.moveTo(cx, cy); this.ctx.lineTo(nx, ny); this.ctx.strokeStyle = `rgba(${color.r},${color.g},${color.b},0.4)`; this.ctx.lineWidth = 2; this.ctx.stroke(); }
+                        this.drawNode(n.name, nx, ny, size, col, dark, blur, stroke, chkScale ? ((scale_mask & (1<<n.pitch)) !== 0 ? 1 : 0.05) : 1);
                     });
                 };
-
-                dist(planets, r1, 26, rgb, true, 15, '#fff', true, false);
-                dist(moons, r2, 18, 'rgba(255,255,255,0.1)', false, 0, '#666', false, false);
-                dist(space, r3, 12, '#0a0a0c', false, 0, '#222', false, true);
+                dist(planets, r1, 26, rgb, true, 15, '#fff', true, false); dist(moons, r2, 18, 'rgba(255,255,255,0.1)', false, 0, '#666', false, false); dist(space, r3, 12, '#0a0a0c', false, 0, '#222', false, true);
             }
-
             drawLinearMap(state) {
-                const w = window.innerWidth, h = window.innerHeight;
-                this.ctx.clearRect(0, 0, w, h);
-                const { active_mask, notes_detail, color } = state;
-                const rgb = `rgb(${color.r},${color.g},${color.b})`;
-                const octaves = [2, 3, 4, 5, 6];
-                const keyWidth = w / 14;
-                const rowHeight = h / (octaves.length + 2);
-                
+                const w = window.innerWidth, h = window.innerHeight; this.ctx.clearRect(0, 0, w, h);
+                const { active_mask, notes_detail, color } = state, rgb = `rgb(${color.r},${color.g},${color.b})`, octaves = [2, 3, 4, 5, 6], keyW = w / 14, rowH = h / (octaves.length + 2);
                 this.ctx.fillStyle = '#222'; this.ctx.font = '10px monospace'; this.ctx.textAlign = 'right';
-                
-                octaves.forEach((oct, i) => {
-                    const y = h - (i * rowHeight) - rowHeight*1.5;
-                    this.ctx.fillText(`Oct ${oct}`, 40, y + 4);
-                    this.ctx.beginPath(); this.ctx.moveTo(50, y); this.ctx.lineTo(w, y);
-                    this.ctx.strokeStyle = '#222'; this.ctx.lineWidth = 1; this.ctx.stroke();
+                octaves.forEach((oct, i) => { const y = h - (i*rowH) - rowH*1.5; this.ctx.fillText(`Oct ${oct}`, 40, y + 4); this.ctx.beginPath(); this.ctx.moveTo(50, y); this.ctx.lineTo(w, y); this.ctx.strokeStyle = '#222'; this.ctx.lineWidth = 1; this.ctx.stroke(); });
+                if (active_mask > 0) notes_detail.forEach(note => {
+                    if(note.octave >= 2 && note.octave <= 6) {
+                        const x = 70 + (note.pitch * keyW), y = h - ((note.octave - 2)*rowH) - rowH*1.5;
+                        this.drawNode(note.name, x, y, 20, rgb, true, 15, '#fff');
+                        this.ctx.beginPath(); this.ctx.moveTo(x, y+20); this.ctx.lineTo(x, h); this.ctx.strokeStyle = `rgba(${color.r},${color.g},${color.b},0.2)`; this.ctx.lineWidth = 2; this.ctx.stroke();
+                    }
                 });
-
-                if (active_mask > 0) {
-                    notes_detail.forEach(note => {
-                        if(note.octave >= 2 && note.octave <= 6) {
-                            const x = 70 + (note.pitch * keyWidth);
-                            const y = h - ((note.octave - 2) * rowHeight) - rowHeight*1.5;
-                            this.drawNode(note.name, x, y, 20, rgb, true, 15, '#fff');
-                            this.ctx.beginPath(); this.ctx.moveTo(x, y + 20); this.ctx.lineTo(x, h);
-                            this.ctx.strokeStyle = `rgba(${color.r},${color.g},${color.b},0.2)`; 
-                            this.ctx.lineWidth = 2; this.ctx.stroke();
-                        }
-                    });
-                }
             }
         }
 
@@ -623,115 +508,76 @@
         const stateManager = new StateManager();
         const audioEngine = new AudioEngine(stateManager);
         const renderer = new Renderer('harmonyCanvas', stateManager);
+        const synthEngine = new SynthEngine();
+        const visualMetro = new VisualMetronome(document.getElementById('metro-light'));
         
         const ui = {
-            panel: document.getElementById('debug-panel'), overlay: document.getElementById('overlay'),
-            start: document.getElementById('start-btn'), menu: document.getElementById('menu-btn'),
-            closeMenu: document.getElementById('close-btn'), sidebar: document.getElementById('sidebar'),
-            pause: document.getElementById('pause-btn'), stop: document.getElementById('stop-btn'),
-            clear: document.getElementById('clear-btn'), calibMsg: document.getElementById('calibration-msg'),
-            sensSlider: document.getElementById('sens-slider'), sensVal: document.getElementById('sens-val'),
-            scaleRoot: document.getElementById('scale-root'), scaleType: document.getElementById('scale-type'),
-            viewMode: document.getElementById('view-mode'),
-            historyBtn: document.getElementById('history-btn'), sessionModal: document.getElementById('session-modal'),
-            closeModal: document.getElementById('close-modal'), sessionContent: document.getElementById('session-content'),
-            exportBtn: document.getElementById('export-json-btn')
+            panel: document.getElementById('debug-panel'), overlay: document.getElementById('overlay'), start: document.getElementById('start-btn'), menu: document.getElementById('menu-btn'),
+            closeMenu: document.getElementById('close-btn'), sidebar: document.getElementById('sidebar'), pause: document.getElementById('pause-btn'), stop: document.getElementById('stop-btn'),
+            clear: document.getElementById('clear-btn'), calibMsg: document.getElementById('calibration-msg'), sensSlider: document.getElementById('sens-slider'), sensVal: document.getElementById('sens-val'),
+            scaleRoot: document.getElementById('scale-root'), scaleType: document.getElementById('scale-type'), viewMode: document.getElementById('view-mode'),
+            historyBtn: document.getElementById('history-btn'), sessionModal: document.getElementById('session-modal'), closeModal: document.getElementById('close-modal'), sessionContent: document.getElementById('session-content'),
+            exportBtn: document.getElementById('export-json-btn'), recBtn: document.getElementById('rec-btn'), synthBtn: document.getElementById('synth-btn'), synthMode: document.getElementById('synth-mode'),
+            metroBtn: document.getElementById('metro-btn'), bpmSlider: document.getElementById('bpm-slider'), bpmVal: document.getElementById('bpm-val')
         };
 
         ui.sensSlider.value = stateManager.state.sens_offset; ui.sensVal.textContent = stateManager.state.sens_offset + ' dB';
-        ui.scaleRoot.value = stateManager.state.scale_root; ui.scaleType.value = stateManager.state.scale_type;
-        ui.viewMode.value = stateManager.state.view_mode;
+        ui.scaleRoot.value = stateManager.state.scale_root; ui.scaleType.value = stateManager.state.scale_type; ui.viewMode.value = stateManager.state.view_mode;
 
-        ui.sensSlider.addEventListener('input', (e) => {
-            const val = parseInt(e.target.value);
-            ui.sensVal.textContent = (val > 0 ? '+' : '') + val + ' dB';
-            stateManager.update({ sens_offset: val });
-        });
+        // Configuración
+        ui.sensSlider.oninput = (e) => { const v = parseInt(e.target.value); ui.sensVal.textContent = (v>0?'+':'')+v+' dB'; stateManager.update({ sens_offset: v }); };
+        ui.bpmSlider.oninput = (e) => { ui.bpmVal.textContent = e.target.value + ' BPM'; visualMetro.setBPM(e.target.value); };
+        const updateConf = () => stateManager.update({ scale_root: parseInt(ui.scaleRoot.value), scale_type: ui.scaleType.value, view_mode: ui.viewMode.value });
+        ui.scaleRoot.onchange = updateConf; ui.scaleType.onchange = updateConf; ui.viewMode.onchange = updateConf;
 
-        const updateConfig = () => {
-            stateManager.update({ scale_root: parseInt(ui.scaleRoot.value), scale_type: ui.scaleType.value, view_mode: ui.viewMode.value });
-        };
-        ui.scaleRoot.addEventListener('change', updateConfig);
-        ui.scaleType.addEventListener('change', updateConfig);
-        ui.viewMode.addEventListener('change', updateConfig);
+        // Menú
+        ui.menu.onclick = () => ui.sidebar.classList.add('active'); ui.closeMenu.onclick = () => ui.sidebar.classList.remove('active');
 
-        ui.menu.onclick = () => ui.sidebar.classList.add('active');
-        ui.closeMenu.onclick = () => ui.sidebar.classList.remove('active');
-
-        ui.pause.onclick = async () => {
-            const isPaused = stateManager.state.status === 'paused';
-            await audioEngine.setPause(!isPaused);
-            ui.pause.textContent = isPaused ? "Pausar Detección" : "Reanudar Escucha";
-            ui.pause.style.backgroundColor = isPaused ? "var(--accent)" : "#ffaa00";
-            ui.sidebar.classList.remove('active');
-        };
-
-        ui.stop.onclick = () => {
-            audioEngine.stop();
-            ui.pause.textContent = "Pausar Detección"; ui.pause.style.backgroundColor = "var(--accent)";
-            ui.sidebar.classList.remove('active');
-            ui.overlay.style.display = 'flex';
-            ui.calibMsg.style.display = 'none';
-        };
-
+        // Botones Core
+        ui.pause.onclick = async () => { const isP = stateManager.state.status === 'paused'; await audioEngine.setPause(!isP); ui.pause.textContent = isP ? "Pausar Detección" : "Reanudar Escucha"; ui.pause.style.backgroundColor = isP ? "var(--accent)" : "#ffaa00"; ui.sidebar.classList.remove('active'); };
+        ui.stop.onclick = () => { audioEngine.stop(); ui.pause.textContent = "Pausar Detección"; ui.pause.style.backgroundColor = "var(--accent)"; ui.sidebar.classList.remove('active'); ui.overlay.style.display = 'flex'; ui.calibMsg.style.display = 'none'; };
         ui.clear.onclick = () => { stateManager.clearHistory(); ui.sidebar.classList.remove('active'); };
+        
+        // Grabación y Metrónomo
+        ui.recBtn.onclick = () => { audioEngine.toggleRecord(document.getElementById('rec-light'), ui.recBtn); ui.sidebar.classList.remove('active'); };
+        ui.metroBtn.onclick = () => { visualMetro.toggle(ui.metroBtn); ui.sidebar.classList.remove('active'); };
 
-        ui.historyBtn.onclick = () => {
+        // Reproductor Sintetizador
+        ui.synthBtn.onclick = () => {
+            if(synthEngine.isPlaying) return;
+            const history = stateManager.state.history;
+            if(history.length === 0) { alert("Historial vacío."); return; }
+            synthEngine.playHistory(history, ui.synthMode.value);
             ui.sidebar.classList.remove('active');
-            ui.sessionModal.style.display = 'flex';
+        };
+
+        // Modal Lectura
+        ui.historyBtn.onclick = () => {
+            ui.sidebar.classList.remove('active'); ui.sessionModal.style.display = 'flex';
             const hist = stateManager.state.history;
-            if (hist.length === 0) {
-                ui.sessionContent.innerHTML = '<div style="color:#666; text-align:center; margin-top:20px;">No hay eventos registrados en esta sesión.</div>';
-            } else {
-                ui.sessionContent.innerHTML = hist.map(h => 
-                    `<div class="session-item">
-                        <span class="session-time">[${h.time || '00:00'}]</span> 
-                        <span class="session-chord">${h.name}</span>
-                        <span style="color:#444; font-size:12px;">Nodos Z12: [${h.raw ? h.raw.join(',') : ''}]</span>
-                    </div>`
-                ).reverse().join('');
-            }
+            ui.sessionContent.innerHTML = hist.length === 0 ? '<div style="color:#666;text-align:center;margin-top:20px;">Sin eventos registrados.</div>' : 
+                hist.map(h => `<div style="border-bottom:1px dashed #333; padding:8px 0; display:flex;">
+                    <span style="color:#666; font-size:13px; margin-right:20px; min-width:80px;">[${h.time||'--'}]</span> 
+                    <span style="color:#0f0; font-weight:bold; min-width:150px;">${h.name}</span>
+                    <span style="color:#444; font-size:12px;">MIDI: [${h.midi_notes ? h.midi_notes.join(',') : ''}]</span>
+                </div>`).reverse().join('');
         };
         ui.closeModal.onclick = () => ui.sessionModal.style.display = 'none';
-
-        // VECTOR 1: Exportador de Puente de Datos (JSON) para ModuloScore
         ui.exportBtn.onclick = () => {
-            const historyData = stateManager.state.history;
-            if(historyData.length === 0) { alert("No hay datos en la sesión para exportar."); return; }
-            
-            const payload = JSON.stringify({
-                metadata: {
-                    app: "Modulo12",
-                    timestamp: new Date().toISOString(),
-                    scale_context: `${HarmonyEngine.getNoteName(stateManager.state.scale_root, stateManager.state.scale_root)} ${stateManager.state.scale_type}`
-                },
-                session_events: historyData
-            }, null, 2);
-
-            const blob = new Blob([payload], {type: 'application/json'});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `modulo12_sesion_${Date.now()}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
+            if(stateManager.state.history.length===0) return;
+            const b = new Blob([JSON.stringify({ metadata: { scale: `${HarmonyEngine.getNoteName(stateManager.state.scale_root, stateManager.state.scale_root)} ${stateManager.state.scale_type}` }, session_events: stateManager.state.history }, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(b); const a = document.createElement('a'); a.href = url; a.download = `modulo12_sesion_${Date.now()}.json`; a.click(); URL.revokeObjectURL(url);
         };
 
         stateManager.subscribe(s => {
             const hudHist = s.history.slice(-5).map(h => h.name).join(' ➔ ') || 'Memoria vacía';
             const notes = s.notes_detail.map(n => n.name).join(', ') || '[]';
             const sug = s.suggestion ? `<span style="color: #fff">${HarmonyEngine.getNoteName(s.suggestion.mask, s.scale_root)} ${s.suggestion.name.split(' ')[1] || ''}</span>` : 'Ninguna';
-            let statColor = '#888';
-            if (s.status === 'active') statColor = '#0f0';
-            if (s.status === 'paused') statColor = '#fa0';
-            if (s.status === 'calibrating') statColor = '#f0f';
+            let statColor = '#888'; if(s.status==='active') statColor='#0f0'; if(s.status==='paused') statColor='#fa0'; if(s.status==='calibrating') statColor='#f0f';
 
             ui.panel.innerHTML = `
-                <div style="color: ${statColor}; font-weight: bold; font-size: 14px; margin-bottom: 10px;">ESTADO: ${s.status.toUpperCase()}</div>
-                Escala: ${HarmonyEngine.getNoteName(s.scale_root, s.scale_root)} ${s.scale_type}<br>
-                Nodos: ${notes}<br>
-                Tensión: ${s.tension_level.toFixed(2)}<br>
-                Ruta: ${sug}
+                <div style="color:${statColor}; font-weight:bold; font-size:14px; margin-bottom:10px;">ESTADO: ${s.status.toUpperCase()}</div>
+                Escala: ${HarmonyEngine.getNoteName(s.scale_root, s.scale_root)} ${s.scale_type}<br>Nodos: ${notes}<br>Tensión: ${s.tension_level.toFixed(2)}<br>Ruta: ${sug}
                 <div class="history-track"><strong>Progresión:</strong><br>${hudHist}</div>
             `;
         });
