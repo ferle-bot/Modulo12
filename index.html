@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Modulo12 - Captura y Perfilado Acústico</title>
+    <title>Modulo12 - Núcleo de Captura</title>
     
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#050508">
@@ -77,8 +77,7 @@
         .session-event { display: inline-block; background: #111; border: 1px solid #222; padding: 6px 12px; margin: 4px; border-radius: 6px; color: #fff; font-size: 13px; }
         .session-event .time { color: #666; font-size: 10px; display: block; margin-bottom: 4px; }
 
-        /* Asistente de Perfilado Multi-Golpe */
-        #profiler-modal { z-index: 10000; }
+        /* Asistente y VU Meter */
         #profiler-box { background: #0a0a0e; border: 1px solid #00ffcc; border-radius: 8px; padding: 30px; text-align: center; box-shadow: 0 0 40px rgba(0, 255, 204, 0.15); max-width: 450px; width: 90%; }
         .profiler-target { font-size: 28px; color: #00ffcc; font-weight: bold; margin: 15px 0; letter-spacing: 1px; }
         .profiler-strikes { display: flex; justify-content: center; gap: 15px; margin-bottom: 25px; }
@@ -86,6 +85,9 @@
         .strike-dot.active { background: #00ffcc; border-color: #00ffcc; box-shadow: 0 0 15px #00ffcc; }
         .profiler-bar-bg { background: #222; height: 4px; border-radius: 2px; overflow: hidden; margin-bottom: 20px; width: 100%; }
         #profiler-bar-fill { background: #00ffcc; height: 100%; width: 0%; transition: width 0.3s; }
+        
+        .vu-meter-bg { background: #111; height: 12px; border-radius: 6px; overflow: hidden; width: 100%; margin: 15px 0; border: 1px solid #333; }
+        .vu-meter-fill { background: linear-gradient(90deg, #00ff00, #ffff00, #ff0000); height: 100%; width: 0%; transition: width 0.05s linear; }
     </style>
 </head>
 <body>
@@ -110,6 +112,16 @@
                 <button id="stop-btn" class="menu-action-btn btn-stop" style="flex:1;">Finalizar</button>
                 <button id="clear-btn" class="menu-action-btn btn-clear" style="flex:1;">Limpiar</button>
             </div>
+        </div>
+
+        <div class="config-group">
+            <div class="config-label"><span style="color:#00ffcc;">Perfil Acústico (Fuente)</span></div>
+            <select id="acoustic-profile" class="menu-select">
+                <option value="piano">Piano Acústico / Teclado</option>
+                <option value="guitar">Guitarra Acústica / Eléctrica</option>
+                <option value="voice">Voz Humana</option>
+                <option value="synth">Genérico / Sintetizador</option>
+            </select>
         </div>
 
         <div class="config-group">
@@ -171,16 +183,14 @@
     <div id="profiler-modal" class="modal-bg">
         <div id="profiler-box">
             <h3 style="margin-top:0; color:#fff;">Perfilado Acústico del Instrumento</h3>
-            <p style="color:#aaa; font-size:13px; margin-bottom:15px;" id="profiler-desc">Toca la nota solicitada 3 veces consecutivas para mapear los armónicos en tu entorno.</p>
-            
+            <p style="color:#aaa; font-size:13px; margin-bottom:15px;" id="profiler-desc">Toca la nota solicitada 3 veces consecutivas.</p>
             <div class="profiler-target" id="profiler-target-note">C2</div>
-            
             <div class="profiler-strikes">
-                <div class="strike-dot" id="sd-1"></div>
-                <div class="strike-dot" id="sd-2"></div>
-                <div class="strike-dot" id="sd-3"></div>
+                <div class="strike-dot" id="sd-1"></div><div class="strike-dot" id="sd-2"></div><div class="strike-dot" id="sd-3"></div>
             </div>
-
+            
+            <div class="vu-meter-bg"><div id="profiler-vu-fill" class="vu-meter-fill"></div></div>
+            
             <div class="profiler-bar-bg"><div id="profiler-bar-fill"></div></div>
             <button id="profiler-skip-btn" class="menu-action-btn" style="background: transparent; color: #666; border: 1px solid #444; width: auto;">Omitir y Forzar Inicio</button>
         </div>
@@ -190,18 +200,22 @@
         <h1 style="margin-bottom: 10px; color: var(--accent); letter-spacing: 4px; font-size: 3rem; text-shadow: 0 0 20px rgba(0,255,0,0.3);">Modulo12</h1>
         <p style="color: #888; margin-bottom: 40px; font-size: 14px;">Motor de Captura Transmodal Z12</p>
         
-        <div style="width: 80%; max-width: 320px; text-align: left;">
+        <div id="pre-config-box" style="width: 80%; max-width: 320px; text-align: left;">
             <label style="color: #00ffcc; font-size: 12px; margin-bottom: 8px; display: block;">1. Selecciona tu instrumento base:</label>
             <select id="pre-profile" class="menu-select" style="margin-bottom: 25px; padding: 12px; font-size: 16px; background: #0a0a0e; border-color: #333;">
                 <option value="piano">Piano Acústico / Teclado (88T)</option>
                 <option value="guitar">Guitarra Acústica / Eléctrica</option>
                 <option value="voice">Voz Humana</option>
-                <option value="synth">Genérico / Sintetizador (Sin Mapeo)</option>
+                <option value="synth">Genérico / Sintetizador</option>
             </select>
         </div>
 
         <button id="start-btn" class="primary-btn">INICIAR CALIBRACIÓN</button>
-        <div id="calibration-msg" style="display:none; color:#fa0; margin-top:20px; font-size:14px; text-align:center; letter-spacing: 1px;">MIDIENDO RUIDO AMBIENTAL<br><span style="font-size:11px; color:#aaa; letter-spacing: 0;">(Silencio absoluto por 2 seg)</span></div>
+        
+        <div id="calibration-msg" style="display:none; width: 80%; max-width: 320px;">
+            <div style="color:#fa0; margin-top:20px; font-size:14px; text-align:center; letter-spacing: 1px;">MIDIENDO RUIDO AMBIENTAL<br><span style="font-size:11px; color:#aaa; letter-spacing: 0;">(Silencio absoluto por 2 seg)</span></div>
+            <div class="vu-meter-bg"><div id="calib-vu-fill" class="vu-meter-fill"></div></div>
+        </div>
     </div>
 
     <div id="debug-panel">Cargando dependencias matemáticas...</div>
@@ -265,12 +279,11 @@
         // ==========================================
         // 2. MATRIZ DE PERFILES Y ESTADO
         // ==========================================
-        // Definición de rutinas de calibración por instrumento
         const PROFILES = {
-            piano:  { tol: 40, minFreq: 27, maxFreq: 4186, targets: [{n:"Do Grave (C2)", m:36}, {n:"Re Grave (D2)", m:38}, {n:"Do Central (C4)", m:60}, {n:"Do Agudo (C5)", m:72}] },
-            guitar: { tol: 45, minFreq: 80, maxFreq: 1200, targets: [{n:"6ta Cuerda Aire (E2)", m:40}, {n:"5ta Cuerda Aire (A2)", m:45}, {n:"1ra Cuerda Aire (E4)", m:64}] },
+            piano:  { tol: 40, minFreq: 27, maxFreq: 4186, targets: [{n:"Do Grave (C2)", m:36}, {n:"Re Grave (D2)", m:38}, {n:"Do Central (C4)", m:60}] },
+            guitar: { tol: 45, minFreq: 80, maxFreq: 1200, targets: [{n:"6ta Cuerda Aire (E2)", m:40}, {n:"1ra Cuerda Aire (E4)", m:64}] },
             voice:  { tol: 60, minFreq: 80, maxFreq: 1200, targets: [{n:"Canta una nota grave", m:"low"}, {n:"Canta una nota aguda", m:"high"}] },
-            synth:  { tol: 35, minFreq: 20, maxFreq: 5000, targets: [] } // Sin calibración guiada
+            synth:  { tol: 35, minFreq: 20, maxFreq: 5000, targets: [] } 
         };
 
         class StateManager {
@@ -281,7 +294,7 @@
                     status: "standby", sens_offset: 0, view_mode: "radial", scale_root: 0, scale_type: "Cromática", scale_mask: 4095,
                     acoustic_profile: "piano", profiler_step: 0, calibration_map: {}
                 };
-                const saved = localStorage.getItem('modulus_state_v12');
+                const saved = localStorage.getItem('modulus_state_v13');
                 this.state = saved ? { ...initial, ...JSON.parse(saved), active_mask: 0, status: 'standby', current_session_id: null, profiler_step: 0, scale_mask: HarmonyEngine.getScaleMask(JSON.parse(saved).scale_root||0, JSON.parse(saved).scale_type||"Cromática") } : initial;
                 this.listeners = [];
             }
@@ -321,7 +334,7 @@
                 }
                 this.save(); this.notify();
             }
-            save() { localStorage.setItem('modulus_state_v12', JSON.stringify({ sessions: this.state.sessions, sens_offset: this.state.sens_offset, view_mode: this.state.view_mode, scale_root: this.state.scale_root, scale_type: this.state.scale_type, acoustic_profile: this.state.acoustic_profile, calibration_map: this.state.calibration_map })); }
+            save() { localStorage.setItem('modulus_state_v13', JSON.stringify({ sessions: this.state.sessions, sens_offset: this.state.sens_offset, view_mode: this.state.view_mode, scale_root: this.state.scale_root, scale_type: this.state.scale_type, acoustic_profile: this.state.acoustic_profile, calibration_map: this.state.calibration_map })); }
             clearHistory() { this.state.sessions = []; this.state.current_session_id = null; this.save(); this.update({}); }
             subscribe(cb) { this.listeners.push(cb); this.notify(); }
             notify() { const snap = JSON.parse(JSON.stringify(this.state)); this.listeners.forEach(cb => cb(snap)); }
@@ -337,9 +350,22 @@
                 this.baseNoiseFloor = -60; this.ANALYSIS_FPS = 15; this.lastTime = 0;
                 this.mediaRecorder = null; this.audioChunks = []; this.isRecording = false;
                 
-                // Variables del Asistente de Golpes (Strikes)
                 this.strikeCount = 0; this.isStriking = false; this.strikeData = [];
+                
+                // Elementos VU Meter
+                this.vuCalib = document.getElementById('calib-vu-fill');
+                this.vuProf = document.getElementById('profiler-vu-fill');
             }
+            
+            updateVU(amplitude) {
+                // Mapear de dB (-100 a -30) a porcentaje (0 a 100)
+                const minDb = -100; const maxDb = -20;
+                let percent = ((amplitude - minDb) / (maxDb - minDb)) * 100;
+                percent = Math.max(0, Math.min(100, percent));
+                if (this.vuCalib) this.vuCalib.style.width = `${percent}%`;
+                if (this.vuProf) this.vuProf.style.width = `${percent}%`;
+            }
+
             async startAndCalibrate() {
                 try {
                     this.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, autoGainControl: false, noiseSuppression: false, channelCount: 1 } });
@@ -358,6 +384,9 @@
                         const tick = () => {
                             this.analyser.getFloatFrequencyData(this.dataArray);
                             let fMax = -Infinity; for(let i=0; i<this.dataArray.length; i++) if(this.dataArray[i] > fMax && this.dataArray[i] < 0) fMax = this.dataArray[i];
+                            
+                            this.updateVU(fMax); // Actualizar VU visual
+                            
                             if(fMax > -100) noiseSamples.push(fMax);
                             
                             if(Date.now() < endTime) requestAnimationFrame(tick);
@@ -365,7 +394,6 @@
                                 noiseSamples.sort((a,b)=>a-b);
                                 this.baseNoiseFloor = Math.max(-80, Math.min((noiseSamples[Math.floor(noiseSamples.length*0.85)]||-60) + 5, -30));
                                 
-                                // ¿Entra a Fase 2 (Profiler 3-Strikes) o directo a Active?
                                 const profileDef = PROFILES[this.stateManager.state.acoustic_profile];
                                 if (profileDef && profileDef.targets.length > 0) {
                                     this.stateManager.update({ status: 'profiling', profiler_step: 0 });
@@ -382,7 +410,6 @@
                 } catch(e) { return false; }
             }
 
-            // Asistente Multi-Golpe (3 Strikes)
             runProfiler() {
                 if (this.stateManager.state.status !== 'profiling') return;
                 
@@ -399,17 +426,16 @@
                 document.getElementById('profiler-target-note').textContent = target.n;
                 
                 this.analyser.getFloatFrequencyData(this.dataArray);
-                const limit = this.baseNoiseFloor + 15; // Umbral de golpe claro
+                const limit = this.baseNoiseFloor + 12; 
                 
-                let isHit = false;
-                let currentPeak = null;
-
-                // Buscar pico principal crudo
                 let fMax = -Infinity; let maxBin = 0;
                 for(let i=2; i<this.analyser.frequencyBinCount-2; i++) {
                     if (this.dataArray[i] > fMax) { fMax = this.dataArray[i]; maxBin = i; }
                 }
+                
+                this.updateVU(fMax);
 
+                let isHit = false; let currentPeak = null;
                 if (fMax > limit) {
                     const freq = maxBin * (this.audioCtx.sampleRate / (this.analyser.frequencyBinCount * 2));
                     const midi = Math.round(12 * Math.log2(freq/440) + 69);
@@ -417,10 +443,9 @@
 
                     if (target.m === 'low') { isHit = midi < 60; }
                     else if (target.m === 'high') { isHit = midi > 60; }
-                    else { isHit = Math.abs(midi - target.m) <= 12; } // Tolerancia de octava al detectar el golpe
+                    else { isHit = Math.abs(midi - target.m) <= 12; } 
                 }
 
-                // Lógica de 3 Strikes (Ataque y Liberación)
                 if (isHit && !this.isStriking) {
                     this.isStriking = true;
                     this.strikeCount++;
@@ -428,13 +453,10 @@
                     this.updateStrikeUI();
                     
                     if (this.strikeCount >= 3) {
-                        // Promediar y guardar en mapa de calibración
-                        // (En el futuro, esto se usa para ajustar los filtros dinámicos)
                         const calibMap = this.stateManager.state.calibration_map;
                         calibMap[target.n] = this.strikeData;
                         this.stateManager.update({ calibration_map: calibMap });
 
-                        // Siguiente nota
                         setTimeout(() => {
                             this.strikeCount = 0; this.strikeData = []; this.updateStrikeUI();
                             this.stateManager.update({ profiler_step: step + 1 });
@@ -442,12 +464,11 @@
                         }, 800);
                         return;
                     }
-                    setTimeout(() => { this.isStriking = false; }, 400); // Deadzone entre golpes
+                    setTimeout(() => { this.isStriking = false; }, 400); 
                 } else if (!isHit && fMax < this.baseNoiseFloor + 5) {
-                    this.isStriking = false; // El sonido bajó, listo para siguiente golpe
+                    this.isStriking = false; 
                 }
 
-                // Actualizar barra de progreso visual general
                 const totalSteps = profileDef.targets.length * 3;
                 const currentProgress = (step * 3) + this.strikeCount;
                 document.getElementById('profiler-bar-fill').style.width = `${(currentProgress / totalSteps) * 100}%`;
@@ -486,7 +507,7 @@
                 this.animationId = requestAnimationFrame(() => this.processFrame());
             }
             
-            // Extracción: Interpolación Parabólica + DESCENSO SUB-ARMÓNICO (Corrección de Octavas Bajas)
+            // Extracción: Interpolación Parabólica + DESCENSO SUB-ARMÓNICO EN VENTANA (Solución C2 vs C4)
             extractPitchesDynamic() {
                 const limit = this.baseNoiseFloor - this.stateManager.state.sens_offset;
                 const binCount = this.analyser.frequencyBinCount;
@@ -496,10 +517,10 @@
                 
                 let rawPeaks = [];
 
+                // 1. Identificación de Picos Crudos
                 for(let i=2; i<binCount-2; i++) {
                     const beta = this.dataArray[i];
                     if(beta > limit && beta > this.dataArray[i-1] && beta > this.dataArray[i+1]) {
-                        // Interpolación Parabólica Sub-Hercio
                         const alpha = this.dataArray[i-1]; const gamma = this.dataArray[i+1];
                         let p = 0; const denom = alpha - 2 * beta + gamma;
                         if (denom !== 0) p = 0.5 * (alpha - gamma) / denom;
@@ -509,47 +530,71 @@
                         
                         const midiExact = 12 * Math.log2(freq/440) + 69;
                         const midi = Math.round(midiExact);
-                        
                         if (Math.abs(midiExact - midi) * 100 > profileDef.tol) continue;
                         
-                        rawPeaks.push({ pitch: ((midi%12)+12)%12, octave: Math.floor(midi/12)-1, midi: midi, amp: beta, freq: freq });
+                        rawPeaks.push({ pitch: ((midi%12)+12)%12, octave: Math.floor(midi/12)-1, midi: midi, amp: beta, freq: freq, bin: i+p });
                     }
                 }
 
-                // ALGORITMO DE DESCENSO SUB-ARMÓNICO (Identificar la C2 escondida bajo la C4)
+                // 2. Ingeniería Inversa (Descenso Armónico Analítico)
                 let correctedPeaks = [];
-                const fundamentalLimit = limit - 10; // La fundamental verdadera suele ser más débil que el armónico
+                const fundamentalTolDb = 15; // La sub-octava puede estar hasta 15dB por debajo del armónico principal
 
                 rawPeaks.forEach(peak => {
                     let isHarmonic = false;
-                    let fundamentalMidi = peak.midi;
+                    let fundamentalFreq = peak.freq;
+                    let fundamentalAmp = peak.amp;
 
-                    // Si estamos en un piano/guitarra, revisar 1 o 2 octavas abajo
+                    // Si es un sonido de cuerdas, buscar hasta 2 octavas abajo (f/2 y f/4)
                     if (this.stateManager.state.acoustic_profile === 'piano' || this.stateManager.state.acoustic_profile === 'guitar') {
-                        const expectedSub1Freq = peak.freq / 2; // Una octava abajo
-                        const expectedSub2Freq = peak.freq / 4; // Dos octavas abajo
-                        
-                        // Buscar en los picos crudos si existe energía cerca de f/2 o f/4
-                        const sub2Exists = rawPeaks.find(p => Math.abs(p.freq - expectedSub2Freq) < 5 && p.amp > fundamentalLimit);
-                        const sub1Exists = rawPeaks.find(p => Math.abs(p.freq - expectedSub1Freq) < 5 && p.amp > fundamentalLimit);
+                        // Búsqueda en ventana para f/2 (Primera octava baja)
+                        const expectedSub1Bin = Math.round(peak.bin / 2);
+                        // Búsqueda en ventana para f/4 (Segunda octava baja, común en pianos acústicos)
+                        const expectedSub2Bin = Math.round(peak.bin / 4);
 
-                        if (sub2Exists) {
-                            fundamentalMidi = sub2Exists.midi;
+                        // Función para buscar energía en una ventana alrededor del bin teórico
+                        const checkWindow = (targetBin) => {
+                            if (targetBin < 2) return null;
+                            let maxA = -Infinity; let maxI = 0;
+                            // Ventana de tolerancia: +/- 2 bins
+                            for(let w = -2; w <= 2; w++) {
+                                const idx = targetBin + w;
+                                if (idx > 0 && idx < binCount && this.dataArray[idx] > maxA) {
+                                    maxA = this.dataArray[idx]; maxI = idx;
+                                }
+                            }
+                            // Exigimos que la energía exista y no esté sepultada en el ruido
+                            if (maxA > limit && maxA > (peak.amp - fundamentalTolDb)) {
+                                return { amp: maxA, freq: maxI * (sampleRate / (binCount * 2)) };
+                            }
+                            return null;
+                        };
+
+                        // Comprobar la fundamental más profunda primero (f/4)
+                        const sub2Data = checkWindow(expectedSub2Bin);
+                        if (sub2Data && sub2Data.freq >= profileDef.minFreq) {
+                            fundamentalFreq = sub2Data.freq;
+                            fundamentalAmp = sub2Data.amp; // Usar la amplitud real de la fundamental
                             isHarmonic = true;
-                        } else if (sub1Exists) {
-                            fundamentalMidi = sub1Exists.midi;
-                            isHarmonic = true;
+                        } else {
+                            // Si no hay f/4, buscar f/2
+                            const sub1Data = checkWindow(expectedSub1Bin);
+                            if (sub1Data && sub1Data.freq >= profileDef.minFreq) {
+                                fundamentalFreq = sub1Data.freq;
+                                fundamentalAmp = sub1Data.amp;
+                                isHarmonic = true;
+                            }
                         }
                     }
 
-                    if (!isHarmonic) {
-                        correctedPeaks.push(peak);
-                    } else {
-                        // Promover el sub-armónico a la lista oficial con la amplitud del pico alto
-                        const p = ((fundamentalMidi%12)+12)%12;
-                        const oct = Math.floor(fundamentalMidi/12)-1;
-                        correctedPeaks.push({ pitch: p, octave: oct, midi: fundamentalMidi, amp: peak.amp, freq: peak.freq });
-                    }
+                    // Convertir la frecuencia resuelta a MIDI
+                    const fMidiExact = 12 * Math.log2(fundamentalFreq/440) + 69;
+                    const fMidi = Math.round(fMidiExact);
+                    const p = ((fMidi%12)+12)%12;
+                    const oct = Math.floor(fMidi/12)-1;
+                    
+                    // Si se hizo la corrección, añadirla con la amplitud del pico alto para asegurar que gane en el filtro posterior
+                    correctedPeaks.push({ pitch: p, octave: oct, midi: fMidi, amp: isHarmonic ? peak.amp : peak.amp, freq: fundamentalFreq });
                 });
 
                 const map = new Map(); 
@@ -740,7 +785,7 @@
             closeMenu: document.getElementById('close-btn'), sidebar: document.getElementById('sidebar'), pause: document.getElementById('pause-btn'), stop: document.getElementById('stop-btn'),
             clear: document.getElementById('clear-btn'), calibMsg: document.getElementById('calibration-msg'), sensSlider: document.getElementById('sens-slider'), sensVal: document.getElementById('sens-val'),
             scaleRoot: document.getElementById('scale-root'), scaleType: document.getElementById('scale-type'), viewMode: document.getElementById('view-mode'), acousticProfile: document.getElementById('acoustic-profile'),
-            preProfile: document.getElementById('pre-profile'), historyBtn: document.getElementById('history-btn'), sessionModal: document.getElementById('session-modal'), closeModal: document.getElementById('close-modal'), sessionContent: document.getElementById('session-content'),
+            preProfile: document.getElementById('pre-profile'), preConfigBox: document.getElementById('pre-config-box'), historyBtn: document.getElementById('history-btn'), sessionModal: document.getElementById('session-modal'), closeModal: document.getElementById('close-modal'), sessionContent: document.getElementById('session-content'),
             recBtn: document.getElementById('rec-btn'), metroBtn: document.getElementById('metro-btn'), bpmSlider: document.getElementById('bpm-slider'), bpmVal: document.getElementById('bpm-val'),
             profilerSkip: document.getElementById('profiler-skip-btn')
         };
@@ -757,7 +802,7 @@
         ui.menu.onclick = () => ui.sidebar.classList.add('active'); ui.closeMenu.onclick = () => ui.sidebar.classList.remove('active');
 
         ui.pause.onclick = async () => { const isP = stateManager.state.status === 'paused'; await audioEngine.setPause(!isP); ui.pause.textContent = isP ? "Pausar Detección" : "Reanudar Escucha"; ui.pause.style.backgroundColor = isP ? "var(--accent)" : "#ffaa00"; ui.sidebar.classList.remove('active'); };
-        ui.stop.onclick = () => { audioEngine.stop(); ui.pause.textContent = "Pausar Detección"; ui.pause.style.backgroundColor = "var(--accent)"; ui.sidebar.classList.remove('active'); ui.overlay.style.display = 'flex'; ui.calibMsg.style.display = 'none'; };
+        ui.stop.onclick = () => { audioEngine.stop(); ui.pause.textContent = "Pausar Detección"; ui.pause.style.backgroundColor = "var(--accent)"; ui.sidebar.classList.remove('active'); ui.overlay.style.display = 'flex'; ui.preConfigBox.style.display = 'block'; ui.calibMsg.style.display = 'none'; };
         ui.clear.onclick = () => { stateManager.clearHistory(); ui.sidebar.classList.remove('active'); };
         
         ui.recBtn.onclick = () => { audioEngine.toggleRecord(document.getElementById('rec-light'), ui.recBtn); ui.sidebar.classList.remove('active'); };
@@ -823,13 +868,12 @@
         });
 
         ui.start.onclick = async () => {
-            // Sincronizar el perfil pre-boot con el stateManager
             const selectedProfile = ui.preProfile.value;
             ui.acousticProfile.value = selectedProfile;
             stateManager.update({ acoustic_profile: selectedProfile });
 
             ui.start.style.display = 'none'; 
-            ui.preProfile.style.display = 'none'; // Ocultar selector
+            ui.preConfigBox.style.display = 'none'; 
             ui.calibMsg.style.display = 'block';
             
             if (await audioEngine.startAndCalibrate()) {
@@ -837,7 +881,7 @@
             }
             
             ui.start.style.display = 'block'; 
-            ui.preProfile.style.display = 'block';
+            ui.preConfigBox.style.display = 'block';
             ui.calibMsg.style.display = 'none';
         };
 
