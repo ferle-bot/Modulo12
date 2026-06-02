@@ -33,18 +33,19 @@
             align-items: center; z-index: 20; flex-direction: column;
         }
         
-        button {
+        button.primary-btn {
             background-color: var(--accent); color: #000; border: none; padding: 15px 40px;
             font-size: 18px; font-weight: bold; cursor: pointer; border-radius: 4px;
             box-shadow: 0 0 20px rgba(0, 255, 0, 0.3); transition: all 0.2s ease;
             font-family: monospace; letter-spacing: 1px;
         }
-        button:hover { background-color: var(--accent-hover); transform: scale(1.02); }
-        button:disabled { background-color: #333; box-shadow: none; cursor: not-allowed; color: #777; }
+        button.primary-btn:hover { background-color: var(--accent-hover); transform: scale(1.02); }
+        button.primary-btn:disabled { background-color: #333; box-shadow: none; cursor: not-allowed; color: #777; }
         
         .menu-action-btn {
             padding: 12px; font-size: 14px; width: 100%; margin-bottom: 12px;
-            text-align: center; box-shadow: none; letter-spacing: 0;
+            text-align: center; box-shadow: none; letter-spacing: 0; font-family: monospace;
+            border-radius: 4px; border: none; cursor: pointer;
         }
         .btn-pause { background-color: var(--accent); color: #000; }
         .btn-stop { background-color: #ff3333; color: #fff; }
@@ -63,10 +64,10 @@
             text-shadow: 0 0 10px rgba(0,0,0,0.8); padding: 5px;
         }
         #sidebar {
-            position: fixed; top: 0; right: -300px; width: 260px; height: 100%;
+            position: fixed; top: 0; right: -320px; width: 280px; height: 100%;
             background: rgba(10, 10, 12, 0.98); border-left: 1px solid #222;
             transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 40; padding: 25px;
-            box-shadow: -10px 0 30px rgba(0,0,0,0.8); box-sizing: border-box;
+            box-shadow: -10px 0 30px rgba(0,0,0,0.8); box-sizing: border-box; overflow-y: auto;
         }
         #sidebar.active { right: 0; }
         #close-btn {
@@ -76,15 +77,15 @@
         #close-btn:hover { color: #fff; }
 
         /* Controles de Configuración */
-        .config-group {
-            margin-top: 30px; border-top: 1px solid #222; padding-top: 20px;
+        .config-group { margin-top: 25px; border-top: 1px solid #222; padding-top: 15px; }
+        .config-label { font-size: 12px; color: #aaa; margin-bottom: 10px; display: flex; justify-content: space-between; }
+        
+        select.menu-select {
+            background: #111; color: #fff; border: 1px solid #333; padding: 8px; 
+            border-radius: 4px; font-family: monospace; width: 100%; outline: none;
         }
-        .config-label {
-            font-size: 12px; color: #aaa; margin-bottom: 10px; display: flex; justify-content: space-between;
-        }
-        input[type=range] {
-            width: 100%; -webkit-appearance: none; background: transparent; margin: 10px 0;
-        }
+        
+        input[type=range] { width: 100%; -webkit-appearance: none; background: transparent; margin: 10px 0; }
         input[type=range]:focus { outline: none; }
         input[type=range]::-webkit-slider-runnable-track {
             width: 100%; height: 4px; cursor: pointer; background: #333; border-radius: 2px;
@@ -93,6 +94,13 @@
             height: 16px; width: 16px; border-radius: 50%; background: var(--accent);
             cursor: pointer; -webkit-appearance: none; margin-top: -6px;
         }
+
+        /* Calibrador de UI */
+        #calibration-msg {
+            display: none; color: #ffaa00; margin-top: 20px; font-size: 14px; text-align: center;
+            animation: pulse 1s infinite alternate;
+        }
+        @keyframes pulse { from { opacity: 0.5; } to { opacity: 1; } }
     </style>
 </head>
 <body>
@@ -101,31 +109,52 @@
     <div id="sidebar">
         <div id="close-btn">×</div>
         <h3 style="color: var(--accent); margin-top: 0; letter-spacing: 1px; font-size: 20px;">Modulo12</h3>
-        <hr style="border-color: #222; margin-bottom: 25px;">
+        <hr style="border-color: #222; margin-bottom: 20px;">
         
         <button id="pause-btn" class="menu-action-btn btn-pause">Pausar Detección</button>
         <button id="stop-btn" class="menu-action-btn btn-stop">Detener Hardware</button>
         <button id="clear-btn" class="menu-action-btn btn-clear">Purgar Memoria</button>
         
         <div class="config-group">
-            <div class="config-label">
-                <span>Sensibilidad</span>
-                <span id="sens-val">75%</span>
-            </div>
-            <input type="range" id="sens-slider" min="1" max="100" value="75">
-            <div style="color: #555; font-size: 10px; line-height: 1.4; margin-top: 8px;">
-                Disminuye para filtrar ruido de fondo (lluvia/viento). Aumenta para captar armónicos sutiles.
+            <div class="config-label"><span>Filtro de Escala Diatónica</span></div>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <select id="scale-root" class="menu-select" style="flex: 1;">
+                    <option value="0">C</option><option value="1">Db</option>
+                    <option value="2">D</option><option value="3">Eb</option>
+                    <option value="4">E</option><option value="5">F</option>
+                    <option value="6">F#</option><option value="7">G</option>
+                    <option value="8">Ab</option><option value="9">A</option>
+                    <option value="10">Bb</option><option value="11">B</option>
+                </select>
+                <select id="scale-type" class="menu-select" style="flex: 2;">
+                    <option value="Cromática">Off (Cromática)</option>
+                    <option value="Mayor">Mayor</option>
+                    <option value="Menor Nat.">Menor Natural</option>
+                    <option value="Menor Arm.">Menor Armónica</option>
+                    <option value="Dórica">Dórica</option>
+                    <option value="Frigia">Frigia</option>
+                    <option value="Lidia">Lidia</option>
+                    <option value="Mixolidia">Mixolidia</option>
+                </select>
             </div>
         </div>
-        
-        <div style="color: #555; font-size: 12px; margin-top: 30px;">
-            <div>▶ Selector de Escalas (Próx.)</div>
+
+        <div class="config-group">
+            <div class="config-label">
+                <span>Sensibilidad (Offset)</span>
+                <span id="sens-val">0 dB</span>
+            </div>
+            <input type="range" id="sens-slider" min="-20" max="20" value="0">
+            <div style="color: #555; font-size: 10px; line-height: 1.4; margin-top: 8px;">
+                Ajuste fino sobre la calibración automática inicial. (-) Filtra lluvia/ruido. (+) Capta susurros.
+            </div>
         </div>
     </div>
 
     <div id="overlay">
-        <h1 style="margin-bottom: 40px; color: var(--accent); letter-spacing: 4px; font-size: 2.5rem; text-shadow: 0 0 20px rgba(0,255,0,0.3);">Modulo12</h1>
-        <button id="start-btn">INICIAR MOTOR</button>
+        <h1 style="margin-bottom: 30px; color: var(--accent); letter-spacing: 4px; font-size: 2.5rem; text-shadow: 0 0 20px rgba(0,255,0,0.3);">Modulo12</h1>
+        <button id="start-btn" class="primary-btn">INICIAR MOTOR</button>
+        <div id="calibration-msg">CALIBRANDO RUIDO DE FONDO<br><span style="font-size: 11px; color:#aaa;">(Mantén silencio por 2 segundos)</span></div>
     </div>
 
     <div id="debug-panel">Cargando dependencias matemáticas...</div>
@@ -135,27 +164,40 @@
         'use strict';
 
         // ==========================================
-        // 1. MOTOR MATEMÁTICO Y DICCIONARIO
+        // 1. MOTOR MATEMÁTICO: DICCIONARIO Y ESCALAS
         // ==========================================
         const noteNames = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
-        const createMask = (notes) => notes.reduce((m, n) => m | (1 << n), 0);
+        const createMask = (notes) => notes.reduce((m, n) => m | (1 << (n % 12)), 0);
         
         const Z12_DICTIONARY = Array.from({length: 12}).flatMap((_, i) => [
-            { name: `${noteNames[i]} May`, mask: createMask([i, (i+4)%12, (i+7)%12]) },
-            { name: `${noteNames[i]} min`, mask: createMask([i, (i+3)%12, (i+7)%12]) },
-            { name: `${noteNames[i]}Maj7`, mask: createMask([i, (i+4)%12, (i+7)%12, (i+11)%12]) },
-            { name: `${noteNames[i]}min7`, mask: createMask([i, (i+3)%12, (i+7)%12, (i+10)%12]) },
-            { name: `${noteNames[i]}7`, mask: createMask([i, (i+4)%12, (i+7)%12, (i+10)%12]) },
-            { name: `${noteNames[i]}dim7`, mask: createMask([i, (i+3)%12, (i+6)%12, (i+9)%12]) }
+            { name: `${noteNames[i]} May`, mask: createMask([i, i+4, i+7]) },
+            { name: `${noteNames[i]} min`, mask: createMask([i, i+3, i+7]) },
+            { name: `${noteNames[i]}Maj7`, mask: createMask([i, i+4, i+7, i+11]) },
+            { name: `${noteNames[i]}min7`, mask: createMask([i, i+3, i+7, i+10]) },
+            { name: `${noteNames[i]}7`, mask: createMask([i, i+4, i+7, i+10]) },
+            { name: `${noteNames[i]}dim7`, mask: createMask([i, i+3, i+6, i+9]) }
         ]);
+
+        const SCALES_DEF = {
+            "Cromática": [0,1,2,3,4,5,6,7,8,9,10,11],
+            "Mayor": [0,2,4,5,7,9,11],
+            "Menor Nat.": [0,2,3,5,7,8,10],
+            "Menor Arm.": [0,2,3,5,7,8,11],
+            "Dórica": [0,2,3,5,7,9,10],
+            "Frigia": [0,1,3,5,7,8,10],
+            "Lidia": [0,2,4,6,7,9,11],
+            "Mixolidia": [0,2,4,5,7,9,10]
+        };
 
         const HarmonyEngine = {
             createPitchClassSet: createMask,
+            getScaleMask: (root, type) => {
+                const intervals = SCALES_DEF[type] || SCALES_DEF["Cromática"];
+                return createMask(intervals.map(i => (i + root) % 12));
+            },
             calculateParsimony: (maskA, maskB) => {
                 let count = 0;
-                for (let intersection = maskA & maskB; intersection > 0; intersection >>= 1) {
-                    count += intersection & 1;
-                }
+                for (let intersection = maskA & maskB; intersection > 0; intersection >>= 1) count += intersection & 1;
                 return count;
             },
             evaluateTension: (notes) => {
@@ -172,11 +214,18 @@
                 if (hasMinorSecond) return { level: 0.7, color: {r: 255, g: 165, b: 0}, desc: "Tensión armónica" };
                 return { level: 0.3, color: {r: 0, g: 200, b: 255}, desc: "Estabilidad matizada" };
             },
-            suggestPath: (currentMask) => {
+            // Vector 2: Pathfinding Diatónico
+            suggestPath: (currentMask, scaleMask) => {
                 if(currentMask === 0) return null;
                 let best = null, maxShared = 0;
+                const isChromatic = scaleMask === 4095; // 4095 = 12 bits activos
+
                 for(const chord of Z12_DICTIONARY) {
                     if(chord.mask === currentMask) continue; 
+                    
+                    // Si hay escala activa, descartar acordes que salgan de la tonalidad
+                    if (!isChromatic && (chord.mask & scaleMask) !== chord.mask) continue;
+
                     let shared = HarmonyEngine.calculateParsimony(currentMask, chord.mask);
                     if(shared > maxShared) { maxShared = shared; best = chord; }
                 }
@@ -185,7 +234,7 @@
         };
 
         // ==========================================
-        // 2. GESTIÓN DE ESTADO LOCAL-FIRST
+        // 2. GESTIÓN DE ESTADO (MEMORIA Y ESCALAS)
         // ==========================================
         class StateManager {
             constructor() {
@@ -193,16 +242,19 @@
                     active_mask: 0, notes_array: [], notes_detail: [], 
                     tension_level: 0.0, color: {r: 34, g: 34, b: 34},
                     description: "Silencio", suggestion: null, history: [],
-                    status: "standby", sensitivity: 75
+                    status: "standby", sens_offset: 0,
+                    scale_root: 0, scale_type: "Cromática", scale_mask: 4095
                 };
                 
-                const saved = localStorage.getItem('modulus_state_v2');
+                const saved = localStorage.getItem('modulus_state_v3');
                 if (saved) {
                     const parsed = JSON.parse(saved);
                     this.state = { 
-                        ...initial, 
-                        history: parsed.history || [], 
-                        sensitivity: parsed.sensitivity !== undefined ? parsed.sensitivity : 75 
+                        ...initial, history: parsed.history || [], 
+                        sens_offset: parsed.sens_offset || 0,
+                        scale_root: parsed.scale_root || 0,
+                        scale_type: parsed.scale_type || "Cromática",
+                        scale_mask: HarmonyEngine.getScaleMask(parsed.scale_root || 0, parsed.scale_type || "Cromática")
                     };
                 } else {
                     this.state = initial;
@@ -213,6 +265,11 @@
             update(newState) {
                 const prevMask = this.state.active_mask;
                 this.state = { ...this.state, ...newState };
+
+                // Recalcular máscara de escala si cambian los parámetros
+                if (newState.scale_root !== undefined || newState.scale_type !== undefined) {
+                    this.state.scale_mask = HarmonyEngine.getScaleMask(this.state.scale_root, this.state.scale_type);
+                }
 
                 if (newState.active_mask !== undefined && newState.active_mask !== prevMask) {
                     if (this.state.status === 'active' && this.state.active_mask > 0) {
@@ -227,19 +284,16 @@
                     }
                 }
                 
-                localStorage.setItem('modulus_state_v2', JSON.stringify({ 
-                    history: this.state.history,
-                    sensitivity: this.state.sensitivity
+                localStorage.setItem('modulus_state_v3', JSON.stringify({ 
+                    history: this.state.history, sens_offset: this.state.sens_offset,
+                    scale_root: this.state.scale_root, scale_type: this.state.scale_type
                 }));
                 this.notify();
             }
 
             clearHistory() {
                 this.state.history = [];
-                localStorage.setItem('modulus_state_v2', JSON.stringify({ 
-                    history: [], sensitivity: this.state.sensitivity 
-                }));
-                this.notify();
+                this.update({});
             }
 
             subscribe(cb) { this.listeners.push(cb); this.notify(); }
@@ -250,7 +304,7 @@
         }
 
         // ==========================================
-        // 3. MÓDULO DE PERCEPCIÓN ACÚSTICA (CON UMBRAL DE RUIDO)
+        // 3. MÓDULO ACÚSTICO: AUTO-CALIBRACIÓN VECTOR 3
         // ==========================================
         class AudioEngine {
             constructor(stateManager) {
@@ -258,14 +312,12 @@
                 this.audioCtx = null; this.analyser = null;
                 this.dataArray = null; this.stream = null;
                 this.animationId = null;
+                this.baseNoiseFloor = -60; // Valor seguro predeterminado
             }
 
-            async start() {
+            async startAndCalibrate() {
                 try {
-                    const constraints = {
-                        audio: { echoCancellation: false, autoGainControl: false, noiseSuppression: false, channelCount: 1 }
-                    };
-                    
+                    const constraints = { audio: { echoCancellation: false, autoGainControl: false, noiseSuppression: false, channelCount: 1 } };
                     this.stream = await navigator.mediaDevices.getUserMedia(constraints);
                     this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                     await this.audioCtx.resume();
@@ -274,17 +326,35 @@
                     this.analyser = this.audioCtx.createAnalyser();
                     this.analyser.fftSize = 8192;
                     this.analyser.smoothingTimeConstant = 0.6;
-                    
                     source.connect(this.analyser);
                     this.dataArray = new Float32Array(this.analyser.frequencyBinCount);
                     
-                    this.stateManager.update({ status: 'active' });
-                    this.processFrame();
-                    return true;
+                    this.stateManager.update({ status: 'calibrating' });
+
+                    // Fase de Calibración Matemática de 2 segundos
+                    let maxNoise = -Infinity;
+                    const endTime = Date.now() + 2000;
+                    
+                    return new Promise((resolve) => {
+                        const calibrateTick = () => {
+                            this.analyser.getFloatFrequencyData(this.dataArray);
+                            for(let i=0; i<this.dataArray.length; i++) {
+                                if (this.dataArray[i] > maxNoise && this.dataArray[i] < 0) maxNoise = this.dataArray[i];
+                            }
+                            if (Date.now() < endTime) {
+                                requestAnimationFrame(calibrateTick);
+                            } else {
+                                // Establecer piso de ruido limitando extremos (entre -80 y -30)
+                                this.baseNoiseFloor = Math.max(-80, Math.min(maxNoise + 10, -30));
+                                this.stateManager.update({ status: 'active' });
+                                this.processFrame();
+                                resolve(true);
+                            }
+                        };
+                        calibrateTick();
+                    });
                 } catch (err) {
-                    console.error("Audio error:", err);
-                    alert("No se pudo acceder al hardware de audio crudo.");
-                    return false;
+                    console.error(err); alert("No se pudo acceder al hardware de audio crudo."); return false;
                 }
             }
 
@@ -297,7 +367,9 @@
                 const mask = HarmonyEngine.createPitchClassSet(rawPitches);
                 
                 const tension = HarmonyEngine.evaluateTension(rawPitches);
-                const path = HarmonyEngine.suggestPath(mask);
+                
+                // Vector 2: Pathfinding con conocimiento de escala
+                const path = HarmonyEngine.suggestPath(mask, this.stateManager.state.scale_mask);
 
                 this.stateManager.update({
                     active_mask: mask, notes_array: rawPitches, notes_detail: details,
@@ -312,24 +384,15 @@
                 const binCount = this.analyser.frequencyBinCount;
                 const sampleRate = this.audioCtx.sampleRate;
                 
-                let maxAmp = -Infinity;
-                for (let i = 0; i < binCount; i++) {
-                    if (this.dataArray[i] > maxAmp) maxAmp = this.dataArray[i];
-                }
+                // Aplicar compensación del usuario al piso de ruido calculado
+                const offset = this.stateManager.state.sens_offset; 
+                const currentNoiseFloor = this.baseNoiseFloor - offset;
 
-                // Cálculo de Piso de Ruido (Noise Floor) basado en Sensibilidad [1 a 100]
-                // 100 = -90dB (Hipersensible, capta todo). 1 = -30dB (Sordo, requiere sonido fuerte/cercano).
-                const sens = this.stateManager.state.sensitivity;
-                const noiseFloor = -30 - (sens * 0.6); 
-
-                if (maxAmp < noiseFloor) return [];
-
-                const dynamicThreshold = maxAmp - 30; // Solo nodos a menos de 30dB del pico dominante
                 let detected = [];
 
                 for (let i = 2; i < binCount - 2; i++) {
                     const amp = this.dataArray[i];
-                    if (amp > noiseFloor && amp > dynamicThreshold && amp > this.dataArray[i-1] && amp > this.dataArray[i+1]) {
+                    if (amp > currentNoiseFloor && amp > this.dataArray[i-1] && amp > this.dataArray[i+1]) {
                         const freq = i * (sampleRate / (binCount * 2));
                         if (freq < 50 || freq > 3000) continue; 
                         
@@ -343,11 +406,11 @@
 
                 const map = new Map();
                 for (const d of detected) {
-                    if (!map.has(d.pitch) || d.midi < map.get(d.pitch).midi) {
+                    // Mantener el armónico con mayor amplitud para la misma nota
+                    if (!map.has(d.pitch) || map.get(d.pitch).amp < d.amp) {
                         map.set(d.pitch, d);
                     }
                 }
-                
                 return Array.from(map.values()).sort((a, b) => a.midi - b.midi);
             }
 
@@ -376,7 +439,7 @@
         }
 
         // ==========================================
-        // 4. PROYECTOR VISUAL (HIGH-DPI SISTEMA SOLAR)
+        // 4. PROYECTOR VISUAL (FILTRADO DIATÓNICO)
         // ==========================================
         class Renderer {
             constructor(canvasId, stateManager) {
@@ -397,7 +460,8 @@
                 this.draw(state);
             }
 
-            drawNode(n, x, y, size, col, isDark, blur, stroke) {
+            drawNode(n, x, y, size, col, isDark, blur, stroke, alpha = 1) {
+                this.ctx.globalAlpha = alpha;
                 this.ctx.beginPath(); this.ctx.arc(x, y, size, 0, Math.PI * 2);
                 this.ctx.fillStyle = col; this.ctx.shadowBlur = blur; this.ctx.shadowColor = col; this.ctx.fill();
                 this.ctx.lineWidth = 2; this.ctx.strokeStyle = stroke; this.ctx.stroke();
@@ -405,13 +469,14 @@
                 this.ctx.font = `bold ${size * 0.55}px monospace`; 
                 this.ctx.textAlign = 'center'; this.ctx.textBaseline = 'middle';
                 this.ctx.shadowBlur = 0; this.ctx.fillText(n, x, y);
+                this.ctx.globalAlpha = 1; // Reset
             }
 
             draw(state) {
                 const w = window.innerWidth, h = window.innerHeight;
                 this.ctx.clearRect(0, 0, w, h);
                 
-                const { active_mask, notes_detail, color, suggestion } = state;
+                const { active_mask, notes_detail, color, suggestion, scale_mask } = state;
                 const cx = w / 2, cy = h / 2;
                 const dim = Math.min(w, h);
                 
@@ -431,7 +496,10 @@
                 if (active_mask === 0 || notes_detail.length === 0) {
                     for(let i=0; i<12; i++) {
                         const a = (i * Math.PI*2)/12 - Math.PI/2;
-                        this.drawNode(noteNames[i], cx+Math.cos(a)*r3, cy+Math.sin(a)*r3, 14, '#0a0a0c', false, 0, '#222');
+                        // Vector 1: Filtrado visual en silencio absoluto
+                        const isDiatonic = (scale_mask & (1 << i)) !== 0;
+                        const alpha = isDiatonic ? 1 : 0.1; 
+                        this.drawNode(noteNames[i], cx+Math.cos(a)*r3, cy+Math.sin(a)*r3, 14, '#0a0a0c', false, 0, '#222', alpha);
                     }
                     return;
                 }
@@ -452,7 +520,7 @@
                     }
                 }
 
-                const dist = (arr, r, size, col, dark, blur, stroke, link) => {
+                const dist = (arr, r, size, col, dark, blur, stroke, link, checkScale = false) => {
                     const cnt = arr.length;
                     arr.forEach((n, i) => {
                         const a = (i * Math.PI*2)/cnt - Math.PI/2;
@@ -462,18 +530,23 @@
                             this.ctx.strokeStyle = `rgba(${color.r},${color.g},${color.b},0.4)`; 
                             this.ctx.lineWidth = 2; this.ctx.stroke();
                         }
-                        this.drawNode(n.name, nx, ny, size, col, dark, blur, stroke);
+                        // Filtrado Diatónico visual para espacio exterior
+                        let alpha = 1;
+                        if (checkScale) {
+                            alpha = (scale_mask & (1 << n.pitch)) !== 0 ? 1 : 0.05;
+                        }
+                        this.drawNode(n.name, nx, ny, size, col, dark, blur, stroke, alpha);
                     });
                 };
 
-                dist(planets, r1, 26, rgb, true, 15, '#fff', true);
-                dist(moons, r2, 18, 'rgba(255,255,255,0.1)', false, 0, '#666', false);
-                dist(space, r3, 12, '#0a0a0c', false, 0, '#222', false);
+                dist(planets, r1, 26, rgb, true, 15, '#fff', true, false);
+                dist(moons, r2, 18, 'rgba(255,255,255,0.1)', false, 0, '#666', false, false);
+                dist(space, r3, 12, '#0a0a0c', false, 0, '#222', false, true); // Aplica checkScale a Órbita 3
             }
         }
 
         // ==========================================
-        // 5. INICIALIZACIÓN E INTERFACES
+        // 5. EVENTOS E INTERFAZ UI
         // ==========================================
         const stateManager = new StateManager();
         const audioEngine = new AudioEngine(stateManager);
@@ -484,20 +557,32 @@
             start: document.getElementById('start-btn'), menu: document.getElementById('menu-btn'),
             close: document.getElementById('close-btn'), sidebar: document.getElementById('sidebar'),
             pause: document.getElementById('pause-btn'), stop: document.getElementById('stop-btn'),
-            clear: document.getElementById('clear-btn'),
-            sensSlider: document.getElementById('sens-slider'), sensVal: document.getElementById('sens-val')
+            clear: document.getElementById('clear-btn'), calibMsg: document.getElementById('calibration-msg'),
+            sensSlider: document.getElementById('sens-slider'), sensVal: document.getElementById('sens-val'),
+            scaleRoot: document.getElementById('scale-root'), scaleType: document.getElementById('scale-type')
         };
 
-        // Binding de Configuración de Sensibilidad
-        ui.sensSlider.value = stateManager.state.sensitivity;
-        ui.sensVal.textContent = stateManager.state.sensitivity + '%';
+        // Enlazar Configuración
+        ui.sensSlider.value = stateManager.state.sens_offset;
+        ui.sensVal.textContent = stateManager.state.sens_offset + ' dB';
+        ui.scaleRoot.value = stateManager.state.scale_root;
+        ui.scaleType.value = stateManager.state.scale_type;
 
         ui.sensSlider.addEventListener('input', (e) => {
             const val = parseInt(e.target.value);
-            ui.sensVal.textContent = val + '%';
-            stateManager.update({ sensitivity: val });
+            ui.sensVal.textContent = (val > 0 ? '+' : '') + val + ' dB';
+            stateManager.update({ sens_offset: val });
         });
 
+        const updateScale = () => {
+            stateManager.update({ 
+                scale_root: parseInt(ui.scaleRoot.value), scale_type: ui.scaleType.value 
+            });
+        };
+        ui.scaleRoot.addEventListener('change', updateScale);
+        ui.scaleType.addEventListener('change', updateScale);
+
+        // Enlazar Botones
         ui.menu.onclick = () => ui.sidebar.classList.add('active');
         ui.close.onclick = () => ui.sidebar.classList.remove('active');
 
@@ -514,6 +599,7 @@
             ui.pause.textContent = "Pausar Detección"; ui.pause.style.backgroundColor = "var(--accent)";
             ui.sidebar.classList.remove('active');
             ui.overlay.style.display = 'flex';
+            ui.calibMsg.style.display = 'none';
         };
 
         ui.clear.onclick = () => {
@@ -525,16 +611,19 @@
             const hist = s.history.length ? s.history.map(h => h.name).join(' ➔ ') : 'Memoria vacía';
             const notes = s.notes_detail.map(n => n.name).join(', ') || '[]';
             const sug = s.suggestion ? `<span style="color: #fff">${s.suggestion.name}</span>` : 'Ninguna';
-            const statColor = s.status === 'active' ? '#0f0' : (s.status === 'paused' ? '#fa0' : '#888');
+            let statColor = '#888';
+            if (s.status === 'active') statColor = '#0f0';
+            if (s.status === 'paused') statColor = '#fa0';
+            if (s.status === 'calibrating') statColor = '#f0f';
 
             ui.panel.innerHTML = `
                 <div style="color: ${statColor}; font-weight: bold; font-size: 14px; margin-bottom: 10px;">
                     ESTADO: ${s.status.toUpperCase()}
                 </div>
-                Nodos: ${notes}<br>
+                Escala Activa: ${noteNames[s.scale_root]} ${s.scale_type}<br>
+                Nodos Activos: ${notes}<br>
                 Tensión: ${s.tension_level.toFixed(2)}<br>
-                Color: <span style="color: rgb(${s.color.r},${s.color.g},${s.color.b})">${s.description}</span><br>
-                Path: ${sug}
+                Pathfinding: ${sug}
                 <div class="history-track">
                     <strong>Matriz Histórica:</strong><br>${hist}
                 </div>
@@ -542,13 +631,15 @@
         });
 
         ui.start.onclick = async () => {
-            ui.start.textContent = "CONECTANDO DSP...";
-            ui.start.disabled = true;
-            if (await audioEngine.start()) {
+            ui.start.style.display = 'none';
+            ui.calibMsg.style.display = 'block';
+            
+            if (await audioEngine.startAndCalibrate()) {
                 ui.overlay.style.display = 'none';
             }
-            ui.start.textContent = "INICIAR MOTOR";
-            ui.start.disabled = false;
+            
+            ui.start.style.display = 'block';
+            ui.calibMsg.style.display = 'none';
         };
 
         if ('serviceWorker' in navigator) {
