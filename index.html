@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Modulo12</title>
+    <title>Modulo12 - Captura y Perfilado Acústico</title>
     
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#050508">
@@ -31,7 +31,7 @@
 
         #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 5, 8, 0.98); display: flex; justify-content: center; align-items: center; z-index: 20; flex-direction: column; }
         
-        button.primary-btn { background-color: var(--accent); color: #000; border: none; padding: 15px 40px; font-size: 18px; font-weight: bold; cursor: pointer; border-radius: 4px; box-shadow: 0 0 20px rgba(0, 255, 0, 0.3); transition: all 0.2s ease; font-family: monospace; letter-spacing: 1px; }
+        button.primary-btn { background-color: var(--accent); color: #000; border: none; padding: 15px 40px; font-size: 18px; font-weight: bold; cursor: pointer; border-radius: 4px; box-shadow: 0 0 20px rgba(0, 255, 0, 0.3); transition: all 0.2s ease; font-family: monospace; letter-spacing: 1px; margin-top: 15px; }
         button.primary-btn:hover { background-color: var(--accent-hover); transform: scale(1.02); }
         
         .menu-action-btn { padding: 12px; font-size: 14px; width: 100%; margin-bottom: 8px; text-align: center; font-family: monospace; border-radius: 4px; border: none; cursor: pointer; transition: all 0.2s; }
@@ -52,7 +52,7 @@
         
         .config-group { margin-top: 15px; border-top: 1px solid #222; padding-top: 15px; }
         .config-label { font-size: 12px; color: #aaa; margin-bottom: 8px; display: flex; justify-content: space-between; }
-        select.menu-select { background: #111; color: #fff; border: 1px solid #333; padding: 8px; border-radius: 4px; font-family: monospace; width: 100%; outline: none; margin-bottom: 8px; transition: border-color 0.2s; }
+        select.menu-select { background: #111; color: #fff; border: 1px solid #333; padding: 10px; border-radius: 4px; font-family: monospace; width: 100%; outline: none; margin-bottom: 8px; transition: border-color 0.2s; font-size: 14px; }
         select.menu-select:focus { border-color: var(--accent); }
         input[type=range] { width: 100%; -webkit-appearance: none; background: transparent; margin: 8px 0; }
         input[type=range]:focus { outline: none; }
@@ -77,12 +77,15 @@
         .session-event { display: inline-block; background: #111; border: 1px solid #222; padding: 6px 12px; margin: 4px; border-radius: 6px; color: #fff; font-size: 13px; }
         .session-event .time { color: #666; font-size: 10px; display: block; margin-bottom: 4px; }
 
-        /* Asistente de Perfilado */
+        /* Asistente de Perfilado Multi-Golpe */
         #profiler-modal { z-index: 10000; }
-        #profiler-box { background: #0a0a0e; border: 1px solid #00ffcc; border-radius: 8px; padding: 30px; text-align: center; box-shadow: 0 0 30px rgba(0, 255, 204, 0.2); max-width: 400px; width: 90%; }
-        .profiler-target { font-size: 24px; color: #00ffcc; font-weight: bold; margin: 20px 0; letter-spacing: 2px; }
-        .profiler-bar-bg { background: #222; height: 10px; border-radius: 5px; overflow: hidden; margin-bottom: 20px; }
-        #profiler-bar-fill { background: #00ffcc; height: 100%; width: 0%; transition: width 0.1s; }
+        #profiler-box { background: #0a0a0e; border: 1px solid #00ffcc; border-radius: 8px; padding: 30px; text-align: center; box-shadow: 0 0 40px rgba(0, 255, 204, 0.15); max-width: 450px; width: 90%; }
+        .profiler-target { font-size: 28px; color: #00ffcc; font-weight: bold; margin: 15px 0; letter-spacing: 1px; }
+        .profiler-strikes { display: flex; justify-content: center; gap: 15px; margin-bottom: 25px; }
+        .strike-dot { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #333; background: #111; transition: all 0.2s; }
+        .strike-dot.active { background: #00ffcc; border-color: #00ffcc; box-shadow: 0 0 15px #00ffcc; }
+        .profiler-bar-bg { background: #222; height: 4px; border-radius: 2px; overflow: hidden; margin-bottom: 20px; width: 100%; }
+        #profiler-bar-fill { background: #00ffcc; height: 100%; width: 0%; transition: width 0.3s; }
     </style>
 </head>
 <body>
@@ -107,16 +110,6 @@
                 <button id="stop-btn" class="menu-action-btn btn-stop" style="flex:1;">Finalizar</button>
                 <button id="clear-btn" class="menu-action-btn btn-clear" style="flex:1;">Limpiar</button>
             </div>
-        </div>
-
-        <div class="config-group">
-            <div class="config-label"><span style="color:#00ffcc;">Perfil Acústico (Fuente)</span></div>
-            <select id="acoustic-profile" class="menu-select">
-                <option value="piano">Piano Acústico / Teclado</option>
-                <option value="guitar">Guitarra Acústica / Eléctrica</option>
-                <option value="voice">Voz Humana</option>
-                <option value="synth">Genérico / Sintetizador</option>
-            </select>
         </div>
 
         <div class="config-group">
@@ -177,17 +170,37 @@
 
     <div id="profiler-modal" class="modal-bg">
         <div id="profiler-box">
-            <h3 style="margin-top:0; color:#fff;">Asistente de Perfilado Acústico</h3>
-            <p style="color:#aaa; font-size:12px; margin-bottom:20px;" id="profiler-desc">Calibrando el motor para la acústica y el rango de tu instrumento.</p>
-            <div class="profiler-target" id="profiler-target-note">Toca Do Grave (C2)</div>
+            <h3 style="margin-top:0; color:#fff;">Perfilado Acústico del Instrumento</h3>
+            <p style="color:#aaa; font-size:13px; margin-bottom:15px;" id="profiler-desc">Toca la nota solicitada 3 veces consecutivas para mapear los armónicos en tu entorno.</p>
+            
+            <div class="profiler-target" id="profiler-target-note">C2</div>
+            
+            <div class="profiler-strikes">
+                <div class="strike-dot" id="sd-1"></div>
+                <div class="strike-dot" id="sd-2"></div>
+                <div class="strike-dot" id="sd-3"></div>
+            </div>
+
             <div class="profiler-bar-bg"><div id="profiler-bar-fill"></div></div>
-            <button id="profiler-skip-btn" class="menu-action-btn" style="background: transparent; color: #666; border: 1px solid #444; width: auto; margin-top: 10px;">Forzar Siguiente / Omitir</button>
+            <button id="profiler-skip-btn" class="menu-action-btn" style="background: transparent; color: #666; border: 1px solid #444; width: auto;">Omitir y Forzar Inicio</button>
         </div>
     </div>
 
     <div id="overlay">
-        <h1 style="margin-bottom: 30px; color: var(--accent); letter-spacing: 4px; font-size: 2.5rem; text-shadow: 0 0 20px rgba(0,255,0,0.3);">Modulo12</h1>
-        <button id="start-btn" class="primary-btn">INICIAR SESIÓN</button>
+        <h1 style="margin-bottom: 10px; color: var(--accent); letter-spacing: 4px; font-size: 3rem; text-shadow: 0 0 20px rgba(0,255,0,0.3);">Modulo12</h1>
+        <p style="color: #888; margin-bottom: 40px; font-size: 14px;">Motor de Captura Transmodal Z12</p>
+        
+        <div style="width: 80%; max-width: 320px; text-align: left;">
+            <label style="color: #00ffcc; font-size: 12px; margin-bottom: 8px; display: block;">1. Selecciona tu instrumento base:</label>
+            <select id="pre-profile" class="menu-select" style="margin-bottom: 25px; padding: 12px; font-size: 16px; background: #0a0a0e; border-color: #333;">
+                <option value="piano">Piano Acústico / Teclado (88T)</option>
+                <option value="guitar">Guitarra Acústica / Eléctrica</option>
+                <option value="voice">Voz Humana</option>
+                <option value="synth">Genérico / Sintetizador (Sin Mapeo)</option>
+            </select>
+        </div>
+
+        <button id="start-btn" class="primary-btn">INICIAR CALIBRACIÓN</button>
         <div id="calibration-msg" style="display:none; color:#fa0; margin-top:20px; font-size:14px; text-align:center; letter-spacing: 1px;">MIDIENDO RUIDO AMBIENTAL<br><span style="font-size:11px; color:#aaa; letter-spacing: 0;">(Silencio absoluto por 2 seg)</span></div>
     </div>
 
@@ -252,10 +265,11 @@
         // ==========================================
         // 2. MATRIZ DE PERFILES Y ESTADO
         // ==========================================
+        // Definición de rutinas de calibración por instrumento
         const PROFILES = {
-            piano:  { tol: 40, minFreq: 27, maxFreq: 4186, targets: [{n:"Do Grave (C2)", m:36}, {n:"Do Agudo (C5)", m:72}] },
-            guitar: { tol: 45, minFreq: 80, maxFreq: 1200, targets: [{n:"6ta Cuerda Aire (E2)", m:40}, {n:"1ra Cuerda Aire (E4)", m:64}] },
-            voice:  { tol: 60, minFreq: 80, maxFreq: 1200, targets: [{n:"Sostén una nota grave...", m:"low"}, {n:"Sostén una nota aguda...", m:"high"}] },
+            piano:  { tol: 40, minFreq: 27, maxFreq: 4186, targets: [{n:"Do Grave (C2)", m:36}, {n:"Re Grave (D2)", m:38}, {n:"Do Central (C4)", m:60}, {n:"Do Agudo (C5)", m:72}] },
+            guitar: { tol: 45, minFreq: 80, maxFreq: 1200, targets: [{n:"6ta Cuerda Aire (E2)", m:40}, {n:"5ta Cuerda Aire (A2)", m:45}, {n:"1ra Cuerda Aire (E4)", m:64}] },
+            voice:  { tol: 60, minFreq: 80, maxFreq: 1200, targets: [{n:"Canta una nota grave", m:"low"}, {n:"Canta una nota aguda", m:"high"}] },
             synth:  { tol: 35, minFreq: 20, maxFreq: 5000, targets: [] } // Sin calibración guiada
         };
 
@@ -265,9 +279,9 @@
                     active_mask: 0, notes_array: [], notes_detail: [], tension_level: 0.0, color: {r: 34, g: 34, b: 34},
                     description: "Silencio", suggestion: null, sessions: [], current_session_id: null,
                     status: "standby", sens_offset: 0, view_mode: "radial", scale_root: 0, scale_type: "Cromática", scale_mask: 4095,
-                    acoustic_profile: "piano", profiler_step: 0
+                    acoustic_profile: "piano", profiler_step: 0, calibration_map: {}
                 };
-                const saved = localStorage.getItem('modulus_state_v11');
+                const saved = localStorage.getItem('modulus_state_v12');
                 this.state = saved ? { ...initial, ...JSON.parse(saved), active_mask: 0, status: 'standby', current_session_id: null, profiler_step: 0, scale_mask: HarmonyEngine.getScaleMask(JSON.parse(saved).scale_root||0, JSON.parse(saved).scale_type||"Cromática") } : initial;
                 this.listeners = [];
             }
@@ -282,9 +296,7 @@
                     const session = this.state.sessions.find(s => s.id === this.state.current_session_id);
                     if (session && session.events.length === 0) this.state.sessions = this.state.sessions.filter(s => s.id !== this.state.current_session_id);
                 }
-                this.state.current_session_id = null;
-                localStorage.setItem('modulus_state_v11', JSON.stringify({ sessions: this.state.sessions, sens_offset: this.state.sens_offset, view_mode: this.state.view_mode, scale_root: this.state.scale_root, scale_type: this.state.scale_type, acoustic_profile: this.state.acoustic_profile }));
-                this.notify();
+                this.state.current_session_id = null; this.save(); this.notify();
             }
             update(newState) {
                 const prevMask = this.state.active_mask; this.state = { ...this.state, ...newState };
@@ -307,10 +319,10 @@
                         }
                     }
                 }
-                localStorage.setItem('modulus_state_v11', JSON.stringify({ sessions: this.state.sessions, sens_offset: this.state.sens_offset, view_mode: this.state.view_mode, scale_root: this.state.scale_root, scale_type: this.state.scale_type, acoustic_profile: this.state.acoustic_profile }));
-                this.notify();
+                this.save(); this.notify();
             }
-            clearHistory() { this.state.sessions = []; this.state.current_session_id = null; localStorage.setItem('modulus_state_v11', JSON.stringify({ sessions: [] })); this.update({}); }
+            save() { localStorage.setItem('modulus_state_v12', JSON.stringify({ sessions: this.state.sessions, sens_offset: this.state.sens_offset, view_mode: this.state.view_mode, scale_root: this.state.scale_root, scale_type: this.state.scale_type, acoustic_profile: this.state.acoustic_profile, calibration_map: this.state.calibration_map })); }
+            clearHistory() { this.state.sessions = []; this.state.current_session_id = null; this.save(); this.update({}); }
             subscribe(cb) { this.listeners.push(cb); this.notify(); }
             notify() { const snap = JSON.parse(JSON.stringify(this.state)); this.listeners.forEach(cb => cb(snap)); }
         }
@@ -325,8 +337,8 @@
                 this.baseNoiseFloor = -60; this.ANALYSIS_FPS = 15; this.lastTime = 0;
                 this.mediaRecorder = null; this.audioChunks = []; this.isRecording = false;
                 
-                // Variables del Profiler
-                this.profilerProgress = 0;
+                // Variables del Asistente de Golpes (Strikes)
+                this.strikeCount = 0; this.isStriking = false; this.strikeData = [];
             }
             async startAndCalibrate() {
                 try {
@@ -353,11 +365,12 @@
                                 noiseSamples.sort((a,b)=>a-b);
                                 this.baseNoiseFloor = Math.max(-80, Math.min((noiseSamples[Math.floor(noiseSamples.length*0.85)]||-60) + 5, -30));
                                 
-                                // Determinar si entra a Fase 2 (Profiler) o directo a Active
+                                // ¿Entra a Fase 2 (Profiler 3-Strikes) o directo a Active?
                                 const profileDef = PROFILES[this.stateManager.state.acoustic_profile];
                                 if (profileDef && profileDef.targets.length > 0) {
                                     this.stateManager.update({ status: 'profiling', profiler_step: 0 });
                                     document.getElementById('profiler-modal').style.display = 'flex';
+                                    this.strikeCount = 0; this.strikeData = []; this.updateStrikeUI();
                                     this.runProfiler();
                                 } else {
                                     this.finishCalibration();
@@ -369,7 +382,7 @@
                 } catch(e) { return false; }
             }
 
-            // Asistente de Perfilado Interactivo
+            // Asistente Multi-Golpe (3 Strikes)
             runProfiler() {
                 if (this.stateManager.state.status !== 'profiling') return;
                 
@@ -386,36 +399,71 @@
                 document.getElementById('profiler-target-note').textContent = target.n;
                 
                 this.analyser.getFloatFrequencyData(this.dataArray);
-                const details = this.extractPitchesDynamic();
+                const limit = this.baseNoiseFloor + 15; // Umbral de golpe claro
                 
-                let isMatch = false;
-                if (details.length > 0) {
-                    const dominantMidi = details[0].midi;
-                    if (target.m === 'low') { isMatch = dominantMidi < 60; }
-                    else if (target.m === 'high') { isMatch = dominantMidi > 60; }
-                    else { isMatch = Math.abs(dominantMidi - target.m) <= 1; }
+                let isHit = false;
+                let currentPeak = null;
+
+                // Buscar pico principal crudo
+                let fMax = -Infinity; let maxBin = 0;
+                for(let i=2; i<this.analyser.frequencyBinCount-2; i++) {
+                    if (this.dataArray[i] > fMax) { fMax = this.dataArray[i]; maxBin = i; }
                 }
 
-                if (isMatch) {
-                    this.profilerProgress += 5; // Llenado de barra
-                } else {
-                    this.profilerProgress = Math.max(0, this.profilerProgress - 2);
+                if (fMax > limit) {
+                    const freq = maxBin * (this.audioCtx.sampleRate / (this.analyser.frequencyBinCount * 2));
+                    const midi = Math.round(12 * Math.log2(freq/440) + 69);
+                    currentPeak = midi;
+
+                    if (target.m === 'low') { isHit = midi < 60; }
+                    else if (target.m === 'high') { isHit = midi > 60; }
+                    else { isHit = Math.abs(midi - target.m) <= 12; } // Tolerancia de octava al detectar el golpe
                 }
 
-                document.getElementById('profiler-bar-fill').style.width = `${this.profilerProgress}%`;
+                // Lógica de 3 Strikes (Ataque y Liberación)
+                if (isHit && !this.isStriking) {
+                    this.isStriking = true;
+                    this.strikeCount++;
+                    if(currentPeak) this.strikeData.push(currentPeak);
+                    this.updateStrikeUI();
+                    
+                    if (this.strikeCount >= 3) {
+                        // Promediar y guardar en mapa de calibración
+                        // (En el futuro, esto se usa para ajustar los filtros dinámicos)
+                        const calibMap = this.stateManager.state.calibration_map;
+                        calibMap[target.n] = this.strikeData;
+                        this.stateManager.update({ calibration_map: calibMap });
 
-                if (this.profilerProgress >= 100) {
-                    this.profilerProgress = 0;
-                    this.stateManager.update({ profiler_step: step + 1 });
-                    // Pequeña pausa antes de la siguiente nota
-                    setTimeout(() => this.runProfiler(), 1000);
-                } else {
-                    requestAnimationFrame(() => this.runProfiler());
+                        // Siguiente nota
+                        setTimeout(() => {
+                            this.strikeCount = 0; this.strikeData = []; this.updateStrikeUI();
+                            this.stateManager.update({ profiler_step: step + 1 });
+                            this.runProfiler();
+                        }, 800);
+                        return;
+                    }
+                    setTimeout(() => { this.isStriking = false; }, 400); // Deadzone entre golpes
+                } else if (!isHit && fMax < this.baseNoiseFloor + 5) {
+                    this.isStriking = false; // El sonido bajó, listo para siguiente golpe
+                }
+
+                // Actualizar barra de progreso visual general
+                const totalSteps = profileDef.targets.length * 3;
+                const currentProgress = (step * 3) + this.strikeCount;
+                document.getElementById('profiler-bar-fill').style.width = `${(currentProgress / totalSteps) * 100}%`;
+
+                requestAnimationFrame(() => this.runProfiler());
+            }
+
+            updateStrikeUI() {
+                for(let i=1; i<=3; i++) {
+                    const dot = document.getElementById(`sd-${i}`);
+                    if(i <= this.strikeCount) dot.classList.add('active');
+                    else dot.classList.remove('active');
                 }
             }
 
             forceProfilerSkip() {
-                this.profilerProgress = 0;
                 document.getElementById('profiler-modal').style.display = 'none';
                 this.finishCalibration();
             }
@@ -438,51 +486,77 @@
                 this.animationId = requestAnimationFrame(() => this.processFrame());
             }
             
-            // Extracción Parabólica con Límites Físicos del Instrumento
+            // Extracción: Interpolación Parabólica + DESCENSO SUB-ARMÓNICO (Corrección de Octavas Bajas)
             extractPitchesDynamic() {
                 const limit = this.baseNoiseFloor - this.stateManager.state.sens_offset;
                 const binCount = this.analyser.frequencyBinCount;
                 const sampleRate = this.audioCtx.sampleRate;
                 const scaleRoot = this.stateManager.state.scale_root; 
-                
-                // Aplicar Filtros del Perfil Acústico (Vector Matemático 2)
                 const profileDef = PROFILES[this.stateManager.state.acoustic_profile] || PROFILES.synth;
-                const maxDeviationCents = profileDef.tol;
-                const minF = profileDef.minFreq;
-                const maxF = profileDef.maxFreq;
-
-                let det = [];
+                
+                let rawPeaks = [];
 
                 for(let i=2; i<binCount-2; i++) {
                     const beta = this.dataArray[i];
                     if(beta > limit && beta > this.dataArray[i-1] && beta > this.dataArray[i+1]) {
-                        
-                        // Vector Matemático 1: Interpolación Parabólica Sub-Hercio
-                        const alpha = this.dataArray[i-1];
-                        const gamma = this.dataArray[i+1];
-                        let p = 0;
-                        const denominator = alpha - 2 * beta + gamma;
-                        if (denominator !== 0) p = 0.5 * (alpha - gamma) / denominator;
+                        // Interpolación Parabólica Sub-Hercio
+                        const alpha = this.dataArray[i-1]; const gamma = this.dataArray[i+1];
+                        let p = 0; const denom = alpha - 2 * beta + gamma;
+                        if (denom !== 0) p = 0.5 * (alpha - gamma) / denom;
                         
                         const freq = (i + p) * (sampleRate / (binCount * 2));
-                        
-                        // Ignorar si está fuera del rango físico del instrumento
-                        if(freq < minF || freq > maxF) continue;
+                        if(freq < profileDef.minFreq || freq > profileDef.maxFreq) continue;
                         
                         const midiExact = 12 * Math.log2(freq/440) + 69;
                         const midi = Math.round(midiExact);
                         
-                        // Filtrar armónicos inarmónicos (ej. cuerdas gruesas de piano)
-                        const centsDeviation = Math.abs(midiExact - midi) * 100;
-                        if (centsDeviation > maxDeviationCents) continue;
+                        if (Math.abs(midiExact - midi) * 100 > profileDef.tol) continue;
                         
-                        const pitch = ((midi%12)+12)%12;
-                        const oct = Math.floor(midi/12)-1;
-                        
-                        det.push({ pitch: pitch, octave: oct, midi: midi, amp: beta, name: `${HarmonyEngine.getNoteName(pitch, scaleRoot)}${oct}` });
+                        rawPeaks.push({ pitch: ((midi%12)+12)%12, octave: Math.floor(midi/12)-1, midi: midi, amp: beta, freq: freq });
                     }
                 }
-                const map = new Map(); for(const d of det) if(!map.has(d.pitch) || map.get(d.pitch).amp < d.amp) map.set(d.pitch, d);
+
+                // ALGORITMO DE DESCENSO SUB-ARMÓNICO (Identificar la C2 escondida bajo la C4)
+                let correctedPeaks = [];
+                const fundamentalLimit = limit - 10; // La fundamental verdadera suele ser más débil que el armónico
+
+                rawPeaks.forEach(peak => {
+                    let isHarmonic = false;
+                    let fundamentalMidi = peak.midi;
+
+                    // Si estamos en un piano/guitarra, revisar 1 o 2 octavas abajo
+                    if (this.stateManager.state.acoustic_profile === 'piano' || this.stateManager.state.acoustic_profile === 'guitar') {
+                        const expectedSub1Freq = peak.freq / 2; // Una octava abajo
+                        const expectedSub2Freq = peak.freq / 4; // Dos octavas abajo
+                        
+                        // Buscar en los picos crudos si existe energía cerca de f/2 o f/4
+                        const sub2Exists = rawPeaks.find(p => Math.abs(p.freq - expectedSub2Freq) < 5 && p.amp > fundamentalLimit);
+                        const sub1Exists = rawPeaks.find(p => Math.abs(p.freq - expectedSub1Freq) < 5 && p.amp > fundamentalLimit);
+
+                        if (sub2Exists) {
+                            fundamentalMidi = sub2Exists.midi;
+                            isHarmonic = true;
+                        } else if (sub1Exists) {
+                            fundamentalMidi = sub1Exists.midi;
+                            isHarmonic = true;
+                        }
+                    }
+
+                    if (!isHarmonic) {
+                        correctedPeaks.push(peak);
+                    } else {
+                        // Promover el sub-armónico a la lista oficial con la amplitud del pico alto
+                        const p = ((fundamentalMidi%12)+12)%12;
+                        const oct = Math.floor(fundamentalMidi/12)-1;
+                        correctedPeaks.push({ pitch: p, octave: oct, midi: fundamentalMidi, amp: peak.amp, freq: peak.freq });
+                    }
+                });
+
+                const map = new Map(); 
+                for(const d of correctedPeaks) {
+                    d.name = `${HarmonyEngine.getNoteName(d.pitch, scaleRoot)}${d.octave}`;
+                    if(!map.has(d.pitch) || map.get(d.pitch).amp < d.amp) map.set(d.pitch, d);
+                }
                 return Array.from(map.values()).sort((a,b)=>a.midi-b.midi);
             }
             
@@ -666,14 +740,14 @@
             closeMenu: document.getElementById('close-btn'), sidebar: document.getElementById('sidebar'), pause: document.getElementById('pause-btn'), stop: document.getElementById('stop-btn'),
             clear: document.getElementById('clear-btn'), calibMsg: document.getElementById('calibration-msg'), sensSlider: document.getElementById('sens-slider'), sensVal: document.getElementById('sens-val'),
             scaleRoot: document.getElementById('scale-root'), scaleType: document.getElementById('scale-type'), viewMode: document.getElementById('view-mode'), acousticProfile: document.getElementById('acoustic-profile'),
-            historyBtn: document.getElementById('history-btn'), sessionModal: document.getElementById('session-modal'), closeModal: document.getElementById('close-modal'), sessionContent: document.getElementById('session-content'),
+            preProfile: document.getElementById('pre-profile'), historyBtn: document.getElementById('history-btn'), sessionModal: document.getElementById('session-modal'), closeModal: document.getElementById('close-modal'), sessionContent: document.getElementById('session-content'),
             recBtn: document.getElementById('rec-btn'), metroBtn: document.getElementById('metro-btn'), bpmSlider: document.getElementById('bpm-slider'), bpmVal: document.getElementById('bpm-val'),
             profilerSkip: document.getElementById('profiler-skip-btn')
         };
 
         ui.sensSlider.value = stateManager.state.sens_offset; ui.sensVal.textContent = stateManager.state.sens_offset + ' dB';
         ui.scaleRoot.value = stateManager.state.scale_root; ui.scaleType.value = stateManager.state.scale_type; ui.viewMode.value = stateManager.state.view_mode;
-        ui.acousticProfile.value = stateManager.state.acoustic_profile;
+        ui.acousticProfile.value = stateManager.state.acoustic_profile; ui.preProfile.value = stateManager.state.acoustic_profile;
 
         ui.sensSlider.oninput = (e) => { const v = parseInt(e.target.value); ui.sensVal.textContent = (v>0?'+':'')+v+' dB'; stateManager.update({ sens_offset: v }); };
         ui.bpmSlider.oninput = (e) => { ui.bpmVal.textContent = e.target.value + ' BPM'; visualMetro.setBPM(e.target.value); };
@@ -749,9 +823,22 @@
         });
 
         ui.start.onclick = async () => {
-            ui.start.style.display = 'none'; ui.calibMsg.style.display = 'block';
-            if (await audioEngine.startAndCalibrate()) ui.overlay.style.display = 'none';
-            ui.start.style.display = 'block'; ui.calibMsg.style.display = 'none';
+            // Sincronizar el perfil pre-boot con el stateManager
+            const selectedProfile = ui.preProfile.value;
+            ui.acousticProfile.value = selectedProfile;
+            stateManager.update({ acoustic_profile: selectedProfile });
+
+            ui.start.style.display = 'none'; 
+            ui.preProfile.style.display = 'none'; // Ocultar selector
+            ui.calibMsg.style.display = 'block';
+            
+            if (await audioEngine.startAndCalibrate()) {
+                ui.overlay.style.display = 'none';
+            }
+            
+            ui.start.style.display = 'block'; 
+            ui.preProfile.style.display = 'block';
+            ui.calibMsg.style.display = 'none';
         };
 
         if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
