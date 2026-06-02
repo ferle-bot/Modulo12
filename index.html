@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Modulus (PWA) - Tonnetz Z12</title>
+    <title>Modulus (PWA) - Motor Local-First</title>
     
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#0a0a0c">
@@ -74,16 +74,23 @@
             background-color: #00cc00;
             transform: scale(1.05);
         }
+        .history-track {
+            color: #888;
+            font-size: 11px;
+            margin-top: 10px;
+            border-top: 1px solid #333;
+            padding-top: 10px;
+        }
     </style>
 </head>
 <body>
 
     <div id="overlay">
-        <h2 style="margin-bottom: 20px;">Modulus: Red Tonnetz</h2>
+        <h2 style="margin-bottom: 20px;">Modulus: Persistencia Z12</h2>
         <button id="start-btn">Inicializar Motor Acústico</button>
     </div>
 
-    <div id="debug-panel">Cargando Motor...</div>
+    <div id="debug-panel">Cargando Memoria...</div>
     <canvas id="harmonyCanvas"></canvas>
 
     <script>
@@ -96,10 +103,8 @@
         const createMask = (notes) => notes.reduce((m, n) => m | (1 << n), 0);
 
         for(let i=0; i<12; i++) {
-            // Tríadas
             Z12_DICTIONARY.push({ name: `${noteNames[i]} May`, mask: createMask([i, (i+4)%12, (i+7)%12]) });
             Z12_DICTIONARY.push({ name: `${noteNames[i]} min`, mask: createMask([i, (i+3)%12, (i+7)%12]) });
-            // Tétradas Funcionales
             Z12_DICTIONARY.push({ name: `${noteNames[i]}Maj7`, mask: createMask([i, (i+4)%12, (i+7)%12, (i+11)%12]) });
             Z12_DICTIONARY.push({ name: `${noteNames[i]}min7`, mask: createMask([i, (i+3)%12, (i+7)%12, (i+10)%12]) });
             Z12_DICTIONARY.push({ name: `${noteNames[i]}7`, mask: createMask([i, (i+4)%12, (i+7)%12, (i+10)%12]) });
@@ -162,28 +167,59 @@
                 "tension_level": 0.0,
                 "color": {"r": 34, "g": 34, "b": 34},
                 "description": "Silencio",
-                "suggestion": null
+                "suggestion": null,
+                "history": []
             }
         };
 
         // ==========================================
-        // 4. GESTOR DE ESTADO
+        // 4. GESTOR DE ESTADO CON PERSISTENCIA
         // ==========================================
         class StateManager {
             constructor(initialMatrix) {
-                this.state = JSON.parse(JSON.stringify(initialMatrix.current_state));
+                // Recuperar estado desde localStorage si existe (Local-First estricto)
+                const savedState = localStorage.getItem('modulus_z12_state');
+                if (savedState) {
+                    this.state = JSON.parse(savedState);
+                } else {
+                    this.state = JSON.parse(JSON.stringify(initialMatrix.current_state));
+                }
                 this.listeners = [];
             }
+
             updateState(newStateMatrix) {
                 if (this.state.active_mask !== newStateMatrix.active_mask) {
-                    this.state = { ...this.state, ...newStateMatrix };
+                    
+                    let currentHistory = this.state.history || [];
+                    
+                    // Solo registrar en el historial si es un acorde detectado (no silencio)
+                    if (newStateMatrix.active_mask > 0) {
+                        const chordDef = Z12_DICTIONARY.find(c => c.mask === newStateMatrix.active_mask);
+                        const chordName = chordDef ? chordDef.name : `[${newStateMatrix.notes_array.join(',')}]`;
+                        
+                        const lastEntry = currentHistory[currentHistory.length - 1];
+                        
+                        // Evitar registrar el mismo acorde consecutivamente
+                        if (!lastEntry || lastEntry.mask !== newStateMatrix.active_mask) {
+                            currentHistory.push({ mask: newStateMatrix.active_mask, name: chordName });
+                            if (currentHistory.length > 5) currentHistory.shift(); // Mantener buffer de 5
+                        }
+                    }
+
+                    this.state = { ...this.state, ...newStateMatrix, history: currentHistory };
+                    
+                    // Persistir matriz en texto plano al almacenamiento local
+                    localStorage.setItem('modulus_z12_state', JSON.stringify(this.state));
+                    
                     this.notify();
                 }
             }
+
             subscribe(callback) {
                 this.listeners.push(callback);
                 this.notify(); 
             }
+
             notify() {
                 const stateSnapshot = JSON.parse(JSON.stringify(this.state));
                 this.listeners.forEach(listener => listener(stateSnapshot));
@@ -249,13 +285,11 @@
                 const sampleRate = this.audioContext.sampleRate;
                 const binCount = this.analyser.frequencyBinCount;
                 
-                // Conversión O(N) a escala lineal para el cálculo matemático
                 const linearData = new Float32Array(binCount);
                 for(let i = 0; i < binCount; i++) {
                     linearData[i] = Math.pow(10, this.dataArray[i] / 20);
                 }
 
-                // HPS (Harmonic Product Spectrum) de Orden 3
                 const HPS_ORDER = 3; 
                 const hpsLength = Math.floor(binCount / HPS_ORDER);
                 const hps = new Float32Array(hpsLength);
@@ -269,7 +303,7 @@
 
                 let activePitchClasses = new Set();
                 const ABSOLUTE_NOISE_FLOOR = Math.pow(Math.pow(10, -50 / 20), HPS_ORDER); 
-                const RELATIVE_THRESHOLD = 0.15; // 15% del pico armónico máximo actual
+                const RELATIVE_THRESHOLD = 0.15;
 
                 if (maxHps > ABSOLUTE_NOISE_FLOOR) {
                     for (let i = 0; i < hps.length; i++) {
@@ -306,7 +340,6 @@
                 this.render(this.stateManager.state);
             }
 
-            // Mapeo espacial: X = Quintas (7), Y = Terceras Mayores (4)
             getCoords(index, centerX, centerY, scale) {
                 const tonnetzMap = {
                     5:  {x: -1,   y: 0},     // F
@@ -323,12 +356,12 @@
                     1:  {x: 3.5,  y: 1}      // Db
                 };
                 
-                const mapX = tonnetzMap[index].x - 1.2; // Centrado horizontal
+                const mapX = tonnetzMap[index].x - 1.2; 
                 const mapY = tonnetzMap[index].y;
 
                 return {
                     x: centerX + (mapX * scale),
-                    y: centerY - (mapY * scale * 0.866) // Ajuste hexagonal
+                    y: centerY - (mapY * scale * 0.866) 
                 };
             }
 
@@ -340,12 +373,11 @@
                 const centerY = this.canvas.height / 2;
                 const scale = Math.min(this.canvas.width, this.canvas.height) * 0.25;
 
-                // 1. DIBUJAR MALLA BASE (Geometría Tonnetz Matemática)
+                // Malla Base
                 this.ctx.strokeStyle = '#1a1a1c';
                 this.ctx.lineWidth = 2;
                 for (let i = 0; i < 12; i++) {
                     const pos1 = this.getCoords(i, centerX, centerY, scale);
-                    // Dibujar aristas a los intervalos topológicos cercanos (Quinta, 3ra Mayor, 3ra Menor)
                     [ (i+7)%12, (i+4)%12, (i+3)%12 ].forEach(target => {
                         const pos2 = this.getCoords(target, centerX, centerY, scale);
                         this.ctx.beginPath();
@@ -355,7 +387,7 @@
                     });
                 }
 
-                // 2. DIBUJAR RUTA SUGERIDA (PATHFINDING)
+                // Ruta Sugerida
                 if (suggestion && suggestion.mask > 0) {
                     this.ctx.beginPath();
                     let first = true;
@@ -374,7 +406,7 @@
                     this.ctx.setLineDash([]);
                 }
 
-                // 3. DIBUJAR POLÍGONO DEL ACORDE ACTUAL
+                // Acorde Actual
                 if (active_mask > 0) {
                     this.ctx.beginPath();
                     let firstNode = true;
@@ -393,7 +425,7 @@
                     this.ctx.fill();
                 }
 
-                // 4. DIBUJAR NODOS
+                // Nodos
                 for (let i = 0; i < 12; i++) {
                     const pos = this.getCoords(i, centerX, centerY, scale);
                     const isActive = (active_mask & (1 << i)) !== 0;
@@ -442,12 +474,20 @@
 
         stateManager.subscribe((state) => {
             const sugText = state.suggestion ? `<span style="color: #fff">Ruta Sugerida: ${state.suggestion.name}</span>` : 'Ninguna';
+            const historyText = state.history && state.history.length > 0 
+                ? state.history.map(h => h.name).join(' ➔ ') 
+                : 'Esperando acordes...';
+
             debugPanel.innerHTML = `
                 <strong style="color: #0f0;">MODULUS: RED TONNETZ</strong><br><br>
                 Nodos: [${state.notes_array.join(', ')}]<br>
                 Tensión: ${state.tension_level.toFixed(1)}<br>
                 Estado: <span style="color: rgb(${state.color.r},${state.color.g},${state.color.b})">${state.description}</span><br><br>
                 ${sugText}
+                <div class="history-track">
+                    <strong>Historial Sesión:</strong><br>
+                    ${historyText}
+                </div>
             `;
         });
 
@@ -458,7 +498,6 @@
             overlay.style.display = 'none';
         });
 
-        // Registro de Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
