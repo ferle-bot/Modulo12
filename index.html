@@ -17,7 +17,7 @@
         
         #debug-panel { position: absolute; top: 20px; left: 20px; background: rgba(5, 5, 8, 0.9); padding: 15px; border-radius: 8px; pointer-events: none; border: 1px solid #222; z-index: 10; min-width: 250px; backdrop-filter: blur(4px); }
         
-        /* Indicadores HUD (Metrónomo y Grabación) */
+        /* Indicadores HUD */
         #hud-indicators { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 10; }
         .led-indicator { width: 16px; height: 16px; border-radius: 50%; background: #222; border: 2px solid #111; box-shadow: 0 0 5px #000 inset; transition: background 0.05s; }
         .led-metro.beat { background: #0f0; box-shadow: 0 0 15px #0f0; }
@@ -35,7 +35,6 @@
         .btn-stop { background-color: #ff3333; color: #fff; }
         .btn-clear { background-color: transparent; color: #ff3333; border: 1px solid #ff3333; }
         .btn-history { background-color: #1a1a2e; color: #00ffcc; border: 1px solid #00ffcc; font-size: 14px; font-weight: bold; }
-        .btn-synth { background-color: #331a33; color: #ff00ff; border: 1px solid #ff00ff; }
         .btn-rec { background-color: #2a0a0a; color: #ff3333; border: 1px solid #ff3333; }
 
         .history-track { color: #888; font-size: 11px; margin-top: 12px; border-top: 1px solid #333; padding-top: 12px; line-height: 1.6; }
@@ -53,16 +52,27 @@
         input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #333; border-radius: 2px; }
         input[type=range]::-webkit-slider-thumb { height: 16px; width: 16px; border-radius: 50%; background: var(--accent); cursor: pointer; -webkit-appearance: none; margin-top: -6px; }
         
+        /* Modal de Sesiones Estructuradas */
         #session-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 5, 8, 0.98); z-index: 9999; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
-        #session-container { width: 90%; max-width: 800px; height: 85%; background: #0a0a0e; border: 1px solid #333; border-radius: 8px; padding: 30px; display: flex; flex-direction: column; }
-        #session-content { flex: 1; overflow-y: auto; font-size: 14px; line-height: 2; margin-top: 10px; border: 1px solid #222; padding: 15px; background: #050508; color: #ddd; }
+        #session-container { width: 95%; max-width: 850px; height: 90%; background: #0a0a0e; border: 1px solid #333; border-radius: 8px; padding: 25px; display: flex; flex-direction: column; box-sizing: border-box;}
+        #session-content { flex: 1; overflow-y: auto; margin-top: 15px; }
+        
+        .session-block { border: 1px solid #222; background: #050508; margin-bottom: 15px; border-radius: 6px; padding: 15px; }
+        .session-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 10px; }
+        .session-title { color: #00ffcc; font-size: 16px; font-weight: bold; margin: 0; }
+        .session-controls { display: flex; gap: 10px; }
+        .btn-play-synth { background: #112211; color: #0f0; border: 1px solid #0f0; padding: 6px 12px; font-family: monospace; cursor: pointer; border-radius: 4px; transition: 0.2s; }
+        .btn-play-synth:hover { background: #0f0; color: #000; }
+        
+        .session-event { display: inline-block; background: #111; border: 1px solid #333; padding: 5px 10px; margin: 5px; border-radius: 4px; color: #fff; font-size: 13px; }
+        .session-event .time { color: #666; font-size: 10px; display: block; margin-bottom: 3px; }
     </style>
 </head>
 <body>
 
     <div id="hud-indicators">
         <div id="metro-light" class="led-indicator led-metro" title="Metrónomo Visual"></div>
-        <div id="rec-light" class="led-indicator led-rec" title="Grabación Activa"></div>
+        <div id="rec-light" class="led-indicator led-rec" title="Grabación de Audio Activa"></div>
     </div>
 
     <div id="menu-btn">☰</div>
@@ -71,27 +81,19 @@
         <h3 style="color: var(--accent); margin-top: 0; font-size: 18px;">Modulo12 : Núcleo</h3>
         <hr style="border-color: #222; margin-bottom: 15px;">
         
-        <button id="history-btn" class="menu-action-btn btn-history">▶ Lector de Sesión Z12</button>
-        <button id="synth-btn" class="menu-action-btn btn-synth">♫ Reproducir Sesión (Synth)</button>
-        <div style="display: flex; gap: 5px; margin-bottom: 15px;">
-            <select id="synth-mode" class="menu-select" style="margin: 0; font-size: 12px;">
-                <option value="chord">Bloques</option>
-                <option value="arp">Arpegios</option>
-            </select>
-        </div>
+        <button id="history-btn" class="menu-action-btn btn-history">▶ Abrir Lector de Sesiones</button>
         
-        <button id="rec-btn" class="menu-action-btn btn-rec">⏺ Grabar Audio (Mic)</button>
-        
+        <button id="rec-btn" class="menu-action-btn btn-rec">⏺ Grabar Audio (Micrófono)</button>
         <div class="config-group" style="margin-top: 10px;">
             <button id="pause-btn" class="menu-action-btn btn-pause">Pausar Detección</button>
             <div style="display:flex; gap:10px;">
-                <button id="stop-btn" class="menu-action-btn btn-stop" style="flex:1;">Hardware Off</button>
+                <button id="stop-btn" class="menu-action-btn btn-stop" style="flex:1;">Finalizar</button>
                 <button id="clear-btn" class="menu-action-btn btn-clear" style="flex:1;">Limpiar</button>
             </div>
         </div>
 
         <div class="config-group">
-            <div class="config-label"><span>Selector de Tono/Escala</span></div>
+            <div class="config-label"><span>Filtro de Escala / Tonalidad</span></div>
             <div style="display: flex; gap: 10px;">
                 <select id="scale-root" class="menu-select" style="flex: 1;">
                     <option value="0">C</option><option value="1">C#/Db</option>
@@ -120,17 +122,17 @@
         </div>
 
         <div class="config-group">
-            <div class="config-label"><span>Selector de Proyección</span></div>
+            <div class="config-label"><span>Visor de Proyección</span></div>
             <select id="view-mode" class="menu-select">
-                <option value="radial">Gravedad Armónica</option>
-                <option value="linear">Mapa de Notas (Piano Roll)</option>
+                <option value="radial">Gravedad Armónica Z12</option>
+                <option value="linear">Mapa Espectral (Piano Roll)</option>
             </select>
-            <div class="config-label" style="margin-top: 10px;"><span>Piso de Ruido</span><span id="sens-val">0 dB</span></div>
+            <div class="config-label" style="margin-top: 10px;"><span>Piso de Ruido Acústico</span><span id="sens-val">0 dB</span></div>
             <input type="range" id="sens-slider" min="-20" max="20" value="0">
         </div>
 
         <div class="config-group">
-            <div class="config-label"><span>Metrónomo Visual</span><span id="bpm-val">120 BPM</span></div>
+            <div class="config-label"><span>Metrónomo Visual Silencioso</span><span id="bpm-val">120 BPM</span></div>
             <input type="range" id="bpm-slider" min="40" max="240" value="120">
             <button id="metro-btn" class="menu-action-btn" style="background:#222; color:#0f0; border:1px solid #0f0; margin-top:5px;">Activar Metrónomo</button>
         </div>
@@ -138,18 +140,17 @@
 
     <div id="session-modal">
         <div id="session-container">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h2 style="color: #00ffcc; margin: 0; font-family: monospace;">LECTOR DE SESIÓN</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 15px;">
+                <h2 style="color: #00ffcc; margin: 0; font-family: monospace;">LECTOR DE SESIONES ACTIVAS</h2>
                 <button id="close-modal" style="background: none; border: none; color: #888; font-size: 30px; cursor: pointer;">×</button>
             </div>
-            <button id="export-json-btn" class="menu-action-btn" style="background:#111; color:#0f0; border:1px solid #0f0; width:auto; margin-top:10px;">⇩ Exportar JSON</button>
             <div id="session-content"></div>
         </div>
     </div>
 
     <div id="overlay">
         <h1 style="margin-bottom: 30px; color: var(--accent); letter-spacing: 4px; font-size: 2.5rem; text-shadow: 0 0 20px rgba(0,255,0,0.3);">Modulo12</h1>
-        <button id="start-btn" class="primary-btn">INICIAR MOTOR</button>
+        <button id="start-btn" class="primary-btn">INICIAR SESIÓN</button>
         <div id="calibration-msg" style="display:none; color:#fa0; margin-top:20px; font-size:14px; text-align:center;">CALIBRANDO ACÚSTICA<br><span style="font-size:11px; color:#aaa;">(Silencio por 2 segundos)</span></div>
     </div>
 
@@ -165,7 +166,6 @@
         const noteNamesSharps = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
         const noteNamesFlats =  ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "Cb"];
         const flatRoots = [1, 3, 5, 8, 10]; 
-        
         const createMask = (notes) => notes.reduce((m, n) => m | (1 << (n % 12)), 0);
         
         const Z12_DICTIONARY = Array.from({length: 12}).flatMap((_, i) => [
@@ -213,59 +213,85 @@
         };
 
         // ==========================================
-        // 2. MATRIZ DE ESTADO (PERSISTENCIA Y MIDI)
+        // 2. MATRIZ DE ESTADO: AGRUPACIÓN POR SESIONES
         // ==========================================
         class StateManager {
             constructor() {
                 const initial = {
                     active_mask: 0, notes_array: [], notes_detail: [], tension_level: 0.0, color: {r: 34, g: 34, b: 34},
-                    description: "Silencio", suggestion: null, history: [], status: "standby",
-                    sens_offset: 0, view_mode: "radial", scale_root: 0, scale_type: "Cromática", scale_mask: 4095
+                    description: "Silencio", suggestion: null, 
+                    sessions: [], current_session_id: null, // VECTOR 1: Agrupación en bloques
+                    status: "standby", sens_offset: 0, view_mode: "radial", scale_root: 0, scale_type: "Cromática", scale_mask: 4095
                 };
-                const saved = localStorage.getItem('modulus_state_v8');
-                this.state = saved ? { ...initial, ...JSON.parse(saved), active_mask: 0, status: 'standby', scale_mask: HarmonyEngine.getScaleMask(JSON.parse(saved).scale_root||0, JSON.parse(saved).scale_type||"Cromática") } : initial;
+                const saved = localStorage.getItem('modulus_state_v9');
+                this.state = saved ? { ...initial, ...JSON.parse(saved), active_mask: 0, status: 'standby', current_session_id: null, scale_mask: HarmonyEngine.getScaleMask(JSON.parse(saved).scale_root||0, JSON.parse(saved).scale_type||"Cromática") } : initial;
                 this.listeners = [];
             }
+            
+            // Crea un bloque de sesión cuando el motor arranca
+            startNewSession() {
+                const id = Date.now();
+                const timestamp = new Date().toLocaleString('es-MX');
+                this.state.sessions.push({ id: id, date: timestamp, events: [] });
+                // Mantener solo las últimas 10 sesiones para no saturar localStorage
+                if (this.state.sessions.length > 10) this.state.sessions.shift();
+                this.state.current_session_id = id;
+                this.notify();
+            }
+
+            // Cierra y purga si la sesión está vacía al detener el motor
+            endCurrentSession() {
+                if (this.state.current_session_id) {
+                    const session = this.state.sessions.find(s => s.id === this.state.current_session_id);
+                    if (session && session.events.length === 0) {
+                        this.state.sessions = this.state.sessions.filter(s => s.id !== this.state.current_session_id);
+                    }
+                }
+                this.state.current_session_id = null;
+                localStorage.setItem('modulus_state_v9', JSON.stringify({ sessions: this.state.sessions, sens_offset: this.state.sens_offset, view_mode: this.state.view_mode, scale_root: this.state.scale_root, scale_type: this.state.scale_type }));
+                this.notify();
+            }
+
             update(newState) {
                 const prevMask = this.state.active_mask;
                 this.state = { ...this.state, ...newState };
                 if (newState.scale_root !== undefined || newState.scale_type !== undefined) this.state.scale_mask = HarmonyEngine.getScaleMask(this.state.scale_root, this.state.scale_type);
 
+                // Inyectar evento al array events de la sesión activa
                 if (newState.active_mask !== undefined && newState.active_mask !== prevMask) {
-                    if (this.state.status === 'active' && this.state.active_mask > 0) {
+                    if (this.state.status === 'active' && this.state.active_mask > 0 && this.state.current_session_id) {
                         const rootPitch = this.state.notes_detail[0]?.pitch || 0;
                         const rootName = HarmonyEngine.getNoteName(rootPitch, this.state.scale_root);
                         const chordDef = Z12_DICTIONARY.find(c => c.mask === this.state.active_mask);
                         const name = chordDef ? `${rootName} ${chordDef.name}` : `[${this.state.notes_detail.map(n=>n.name).join(',')}]`;
                         
-                        const hist = this.state.history;
-                        if (hist.length === 0 || hist[hist.length - 1].mask !== this.state.active_mask) {
-                            const time = new Date().toLocaleTimeString('es-MX', { hour12: false, hour: '2-digit', minute: '2-digit', second:'2-digit' });
-                            // Vital: Guardar 'midi_notes' para que el Synthesizer sepa qué frecuencias exactas reproducir
-                            const midi_notes = this.state.notes_detail.map(n => n.midi);
-                            hist.push({ mask: this.state.active_mask, name, time, midi_notes });
-                            if (hist.length > 200) hist.shift();
+                        const currentSession = this.state.sessions.find(s => s.id === this.state.current_session_id);
+                        if (currentSession) {
+                            const events = currentSession.events;
+                            if (events.length === 0 || events[events.length - 1].mask !== this.state.active_mask) {
+                                const time = new Date().toLocaleTimeString('es-MX', { hour12: false, hour: '2-digit', minute: '2-digit', second:'2-digit' });
+                                const midi_notes = this.state.notes_detail.map(n => n.midi);
+                                events.push({ mask: this.state.active_mask, name, time, midi_notes });
+                            }
                         }
                     }
                 }
-                localStorage.setItem('modulus_state_v8', JSON.stringify({ history: this.state.history, sens_offset: this.state.sens_offset, view_mode: this.state.view_mode, scale_root: this.state.scale_root, scale_type: this.state.scale_type }));
+                localStorage.setItem('modulus_state_v9', JSON.stringify({ sessions: this.state.sessions, sens_offset: this.state.sens_offset, view_mode: this.state.view_mode, scale_root: this.state.scale_root, scale_type: this.state.scale_type }));
                 this.notify();
             }
-            clearHistory() { this.state.history = []; this.update({}); }
+            clearHistory() { this.state.sessions = []; this.state.current_session_id = null; localStorage.setItem('modulus_state_v9', JSON.stringify({ sessions: [] })); this.update({}); }
             subscribe(cb) { this.listeners.push(cb); this.notify(); }
             notify() { const snap = JSON.parse(JSON.stringify(this.state)); this.listeners.forEach(cb => cb(snap)); }
         }
 
         // ==========================================
-        // 3. MÓDULOS DE AUDIO (I/O)
+        // 3. MÓDULOS DE AUDIO (I/O, SÍNTESIS WEB, GRABADOR NATIVO)
         // ==========================================
         class AudioEngine {
             constructor(stateManager) {
                 this.stateManager = stateManager; this.audioCtx = null; this.analyser = null;
                 this.dataArray = null; this.stream = null; this.animationId = null;
                 this.baseNoiseFloor = -60; this.ANALYSIS_FPS = 15; this.lastTime = 0;
-                
-                // Módulo de Grabación Nativo
                 this.mediaRecorder = null; this.audioChunks = []; this.isRecording = false;
             }
             async startAndCalibrate() {
@@ -289,7 +315,9 @@
                             else {
                                 noiseSamples.sort((a,b)=>a-b);
                                 this.baseNoiseFloor = Math.max(-80, Math.min((noiseSamples[Math.floor(noiseSamples.length*0.85)]||-60) + 5, -30));
-                                this.stateManager.update({ status: 'active' }); this.processFrame(); resolve(true);
+                                this.stateManager.startNewSession(); // VECTOR 1: Abrir sesión
+                                this.stateManager.update({ status: 'active' }); 
+                                this.processFrame(); resolve(true);
                             }
                         }; tick();
                     });
@@ -331,34 +359,31 @@
                 if(this.isRecording) this.toggleRecord(document.getElementById('rec-light'), document.getElementById('rec-btn'));
                 if(this.stream) this.stream.getTracks().forEach(t=>t.stop());
                 if(this.audioCtx) this.audioCtx.close();
+                this.stateManager.endCurrentSession(); // VECTOR 1: Cerrar sesión
                 this.stateManager.update({status:'standby', active_mask:0, notes_detail:[], tension_level:0, suggestion:null});
             }
 
-            // Sistema de Grabación de Audio
+            // Grabación NATIVA de la sesión
             toggleRecord(ledEl, btnEl) {
                 if(!this.stream) return;
                 if(!this.isRecording) {
-                    this.audioChunks = [];
-                    this.mediaRecorder = new MediaRecorder(this.stream);
+                    this.audioChunks = []; this.mediaRecorder = new MediaRecorder(this.stream);
                     this.mediaRecorder.ondataavailable = e => { if(e.data.size > 0) this.audioChunks.push(e.data); };
                     this.mediaRecorder.onstop = () => {
                         const blob = new Blob(this.audioChunks, { type: 'audio/webm' });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a'); a.href = url; a.download = `modulo12_rec_${Date.now()}.webm`;
+                        const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `modulo12_rec_${Date.now()}.webm`;
                         a.click(); URL.revokeObjectURL(url);
                     };
-                    this.mediaRecorder.start();
-                    this.isRecording = true; ledEl.classList.add('active');
+                    this.mediaRecorder.start(); this.isRecording = true; ledEl.classList.add('active');
                     btnEl.textContent = "⏹ Detener y Guardar Audio"; btnEl.style.color = "#fff";
                 } else {
-                    this.mediaRecorder.stop();
-                    this.isRecording = false; ledEl.classList.remove('active');
+                    this.mediaRecorder.stop(); this.isRecording = false; ledEl.classList.remove('active');
                     btnEl.textContent = "⏺ Grabar Audio (Mic)"; btnEl.style.color = "#ff3333";
                 }
             }
         }
 
-        // Sintetizador Web Audio (Reproductor de Sesiones)
+        // VECTOR 2: Sintetizador Web Audio API (Lector de Sesiones Acústico)
         class SynthEngine {
             constructor() {
                 this.ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -367,42 +392,43 @@
             midiToFreq(m) { return 440 * Math.pow(2, (m - 69) / 12); }
             playNote(midi, time, duration) {
                 const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain();
-                osc.type = 'sine'; osc.frequency.value = this.midiToFreq(midi);
+                osc.type = 'triangle'; // Onda triangular para simular pulsos suaves de piano/guitarra
+                osc.frequency.value = this.midiToFreq(midi);
                 osc.connect(gain); gain.connect(this.ctx.destination);
+                
+                // Envolvente ADSR de Alta Calidad para Composición
                 gain.gain.setValueAtTime(0, time);
-                gain.gain.linearRampToValueAtTime(0.2, time + 0.05); // Attack
-                gain.gain.setValueAtTime(0.2, time + duration - 0.1); // Sustain
-                gain.gain.linearRampToValueAtTime(0, time + duration); // Release
+                gain.gain.linearRampToValueAtTime(0.4, time + 0.05); // Ataque
+                gain.gain.exponentialRampToValueAtTime(0.01, time + duration); // Caída natural
+                
                 osc.start(time); osc.stop(time + duration);
             }
-            async playHistory(history, mode) {
-                if(this.isPlaying || history.length === 0) return;
+            async playSession(eventsArray, mode) {
+                if(this.isPlaying || eventsArray.length === 0) return;
                 if(this.ctx.state === 'suspended') await this.ctx.resume();
                 this.isPlaying = true;
                 const startTime = this.ctx.currentTime + 0.1;
                 let offset = 0;
                 
-                history.forEach(evt => {
+                eventsArray.forEach(evt => {
                     if(!evt.midi_notes) return;
                     if(mode === 'chord') {
-                        evt.midi_notes.forEach(m => this.playNote(m, startTime + offset, 1.2));
-                        offset += 1.5;
+                        // Reproduce todas las notas al mismo tiempo
+                        evt.midi_notes.forEach(m => this.playNote(m, startTime + offset, 1.5));
+                        offset += 1.8;
                     } else if(mode === 'arp') {
-                        evt.midi_notes.forEach((m, i) => this.playNote(m, startTime + offset + (i * 0.3), 0.5));
+                        // Reproduce nota por nota en secuencia (Arpegio)
+                        evt.midi_notes.forEach((m, i) => this.playNote(m, startTime + offset + (i * 0.3), 1.0));
                         offset += (evt.midi_notes.length * 0.3) + 0.5;
                     }
                 });
-                
                 setTimeout(() => { this.isPlaying = false; }, offset * 1000 + 500);
             }
         }
 
-        // Metrónomo Visual
+        // Metrónomo Visual (Desacoplado del Audio para evitar ruido en el Synth)
         class VisualMetronome {
-            constructor(ledEl) {
-                this.led = ledEl; this.intervalId = null; this.bpm = 120;
-                this.isOn = false; this.beatCount = 0;
-            }
+            constructor(ledEl) { this.led = ledEl; this.intervalId = null; this.bpm = 120; this.isOn = false; this.beatCount = 0; }
             setBPM(bpm) { this.bpm = bpm; if(this.isOn) this.restart(); }
             toggle(btnEl) {
                 this.isOn = !this.isOn;
@@ -413,8 +439,7 @@
                 clearInterval(this.intervalId); this.beatCount = 0;
                 const msPerBeat = 60000 / this.bpm;
                 this.intervalId = setInterval(() => {
-                    this.led.className = "led-indicator led-metro";
-                    void this.led.offsetWidth; // force reflow
+                    this.led.className = "led-indicator led-metro"; void this.led.offsetWidth;
                     this.led.classList.add(this.beatCount % 4 === 0 ? 'beat' : 'sub-beat');
                     this.beatCount++;
                 }, msPerBeat);
@@ -503,12 +528,15 @@
         }
 
         // ==========================================
-        // 5. EVENTOS E INTERFAZ UI
+        // 5. ENLACES DE UI E INSTANCIAS
         // ==========================================
         const stateManager = new StateManager();
         const audioEngine = new AudioEngine(stateManager);
         const renderer = new Renderer('harmonyCanvas', stateManager);
+        
+        // Instanciación de Nuevos Motores
         const synthEngine = new SynthEngine();
+        window.synth = synthEngine; // Exponer al scope global para botones inline del Modal
         const visualMetro = new VisualMetronome(document.getElementById('metro-light'));
         
         const ui = {
@@ -517,8 +545,7 @@
             clear: document.getElementById('clear-btn'), calibMsg: document.getElementById('calibration-msg'), sensSlider: document.getElementById('sens-slider'), sensVal: document.getElementById('sens-val'),
             scaleRoot: document.getElementById('scale-root'), scaleType: document.getElementById('scale-type'), viewMode: document.getElementById('view-mode'),
             historyBtn: document.getElementById('history-btn'), sessionModal: document.getElementById('session-modal'), closeModal: document.getElementById('close-modal'), sessionContent: document.getElementById('session-content'),
-            exportBtn: document.getElementById('export-json-btn'), recBtn: document.getElementById('rec-btn'), synthBtn: document.getElementById('synth-btn'), synthMode: document.getElementById('synth-mode'),
-            metroBtn: document.getElementById('metro-btn'), bpmSlider: document.getElementById('bpm-slider'), bpmVal: document.getElementById('bpm-val')
+            recBtn: document.getElementById('rec-btn'), metroBtn: document.getElementById('metro-btn'), bpmSlider: document.getElementById('bpm-slider'), bpmVal: document.getElementById('bpm-val')
         };
 
         ui.sensSlider.value = stateManager.state.sens_offset; ui.sensVal.textContent = stateManager.state.sens_offset + ' dB';
@@ -538,39 +565,69 @@
         ui.stop.onclick = () => { audioEngine.stop(); ui.pause.textContent = "Pausar Detección"; ui.pause.style.backgroundColor = "var(--accent)"; ui.sidebar.classList.remove('active'); ui.overlay.style.display = 'flex'; ui.calibMsg.style.display = 'none'; };
         ui.clear.onclick = () => { stateManager.clearHistory(); ui.sidebar.classList.remove('active'); };
         
-        // Grabación y Metrónomo
+        // Grabación Nativa y Metrónomo
         ui.recBtn.onclick = () => { audioEngine.toggleRecord(document.getElementById('rec-light'), ui.recBtn); ui.sidebar.classList.remove('active'); };
         ui.metroBtn.onclick = () => { visualMetro.toggle(ui.metroBtn); ui.sidebar.classList.remove('active'); };
 
-        // Reproductor Sintetizador
-        ui.synthBtn.onclick = () => {
-            if(synthEngine.isPlaying) return;
-            const history = stateManager.state.history;
-            if(history.length === 0) { alert("Historial vacío."); return; }
-            synthEngine.playHistory(history, ui.synthMode.value);
-            ui.sidebar.classList.remove('active');
-        };
-
-        // Modal Lectura
+        // Modal Lectura de Sesiones (VECTOR 1: Bloques estructurados)
         ui.historyBtn.onclick = () => {
             ui.sidebar.classList.remove('active'); ui.sessionModal.style.display = 'flex';
-            const hist = stateManager.state.history;
-            ui.sessionContent.innerHTML = hist.length === 0 ? '<div style="color:#666;text-align:center;margin-top:20px;">Sin eventos registrados.</div>' : 
-                hist.map(h => `<div style="border-bottom:1px dashed #333; padding:8px 0; display:flex;">
-                    <span style="color:#666; font-size:13px; margin-right:20px; min-width:80px;">[${h.time||'--'}]</span> 
-                    <span style="color:#0f0; font-weight:bold; min-width:150px;">${h.name}</span>
-                    <span style="color:#444; font-size:12px;">MIDI: [${h.midi_notes ? h.midi_notes.join(',') : ''}]</span>
-                </div>`).reverse().join('');
+            const sessions = stateManager.state.sessions;
+            
+            if (sessions.length === 0) {
+                ui.sessionContent.innerHTML = '<div style="color:#666;text-align:center;margin-top:40px;">No existen sesiones guardadas en memoria. Presiona "INICIAR SESIÓN" para grabar una.</div>';
+                return;
+            }
+            
+            // Renderizar las sesiones de forma inversa (la más reciente arriba)
+            let html = '';
+            for (let i = sessions.length - 1; i >= 0; i--) {
+                const s = sessions[i];
+                if(s.events.length === 0) continue; // Evitar renderizar sesiones sin música
+                
+                // Extraer el JSON de forma segura para usar en el botón Exportar
+                const sessionJSON = JSON.stringify(s).replace(/"/g, '&quot;');
+                const eventsJSON = JSON.stringify(s.events).replace(/"/g, '&quot;');
+
+                html += `
+                <div class="session-block">
+                    <div class="session-header">
+                        <h4 class="session-title">Sesión Capturada: ${s.date}</h4>
+                        <div class="session-controls">
+                            <button class="btn-play-synth" onclick="synth.playSession(JSON.parse('${eventsJSON}'), 'chord')">▶ Bloques</button>
+                            <button class="btn-play-synth" onclick="synth.playSession(JSON.parse('${eventsJSON}'), 'arp')">▶ Arpegio</button>
+                            <button class="btn-play-synth" style="border-color:#fa0; color:#fa0;" onclick="exportSessionJSON(JSON.parse('${sessionJSON}'))">⇩ Exportar</button>
+                        </div>
+                    </div>
+                    <div>
+                        ${s.events.map(evt => `
+                            <div class="session-event">
+                                <span class="time">${evt.time}</span>
+                                <strong>${evt.name}</strong>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>`;
+            }
+            ui.sessionContent.innerHTML = html;
         };
         ui.closeModal.onclick = () => ui.sessionModal.style.display = 'none';
-        ui.exportBtn.onclick = () => {
-            if(stateManager.state.history.length===0) return;
-            const b = new Blob([JSON.stringify({ metadata: { scale: `${HarmonyEngine.getNoteName(stateManager.state.scale_root, stateManager.state.scale_root)} ${stateManager.state.scale_type}` }, session_events: stateManager.state.history }, null, 2)], {type: 'application/json'});
-            const url = URL.createObjectURL(b); const a = document.createElement('a'); a.href = url; a.download = `modulo12_sesion_${Date.now()}.json`; a.click(); URL.revokeObjectURL(url);
+        
+        // Exportación de JSON Modular (Para ModuloScore)
+        window.exportSessionJSON = (sessionData) => {
+            const payload = JSON.stringify({ metadata: { app: "Modulo12", export_time: new Date().toISOString() }, session: sessionData }, null, 2);
+            const b = new Blob([payload], {type: 'application/json'});
+            const url = URL.createObjectURL(b); const a = document.createElement('a'); a.href = url; a.download = `modulo12_sesion_${sessionData.id}.json`; a.click(); URL.revokeObjectURL(url);
         };
 
+        // Renderizado del HUD en tiempo real
         stateManager.subscribe(s => {
-            const hudHist = s.history.slice(-5).map(h => h.name).join(' ➔ ') || 'Memoria vacía';
+            let activeEvents = [];
+            if(s.current_session_id) {
+                const currentS = s.sessions.find(ses => ses.id === s.current_session_id);
+                if(currentS) activeEvents = currentS.events;
+            }
+            const hudHist = activeEvents.slice(-5).map(h => h.name).join(' ➔ ') || 'Esperando armónicos...';
             const notes = s.notes_detail.map(n => n.name).join(', ') || '[]';
             const sug = s.suggestion ? `<span style="color: #fff">${HarmonyEngine.getNoteName(s.suggestion.mask, s.scale_root)} ${s.suggestion.name.split(' ')[1] || ''}</span>` : 'Ninguna';
             let statColor = '#888'; if(s.status==='active') statColor='#0f0'; if(s.status==='paused') statColor='#fa0'; if(s.status==='calibrating') statColor='#f0f';
@@ -578,7 +635,7 @@
             ui.panel.innerHTML = `
                 <div style="color:${statColor}; font-weight:bold; font-size:14px; margin-bottom:10px;">ESTADO: ${s.status.toUpperCase()}</div>
                 Escala: ${HarmonyEngine.getNoteName(s.scale_root, s.scale_root)} ${s.scale_type}<br>Nodos: ${notes}<br>Tensión: ${s.tension_level.toFixed(2)}<br>Ruta: ${sug}
-                <div class="history-track"><strong>Progresión:</strong><br>${hudHist}</div>
+                <div class="history-track"><strong>Progresión Actual:</strong><br>${hudHist}</div>
             `;
         });
 
