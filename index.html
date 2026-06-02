@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Modulo12 - Motor de Composición Z12</title>
+    <title>Modulo12 - Motor de Composición Z12 (Bitwise)</title>
     
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#050508">
@@ -198,32 +198,60 @@
         'use strict';
 
         // ==========================================
-        // 1. BIBLIOTECA MAESTRA Y MOTOR MATEMÁTICO
+        // 1. BIBLIOTECA MAESTRA Y MOTOR MATEMÁTICO BITWISE
         // ==========================================
-        let Z12_LIBRARY = { escalas: { "Cromática": [0,1,2,3,4,5,6,7,8,9,10,11] }, armonicos: {} };
+        let Z12_LIBRARY = { escalas: { "Cromática": { mask: [0,1,2,3,4,5,6,7,8,9,10,11] } }, armonicos_fisicos: {} };
 
         const noteNamesSharps = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-        const noteNamesFlats =  ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "Cb"];
+        const noteNamesFlats  = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "Cb"];
         const flatRoots = [1, 3, 5, 8, 10]; 
-        const createMask = (notes) => notes.reduce((m, n) => m | (1 << (n % 12)), 0);
-        
-        const Z12_DICTIONARY = Array.from({length: 12}).flatMap((_, i) => [
-            { name: `May`, mask: createMask([i, i+4, i+7]) }, { name: `min`, mask: createMask([i, i+3, i+7]) },
-            { name: `Maj7`, mask: createMask([i, i+4, i+7, i+11]) }, { name: `min7`, mask: createMask([i, i+3, i+7, i+10]) },
-            { name: `7`, mask: createMask([i, i+4, i+7, i+10]) }, { name: `dim7`, mask: createMask([i, i+3, i+6, i+9]) },
-            { name: `sus4`, mask: createMask([i, i+5, i+7]) }, { name: `sus2`, mask: createMask([i, i+2, i+7]) }
-        ]);
 
         const HarmonyEngine = {
-            createPitchClassSet: createMask,
-            getNoteName: (pitch, scaleRoot) => (flatRoots.includes(scaleRoot) || (scaleRoot === 0 && pitch === 10)) ? noteNamesFlats[pitch] : noteNamesSharps[pitch],
-            getScaleMask: (root, type) => {
-                let intervals = Z12_LIBRARY.escalas[type] || Z12_LIBRARY.armonicos[type];
-                if (!intervals) intervals = Z12_LIBRARY.escalas["Cromática"];
-                return createMask(intervals.map(i => (i + root) % 12));
+            createPitchClassSet: (notes) => {
+                return notes.reduce((m, n) => m | (1 << (((n % 12) + 12) % 12)), 0);
             },
-            evaluateTension: (notes) => {
+            getNoteName: (pitch, scaleRoot) => {
+                return (flatRoots.includes(scaleRoot) || (scaleRoot === 0 && pitch === 10)) ? noteNamesFlats[pitch] : noteNamesSharps[pitch];
+            },
+            rotateMask: (baseMask, semitones) => {
+                const shift = ((semitones % 12) + 12) % 12;
+                if (shift === 0) return baseMask;
+                const shifted = baseMask << shift;
+                const wrap = shifted >> 12;
+                return (shifted | wrap) & 4095;
+            },
+            getScaleMask: (root, scaleName, libraryJSON) => {
+                if (scaleName === "Cromática" || scaleName === "Cromática (Sin Guía)") return 4095;
+                if (!libraryJSON || !libraryJSON.escalas) return 4095;
+
+                let baseArray = null;
+                const cats = [libraryJSON.escalas.diatonicas, libraryJSON.escalas.menor_armonica_y_modos, libraryJSON.escalas.menor_melodica_y_modos, libraryJSON.escalas.bebop, libraryJSON.escalas.simetricas_exoticas, libraryJSON.armonicos_fisicos];
+                
+                for (const cat of cats) {
+                    if (cat && cat[scaleName]) {
+                        baseArray = cat[scaleName].mask;
+                        break;
+                    }
+                }
+                if (!baseArray) return 4095;
+                const baseMask = HarmonyEngine.createPitchClassSet(baseArray);
+                return HarmonyEngine.rotateMask(baseMask, root);
+            },
+            isSubset: (targetMask, containerMask) => {
+                return (targetMask & containerMask) === targetMask;
+            },
+            getHammingDistance: (maskA, maskB) => {
+                let xor = maskA ^ maskB;
+                let distance = 0;
+                while (xor > 0) {
+                    distance += xor & 1;
+                    xor >>= 1;
+                }
+                return distance;
+            },
+            evaluateTension: (notes, libraryJSON) => {
                 if (notes.length < 2) return { level: 0.0, color: {r: 0, g: 255, b: 0}, desc: "Reposo" };
+                const targetMask = HarmonyEngine.createPitchClassSet(notes);
                 let t = false, ms = false;
                 for(let i=0; i<notes.length; i++) for(let j=i+1; j<notes.length; j++) {
                     let iv = Math.abs(notes[i] - notes[j]) % 12;
@@ -233,15 +261,29 @@
                 if(ms) return { level: 0.7, color: {r: 255, g: 165, b: 0}, desc: "Tensión" };
                 return { level: 0.3, color: {r: 0, g: 200, b: 255}, desc: "Estable" };
             },
-            suggestPath: (currentMask, scaleMask) => {
+            suggestPath: (currentMask, scaleMask, libraryJSON) => {
                 if(currentMask === 0) return null;
                 let best = null, maxShared = 0; const isChr = scaleMask === 4095; 
-                for(const chord of Z12_DICTIONARY) {
-                    if(chord.mask === currentMask) continue; 
-                    if (!isChr && (chord.mask & scaleMask) !== chord.mask) continue;
-                    let shared = 0;
-                    for(let inter = currentMask & chord.mask; inter > 0; inter >>= 1) shared += inter & 1;
-                    if(shared > maxShared) { maxShared = shared; best = chord; }
+                
+                if (libraryJSON && libraryJSON.diccionario_acordes) {
+                    for (const chordName in libraryJSON.diccionario_acordes) {
+                        const chordData = libraryJSON.diccionario_acordes[chordName];
+                        for(let r=0; r<12; r++) {
+                            const baseMask = HarmonyEngine.createPitchClassSet(chordData.mask);
+                            const transposedMask = HarmonyEngine.rotateMask(baseMask, r);
+                            if(transposedMask === currentMask) continue;
+                            if (!isChr && (transposedMask & scaleMask) !== transposedMask) continue;
+                            
+                            let shared = 0;
+                            let inter = currentMask & transposedMask;
+                            while(inter > 0) { shared += inter & 1; inter >>= 1; }
+                            
+                            if(shared > maxShared) { 
+                                maxShared = shared; 
+                                best = { name: chordName, mask: transposedMask, root: r }; 
+                            }
+                        }
+                    }
                 }
                 return maxShared > 0 ? best : null;
             }
@@ -294,9 +336,9 @@
                     status: "standby", sens_offset: -55, view_mode: "radial", scale_root: 0, scale_type: "Cromática", scale_mask: 4095,
                     acoustic_profile: "piano", profiler_step: 0, calibration_map: {}
                 };
-                const saved = localStorage.getItem('modulus_settings_v4');
+                const saved = localStorage.getItem('modulus_settings_v5');
                 this.state = saved ? { ...initial, ...JSON.parse(saved), active_mask: 0, status: 'standby', current_session: null, profiler_step: 0 } : initial;
-                this.state.scale_mask = HarmonyEngine.getScaleMask(this.state.scale_root, this.state.scale_type);
+                this.state.scale_mask = HarmonyEngine.getScaleMask(this.state.scale_root, this.state.scale_type, Z12_LIBRARY);
                 this.listeners = [];
             }
             startNewSession() {
@@ -314,15 +356,29 @@
             }
             update(newState) {
                 const prevMask = this.state.active_mask; this.state = { ...this.state, ...newState };
-                if (newState.scale_root !== undefined || newState.scale_type !== undefined) this.state.scale_mask = HarmonyEngine.getScaleMask(this.state.scale_root, this.state.scale_type);
+                if (newState.scale_root !== undefined || newState.scale_type !== undefined) {
+                    this.state.scale_mask = HarmonyEngine.getScaleMask(this.state.scale_root, this.state.scale_type, Z12_LIBRARY);
+                }
 
                 if (newState.active_mask !== undefined && newState.active_mask !== prevMask) {
                     if (this.state.status === 'active' && this.state.active_mask > 0 && this.state.current_session) {
                         const rootPitch = this.state.notes_detail[0]?.pitch || 0;
                         const rootName = HarmonyEngine.getNoteName(rootPitch, this.state.scale_root);
-                        const chordDef = Z12_DICTIONARY.find(c => c.mask === this.state.active_mask);
-                        const name = chordDef ? `${rootName} ${chordDef.name}` : `[${this.state.notes_detail.map(n=>n.name).join(',')}]`;
                         
+                        // Determinación del nombre basándose en el diccionario
+                        let name = `[${this.state.notes_detail.map(n=>n.name).join(',')}]`;
+                        if (Z12_LIBRARY && Z12_LIBRARY.diccionario_acordes) {
+                            for (const chordName in Z12_LIBRARY.diccionario_acordes) {
+                                const chordData = Z12_LIBRARY.diccionario_acordes[chordName];
+                                const baseMask = HarmonyEngine.createPitchClassSet(chordData.mask);
+                                const transposedMask = HarmonyEngine.rotateMask(baseMask, rootPitch);
+                                if (transposedMask === this.state.active_mask) {
+                                    name = `${rootName} ${chordName}`;
+                                    break;
+                                }
+                            }
+                        }
+
                         const events = this.state.current_session.events;
                         if (events.length === 0 || events[events.length - 1].mask !== this.state.active_mask) {
                             const time = new Date().toLocaleTimeString('es-MX', { hour12: false, hour: '2-digit', minute: '2-digit', second:'2-digit' });
@@ -333,7 +389,7 @@
                 }
                 this.saveSettings(); this.notify();
             }
-            saveSettings() { localStorage.setItem('modulus_settings_v4', JSON.stringify({ sens_offset: this.state.sens_offset, view_mode: this.state.view_mode, scale_root: this.state.scale_root, scale_type: this.state.scale_type, acoustic_profile: this.state.acoustic_profile, calibration_map: this.state.calibration_map })); }
+            saveSettings() { localStorage.setItem('modulus_settings_v5', JSON.stringify({ sens_offset: this.state.sens_offset, view_mode: this.state.view_mode, scale_root: this.state.scale_root, scale_type: this.state.scale_type, acoustic_profile: this.state.acoustic_profile, calibration_map: this.state.calibration_map })); }
             async clearHistory() { await ModuloDB.clearAll(); this.state.current_session = null; this.update({}); }
             subscribe(cb) { this.listeners.push(cb); this.notify(); }
             notify() { const snap = JSON.parse(JSON.stringify(this.state)); this.listeners.forEach(cb => cb(snap)); }
@@ -457,9 +513,9 @@
                         const mask = HarmonyEngine.createPitchClassSet(rawPitches);
                         this.stateManager.update({ 
                             active_mask: mask, notes_array: rawPitches, notes_detail: details, 
-                            tension_level: HarmonyEngine.evaluateTension(rawPitches).level, 
-                            color: HarmonyEngine.evaluateTension(rawPitches).color,
-                            suggestion: HarmonyEngine.suggestPath(mask, this.stateManager.state.scale_mask) 
+                            tension_level: HarmonyEngine.evaluateTension(rawPitches, Z12_LIBRARY).level, 
+                            color: HarmonyEngine.evaluateTension(rawPitches, Z12_LIBRARY).color,
+                            suggestion: HarmonyEngine.suggestPath(mask, this.stateManager.state.scale_mask, Z12_LIBRARY) 
                         });
                     } else if (this.stateManager.state.active_mask !== 0) {
                         this.stateManager.update({ active_mask: 0, notes_detail: [] }); 
@@ -578,7 +634,7 @@
                 
                 const isChromatic = scale_mask === 4095;
 
-                // Alerta Visual de Ruptura Armónica (Fondo Rojo)
+                // Alerta Visual de Ruptura Armónica
                 if (tension_level > 0.6) {
                     const glow = this.ctx.createRadialGradient(cx, cy, 0, cx, cy, dim);
                     glow.addColorStop(0, 'rgba(255, 51, 0, 0.15)');
@@ -589,18 +645,17 @@
 
                 if (view_mode === 'linear') { this.drawLinearMap(state); return; }
 
-                // Plantilla Estática Mandala (Fondo - Órbita 3)
+                // Plantilla Estática Mandala
                 if (!isChromatic) this.drawMandalaSkeleton(cx, cy, r3, scale_mask, scale_root);
 
                 if (active_mask === 0 || notes_detail.length === 0) return;
 
-                // Centro: Nota Raíz Detectada
+                // Centro: Nota Raíz
                 const rootNote = notes_detail[0];
                 let centerColor = 'var(--accent)'; 
-                if (!isChromatic && (scale_mask & (1 << rootNote.pitch)) === 0) centerColor = 'var(--alert)'; // Error / Fuera de escala
+                if (!isChromatic && (scale_mask & (1 << rootNote.pitch)) === 0) centerColor = 'var(--alert)';
                 this.drawNode(rootNote.name, cx, cy, 40, centerColor, true, 30, '#fff');
 
-                // Clasificar Órbitas Dinámicas
                 const planets = [], moons = [];
                 for(let i=0; i<12; i++) {
                     if (i === rootNote.pitch) continue;
@@ -612,25 +667,22 @@
                     }
                 }
 
-                // Órbita 2: Lunas de Sugerencia (Pathfinding Predictivo)
+                // Órbita 2: Sugerencias (Pathfinding)
                 moons.forEach(n => {
                     const angle = (n.pitch * Math.PI*2)/12 - Math.PI/2;
                     const nx = cx + Math.cos(angle)*r2, ny = cy + Math.sin(angle)*r2;
-                    
                     this.ctx.beginPath(); this.ctx.moveTo(cx, cy); this.ctx.lineTo(nx, ny); 
                     this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'; this.ctx.setLineDash([4, 6]);
                     this.ctx.lineWidth = 1; this.ctx.stroke(); this.ctx.setLineDash([]);
                     this.drawNode(n.name, nx, ny, 18, 'transparent', false, 5, 'rgba(255, 255, 255, 0.5)', 0.8);
                 });
 
-                // Órbita 1: Planetas Activos (Música Ejecutada Real)
+                // Órbita 1: Planetas Activos
                 planets.forEach(n => {
                     const angle = (n.pitch * Math.PI*2)/12 - Math.PI/2;
                     const nx = cx + Math.cos(angle)*r1, ny = cy + Math.sin(angle)*r1;
-                    
                     let nodeColor = 'var(--accent)'; 
                     if (!isChromatic && (scale_mask & (1 << n.pitch)) === 0) nodeColor = 'var(--alert)'; 
-
                     this.ctx.beginPath(); this.ctx.moveTo(cx, cy); this.ctx.lineTo(nx, ny); 
                     this.ctx.strokeStyle = nodeColor; this.ctx.globalAlpha = 0.5;
                     this.ctx.lineWidth = 2; this.ctx.stroke(); this.ctx.globalAlpha = 1;
@@ -654,7 +706,7 @@
         }
 
         // ==========================================
-        // 5. INICIALIZACIÓN ASÍNCRONA Y UI
+        // 5. INICIALIZACIÓN ASÍNCRONA Y UI (V3 DINÁMICO)
         // ==========================================
         (async function initApp() {
             document.getElementById('debug-panel').textContent = "Descargando Biblioteca Z12...";
@@ -663,22 +715,27 @@
                 Z12_LIBRARY = await res.json();
             } catch (e) {
                 console.warn("Usando fallback de biblioteca.");
-                Z12_LIBRARY = { escalas: { "Cromática": [0,1,2,3,4,5,6,7,8,9,10,11] }, armonicos: {} };
+                Z12_LIBRARY = { escalas: { "Cromática": { mask: [0,1,2,3,4,5,6,7,8,9,10,11] } }, armonicos_fisicos: {} };
             }
 
             const scaleSelect = document.getElementById('scale-type');
-            scaleSelect.innerHTML = '';
+            scaleSelect.innerHTML = '<option value="Cromática">Cromática (Sin Guía)</option>';
             
-            const optgEscalas = document.createElement('optgroup'); optgEscalas.label = "Escalas y Modos";
-            for (const key in Z12_LIBRARY.escalas) {
-                const opt = document.createElement('option'); opt.value = key; opt.textContent = key;
-                optgEscalas.appendChild(opt);
+            if (Z12_LIBRARY.escalas) {
+                for (const category in Z12_LIBRARY.escalas) {
+                    const optg = document.createElement('optgroup');
+                    optg.label = category.replace(/_/g, ' ').toUpperCase();
+                    for (const scaleName in Z12_LIBRARY.escalas[category]) {
+                        const opt = document.createElement('option'); opt.value = scaleName; opt.textContent = scaleName;
+                        optg.appendChild(opt);
+                    }
+                    scaleSelect.appendChild(optg);
+                }
             }
-            scaleSelect.appendChild(optgEscalas);
             
-            if (Object.keys(Z12_LIBRARY.armonicos).length > 0) {
-                const optgArmonicos = document.createElement('optgroup'); optgArmonicos.label = "Series Armónicas Físicas";
-                for (const key in Z12_LIBRARY.armonicos) {
+            if (Z12_LIBRARY.armonicos_fisicos) {
+                const optgArmonicos = document.createElement('optgroup'); optgArmonicos.label = "SERIES ARMÓNICAS FÍSICAS";
+                for (const key in Z12_LIBRARY.armonicos_fisicos) {
                     const opt = document.createElement('option'); opt.value = key; opt.textContent = key;
                     optgArmonicos.appendChild(opt);
                 }
@@ -702,7 +759,7 @@
             ui.acousticProfile.value = stateManager.state.acoustic_profile; ui.preProfile.value = stateManager.state.acoustic_profile;
 
             ui.sensSlider.oninput = (e) => { const v = parseInt(e.target.value); ui.sensVal.textContent = v + ' dB'; stateManager.update({ sens_offset: v }); };
-            const updateConf = () => stateManager.update({ scale_root: parseInt(ui.scaleRoot.value), scale_type: ui.scaleType.value, view_mode: ui.viewMode.value, acoustic_profile: ui.acousticProfile.value });
+            const updateConf = () => stateManager.update({ scale_root: parseInt(ui.scaleRoot.value), scale_type: ui.scaleType.value, viewMode: ui.viewMode.value, acoustic_profile: ui.acousticProfile.value });
             ui.scaleRoot.onchange = updateConf; ui.scaleType.onchange = updateConf; ui.viewMode.onchange = updateConf; ui.acousticProfile.onchange = updateConf;
 
             ui.menu.onclick = () => ui.sidebar.classList.add('active'); ui.closeMenu.onclick = () => ui.sidebar.classList.remove('active');
@@ -712,7 +769,7 @@
             ui.profilerSkip.onclick = () => { audioEngine.forceProfilerSkip(); };
 
             stateManager.subscribe(s => {
-                const sug = s.suggestion ? `<span style="color: #fff">${HarmonyEngine.getNoteName(s.suggestion.mask, s.scale_root)} ${s.suggestion.name.split(' ')[1] || ''}</span>` : 'Ninguna';
+                const sug = s.suggestion ? `<span style="color: #fff">${HarmonyEngine.getNoteName(s.suggestion.root, s.scale_root)} ${s.suggestion.name}</span>` : 'Ninguna';
                 const tensionState = s.tension_level > 0.6 ? `<span style="color:var(--alert); font-weight:bold;">¡Ruptura Armónica! (${s.tension_level.toFixed(2)})</span>` : `<span style="color:var(--accent);">Estable (${s.tension_level.toFixed(2)})</span>`;
                 let statColor = '#888'; if(s.status==='active') statColor='var(--accent)'; if(s.status==='paused') statColor='#fa0'; if(s.status==='calibrating') statColor='#f0f'; if(s.status==='profiling') statColor='#0ff';
 
@@ -720,7 +777,7 @@
                     <div style="color:${statColor}; font-weight:bold; font-size:14px; margin-bottom:10px; letter-spacing:1px;">ESTADO: ${s.status.toUpperCase()}</div>
                     <span style="color:#aaa;">Guía Activa:</span> ${HarmonyEngine.getNoteName(s.scale_root, s.scale_root)} ${s.scale_type}<br>
                     <span style="color:#aaa;">Estado Armónico:</span> ${tensionState}<br>
-                    <span style="color:#aaa;">Sugerencia (Camino ideal):</span> ${sug}<br>
+                    <span style="color:#aaa;">Sugerencia (Pathfinding):</span> ${sug}<br>
                 `;
             });
 
