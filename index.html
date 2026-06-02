@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Modulo12</title>
+    <title>Modulo12 - Núcleo de Captura</title>
     
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#050508">
@@ -15,29 +15,15 @@
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; background-color: var(--bg-color); overflow: hidden; display: flex; justify-content: center; align-items: center; font-family: monospace; user-select: none; color: #fff; }
         canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
         
-        /* Custom Scrollbar para toda la app */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #0a0a0e; border-radius: 4px; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; border: 1px solid #0a0a0e; }
         ::-webkit-scrollbar-thumb:hover { background: #555; }
 
-        /* Panel de Diagnóstico HUD (UI Pulida) */
-        #debug-panel { 
-            position: absolute; top: 20px; left: 20px; background: rgba(5, 5, 8, 0.85); 
-            padding: 18px; border-radius: 8px; pointer-events: none; border: 1px solid #1a1a24; 
-            z-index: 10; min-width: 260px; backdrop-filter: blur(8px);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5); line-height: 1.5;
-        }
+        #debug-panel { position: absolute; top: 20px; left: 20px; background: rgba(5, 5, 8, 0.85); padding: 18px; border-radius: 8px; pointer-events: none; border: 1px solid #1a1a24; z-index: 10; min-width: 260px; backdrop-filter: blur(8px); box-shadow: 0 4px 15px rgba(0,0,0,0.5); line-height: 1.5; }
         
-        /* Indicadores HUD (Discretos, reubicados junto al menú) */
-        #hud-indicators { 
-            position: absolute; top: 28px; right: 70px; /* Alineados con el menú */
-            display: flex; gap: 12px; z-index: 30; align-items: center;
-        }
-        .led-indicator { 
-            width: 10px; height: 10px; border-radius: 50%; background: #222; 
-            border: 1px solid #111; box-shadow: 0 0 3px #000 inset; transition: background 0.05s; 
-        }
+        #hud-indicators { position: absolute; top: 28px; right: 70px; display: flex; gap: 12px; z-index: 30; align-items: center; }
+        .led-indicator { width: 10px; height: 10px; border-radius: 50%; background: #222; border: 1px solid #111; box-shadow: 0 0 3px #000 inset; transition: background 0.05s; }
         .led-metro.beat { background: #0f0; box-shadow: 0 0 10px #0f0; border-color: #0f0; }
         .led-metro.sub-beat { background: #fa0; box-shadow: 0 0 8px #fa0; border-color: #fa0; }
         .led-rec.active { background: #f00; box-shadow: 0 0 10px #f00; border-color: #f00; animation: flash 1s infinite; }
@@ -73,7 +59,7 @@
         input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #333; border-radius: 2px; }
         input[type=range]::-webkit-slider-thumb { height: 16px; width: 16px; border-radius: 50%; background: var(--accent); cursor: pointer; -webkit-appearance: none; margin-top: -6px; }
         
-        /* Modal Lector de Sesiones (UI Pulida) */
+        /* Modal Lector de Sesiones */
         #session-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 5, 8, 0.98); z-index: 9999; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
         #session-container { width: 95%; max-width: 850px; height: 90%; background: #0a0a0e; border: 1px solid #2a2a35; border-radius: 12px; padding: 30px; display: flex; flex-direction: column; box-sizing: border-box; box-shadow: 0 20px 60px rgba(0,0,0,0.9); }
         #session-content { flex: 1; overflow-y: auto; margin-top: 15px; padding-right: 10px; }
@@ -109,14 +95,25 @@
         <hr style="border-color: #1a1a24; margin-bottom: 15px;">
         
         <button id="history-btn" class="menu-action-btn btn-history">▶ Abrir Lector de Sesiones</button>
-        
         <button id="rec-btn" class="menu-action-btn btn-rec">⏺ Grabar Audio (Micrófono)</button>
+        
         <div class="config-group" style="margin-top: 10px;">
             <button id="pause-btn" class="menu-action-btn btn-pause">Pausar Detección</button>
             <div style="display:flex; gap:10px;">
                 <button id="stop-btn" class="menu-action-btn btn-stop" style="flex:1;">Finalizar</button>
                 <button id="clear-btn" class="menu-action-btn btn-clear" style="flex:1;">Limpiar</button>
             </div>
+        </div>
+
+        <div class="config-group">
+            <div class="config-label"><span style="color:#00ffcc;">Perfil Acústico (Fuente)</span></div>
+            <select id="acoustic-profile" class="menu-select">
+                <option value="piano">Piano Acústico / Teclado</option>
+                <option value="guitar">Guitarra Acústica / Eléctrica</option>
+                <option value="voice">Voz Humana</option>
+                <option value="synth">Sintetizador Puro</option>
+                <option value="generic">Entorno Mixto (Genérico)</option>
+            </select>
         </div>
 
         <div class="config-group">
@@ -154,7 +151,7 @@
                 <option value="radial">Gravedad Armónica Z12</option>
                 <option value="linear">Mapa Espectral (Piano Roll)</option>
             </select>
-            <div class="config-label" style="margin-top: 10px;"><span>Piso de Ruido Acústico</span><span id="sens-val">0 dB</span></div>
+            <div class="config-label" style="margin-top: 10px;"><span>Piso de Ruido Dinámico</span><span id="sens-val">0 dB</span></div>
             <input type="range" id="sens-slider" min="-20" max="20" value="0">
         </div>
 
@@ -178,7 +175,7 @@
     <div id="overlay">
         <h1 style="margin-bottom: 30px; color: var(--accent); letter-spacing: 4px; font-size: 2.5rem; text-shadow: 0 0 20px rgba(0,255,0,0.3);">Modulo12</h1>
         <button id="start-btn" class="primary-btn">INICIAR SESIÓN</button>
-        <div id="calibration-msg" style="display:none; color:#fa0; margin-top:20px; font-size:14px; text-align:center; letter-spacing: 1px;">CALIBRANDO ACÚSTICA<br><span style="font-size:11px; color:#aaa; letter-spacing: 0;">(Silencio por 2 segundos)</span></div>
+        <div id="calibration-msg" style="display:none; color:#fa0; margin-top:20px; font-size:14px; text-align:center; letter-spacing: 1px;">CALIBRANDO RUIDO BASE<br><span style="font-size:11px; color:#aaa; letter-spacing: 0;">(Silencio por 2 segundos)</span></div>
     </div>
 
     <div id="debug-panel">Cargando dependencias matemáticas...</div>
@@ -240,30 +237,28 @@
         };
 
         // ==========================================
-        // 2. MATRIZ DE ESTADO: AGRUPACIÓN POR SESIONES
+        // 2. MATRIZ DE ESTADO: SESIONES Y PERFIL ACÚSTICO
         // ==========================================
         class StateManager {
             constructor() {
                 const initial = {
                     active_mask: 0, notes_array: [], notes_detail: [], tension_level: 0.0, color: {r: 34, g: 34, b: 34},
-                    description: "Silencio", suggestion: null, 
-                    sessions: [], current_session_id: null,
-                    status: "standby", sens_offset: 0, view_mode: "radial", scale_root: 0, scale_type: "Cromática", scale_mask: 4095
+                    description: "Silencio", suggestion: null, sessions: [], current_session_id: null,
+                    status: "standby", sens_offset: 0, view_mode: "radial", scale_root: 0, scale_type: "Cromática", scale_mask: 4095,
+                    acoustic_profile: "piano" // Preparación para calibración guiada
                 };
-                const saved = localStorage.getItem('modulus_state_v9');
+                const saved = localStorage.getItem('modulus_state_v10');
                 this.state = saved ? { ...initial, ...JSON.parse(saved), active_mask: 0, status: 'standby', current_session_id: null, scale_mask: HarmonyEngine.getScaleMask(JSON.parse(saved).scale_root||0, JSON.parse(saved).scale_type||"Cromática") } : initial;
                 this.listeners = [];
             }
-            
             startNewSession() {
                 const id = Date.now();
                 const timestamp = new Date().toLocaleString('es-MX');
-                this.state.sessions.push({ id: id, date: timestamp, events: [] });
+                this.state.sessions.push({ id: id, date: timestamp, profile: this.state.acoustic_profile, events: [] });
                 if (this.state.sessions.length > 15) this.state.sessions.shift();
                 this.state.current_session_id = id;
                 this.notify();
             }
-
             endCurrentSession() {
                 if (this.state.current_session_id) {
                     const session = this.state.sessions.find(s => s.id === this.state.current_session_id);
@@ -272,10 +267,9 @@
                     }
                 }
                 this.state.current_session_id = null;
-                localStorage.setItem('modulus_state_v9', JSON.stringify({ sessions: this.state.sessions, sens_offset: this.state.sens_offset, view_mode: this.state.view_mode, scale_root: this.state.scale_root, scale_type: this.state.scale_type }));
+                localStorage.setItem('modulus_state_v10', JSON.stringify({ sessions: this.state.sessions, sens_offset: this.state.sens_offset, view_mode: this.state.view_mode, scale_root: this.state.scale_root, scale_type: this.state.scale_type, acoustic_profile: this.state.acoustic_profile }));
                 this.notify();
             }
-
             update(newState) {
                 const prevMask = this.state.active_mask;
                 this.state = { ...this.state, ...newState };
@@ -299,16 +293,16 @@
                         }
                     }
                 }
-                localStorage.setItem('modulus_state_v9', JSON.stringify({ sessions: this.state.sessions, sens_offset: this.state.sens_offset, view_mode: this.state.view_mode, scale_root: this.state.scale_root, scale_type: this.state.scale_type }));
+                localStorage.setItem('modulus_state_v10', JSON.stringify({ sessions: this.state.sessions, sens_offset: this.state.sens_offset, view_mode: this.state.view_mode, scale_root: this.state.scale_root, scale_type: this.state.scale_type, acoustic_profile: this.state.acoustic_profile }));
                 this.notify();
             }
-            clearHistory() { this.state.sessions = []; this.state.current_session_id = null; localStorage.setItem('modulus_state_v9', JSON.stringify({ sessions: [] })); this.update({}); }
+            clearHistory() { this.state.sessions = []; this.state.current_session_id = null; localStorage.setItem('modulus_state_v10', JSON.stringify({ sessions: [] })); this.update({}); }
             subscribe(cb) { this.listeners.push(cb); this.notify(); }
             notify() { const snap = JSON.parse(JSON.stringify(this.state)); this.listeners.forEach(cb => cb(snap)); }
         }
 
         // ==========================================
-        // 3. MÓDULOS DE AUDIO (I/O, SÍNTESIS WEB, GRABADOR NATIVO)
+        // 3. MOTOR ACÚSTICO: INTERPOLACIÓN PARABÓLICA
         // ==========================================
         class AudioEngine {
             constructor(stateManager) {
@@ -323,7 +317,9 @@
                     this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                     await this.audioCtx.resume();
                     const source = this.audioCtx.createMediaStreamSource(this.stream);
-                    this.analyser = this.audioCtx.createAnalyser(); this.analyser.fftSize = 8192; this.analyser.smoothingTimeConstant = 0.6;
+                    this.analyser = this.audioCtx.createAnalyser(); 
+                    this.analyser.fftSize = 8192; 
+                    this.analyser.smoothingTimeConstant = 0.6;
                     source.connect(this.analyser);
                     this.dataArray = new Float32Array(this.analyser.frequencyBinCount);
                     this.stateManager.update({ status: 'calibrating' });
@@ -357,21 +353,50 @@
                 }
                 this.animationId = requestAnimationFrame(() => this.processFrame());
             }
+            
+            // EXTRACCIÓN CON INTERPOLACIÓN PARABÓLICA (PRECESIÓN SUB-HERCIO)
             extract() {
                 const limit = this.baseNoiseFloor - this.stateManager.state.sens_offset;
+                const binCount = this.analyser.frequencyBinCount;
+                const sampleRate = this.audioCtx.sampleRate;
+                const scaleRoot = this.stateManager.state.scale_root; 
                 let det = [];
-                for(let i=2; i<this.analyser.frequencyBinCount-2; i++) {
-                    const amp = this.dataArray[i];
-                    if(amp > limit && amp > this.dataArray[i-1] && amp > this.dataArray[i+1]) {
-                        const freq = i * (this.audioCtx.sampleRate / (this.analyser.frequencyBinCount*2));
-                        if(freq < 50 || freq > 3000) continue;
-                        const midi = Math.round(12 * Math.log2(freq/440) + 69);
-                        det.push({ pitch: ((midi%12)+12)%12, octave: Math.floor(midi/12)-1, midi, amp, name: `${HarmonyEngine.getNoteName(((midi%12)+12)%12, this.stateManager.state.scale_root)}${Math.floor(midi/12)-1}` });
+
+                for(let i=2; i<binCount-2; i++) {
+                    const beta = this.dataArray[i];
+                    if(beta > limit && beta > this.dataArray[i-1] && beta > this.dataArray[i+1]) {
+                        
+                        // Cálculo Parabólico para afinar la frecuencia matemática exacta entre los bins
+                        const alpha = this.dataArray[i-1];
+                        const gamma = this.dataArray[i+1];
+                        let p = 0;
+                        const denominator = alpha - 2 * beta + gamma;
+                        if (denominator !== 0) {
+                            p = 0.5 * (alpha - gamma) / denominator;
+                        }
+                        
+                        const trueBin = i + p;
+                        const freq = trueBin * (sampleRate / (binCount * 2));
+                        
+                        if(freq < 50 || freq > 4000) continue;
+                        
+                        const midiExact = 12 * Math.log2(freq/440) + 69;
+                        const midi = Math.round(midiExact);
+                        
+                        // Descartar armónicos que caen demasiado lejos del centro de afinación de la nota (desviación en cents)
+                        const centsDeviation = Math.abs(midiExact - midi) * 100;
+                        if (centsDeviation > 35) continue; // Si está muy desafinado, es probable que sea inharmonicidad o ruido, ignorar.
+                        
+                        const pitch = ((midi%12)+12)%12;
+                        const oct = Math.floor(midi/12)-1;
+                        
+                        det.push({ pitch: pitch, octave: oct, midi: midi, amp: beta, name: `${HarmonyEngine.getNoteName(pitch, scaleRoot)}${oct}` });
                     }
                 }
                 const map = new Map(); for(const d of det) if(!map.has(d.pitch) || map.get(d.pitch).amp < d.amp) map.set(d.pitch, d);
                 return Array.from(map.values()).sort((a,b)=>a.midi-b.midi);
             }
+            
             async setPause(p) {
                 if(!this.audioCtx) return;
                 if(p) { await this.audioCtx.suspend(); if(this.animationId) cancelAnimationFrame(this.animationId); this.stateManager.update({status:'paused'}); }
@@ -385,7 +410,6 @@
                 this.stateManager.endCurrentSession();
                 this.stateManager.update({status:'standby', active_mask:0, notes_detail:[], tension_level:0, suggestion:null});
             }
-
             toggleRecord(ledEl, btnEl) {
                 if(!this.stream) return;
                 if(!this.isRecording) {
@@ -397,7 +421,7 @@
                         a.click(); URL.revokeObjectURL(url);
                     };
                     this.mediaRecorder.start(); this.isRecording = true; ledEl.classList.add('active');
-                    btnEl.textContent = "⏹ Detener y Guardar Audio"; btnEl.style.color = "#fff";
+                    btnEl.textContent = "⏹ Detener Grabación"; btnEl.style.color = "#fff";
                 } else {
                     this.mediaRecorder.stop(); this.isRecording = false; ledEl.classList.remove('active');
                     btnEl.textContent = "⏺ Grabar Audio (Mic)"; btnEl.style.color = "#ff3333";
@@ -405,73 +429,36 @@
             }
         }
 
-        // Sintetizador Web Audio API con Función de Interrupción (Stop Synth)
+        // Sintetizador
         class SynthEngine {
-            constructor() {
-                this.initCtx();
-                this.isPlaying = false;
-                this.activeNodes = [];
-                this.playTimeout = null;
-            }
-            initCtx() {
-                if (this.ctx && this.ctx.state !== 'closed') {
-                    this.ctx.close();
-                }
-                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-            }
+            constructor() { this.initCtx(); this.isPlaying = false; this.activeNodes = []; this.playTimeout = null; }
+            initCtx() { if (this.ctx && this.ctx.state !== 'closed') this.ctx.close(); this.ctx = new (window.AudioContext || window.webkitAudioContext)(); }
             midiToFreq(m) { return 440 * Math.pow(2, (m - 69) / 12); }
-            
             playNote(midi, time, duration) {
                 const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain();
-                osc.type = 'triangle'; 
-                osc.frequency.value = this.midiToFreq(midi);
+                osc.type = 'triangle'; osc.frequency.value = this.midiToFreq(midi);
                 osc.connect(gain); gain.connect(this.ctx.destination);
-                
-                gain.gain.setValueAtTime(0, time);
-                gain.gain.linearRampToValueAtTime(0.4, time + 0.05); 
-                gain.gain.exponentialRampToValueAtTime(0.01, time + duration); 
-                
+                gain.gain.setValueAtTime(0, time); gain.gain.linearRampToValueAtTime(0.4, time + 0.05); gain.gain.exponentialRampToValueAtTime(0.01, time + duration); 
                 osc.start(time); osc.stop(time + duration);
                 this.activeNodes.push({ osc, gain });
             }
-            
             async playSession(eventsArray, mode) {
                 if(this.isPlaying || eventsArray.length === 0) return;
                 if(this.ctx.state === 'suspended') await this.ctx.resume();
-                
-                this.isPlaying = true;
-                this.activeNodes = [];
-                const startTime = this.ctx.currentTime + 0.1;
-                let offset = 0;
-                
+                this.isPlaying = true; this.activeNodes = [];
+                const startTime = this.ctx.currentTime + 0.1; let offset = 0;
                 eventsArray.forEach(evt => {
                     if(!evt.midi_notes) return;
-                    if(mode === 'chord') {
-                        evt.midi_notes.forEach(m => this.playNote(m, startTime + offset, 1.5));
-                        offset += 1.8;
-                    } else if(mode === 'arp') {
-                        evt.midi_notes.forEach((m, i) => this.playNote(m, startTime + offset + (i * 0.3), 1.0));
-                        offset += (evt.midi_notes.length * 0.3) + 0.5;
-                    }
+                    if(mode === 'chord') { evt.midi_notes.forEach(m => this.playNote(m, startTime + offset, 1.5)); offset += 1.8; }
+                    else if(mode === 'arp') { evt.midi_notes.forEach((m, i) => this.playNote(m, startTime + offset + (i * 0.3), 1.0)); offset += (evt.midi_notes.length * 0.3) + 0.5; }
                 });
-                
                 this.playTimeout = setTimeout(() => { this.isPlaying = false; }, offset * 1000 + 500);
             }
-
-            // Función esencial para detener el flujo de composición
             stop() {
                 if (!this.isPlaying) return;
                 clearTimeout(this.playTimeout);
-                this.activeNodes.forEach(node => {
-                    try {
-                        node.osc.stop();
-                        node.osc.disconnect();
-                        node.gain.disconnect();
-                    } catch (e) { /* Ignorar errores si el nodo ya terminó */ }
-                });
-                this.activeNodes = [];
-                this.isPlaying = false;
-                this.initCtx(); // Reiniciar el contexto para purgar la cola de eventos programados
+                this.activeNodes.forEach(node => { try { node.osc.stop(); node.osc.disconnect(); node.gain.disconnect(); } catch (e) { } });
+                this.activeNodes = []; this.isPlaying = false; this.initCtx(); 
             }
         }
 
@@ -496,7 +483,7 @@
         }
 
         // ==========================================
-        // 4. PROYECTOR VISUAL (SOLAR/LINEAL)
+        // 4. PROYECTOR VISUAL
         // ==========================================
         class Renderer {
             constructor(canvasId, stateManager) {
@@ -582,64 +569,51 @@
         const stateManager = new StateManager();
         const audioEngine = new AudioEngine(stateManager);
         const renderer = new Renderer('harmonyCanvas', stateManager);
-        
-        // Instanciación de Nuevos Motores
-        const synthEngine = new SynthEngine();
-        window.synth = synthEngine; // Exponer al scope global para botones inline del Modal
+        const synthEngine = new SynthEngine(); window.synth = synthEngine;
         const visualMetro = new VisualMetronome(document.getElementById('metro-light'));
         
         const ui = {
             panel: document.getElementById('debug-panel'), overlay: document.getElementById('overlay'), start: document.getElementById('start-btn'), menu: document.getElementById('menu-btn'),
             closeMenu: document.getElementById('close-btn'), sidebar: document.getElementById('sidebar'), pause: document.getElementById('pause-btn'), stop: document.getElementById('stop-btn'),
             clear: document.getElementById('clear-btn'), calibMsg: document.getElementById('calibration-msg'), sensSlider: document.getElementById('sens-slider'), sensVal: document.getElementById('sens-val'),
-            scaleRoot: document.getElementById('scale-root'), scaleType: document.getElementById('scale-type'), viewMode: document.getElementById('view-mode'),
+            scaleRoot: document.getElementById('scale-root'), scaleType: document.getElementById('scale-type'), viewMode: document.getElementById('view-mode'), acousticProfile: document.getElementById('acoustic-profile'),
             historyBtn: document.getElementById('history-btn'), sessionModal: document.getElementById('session-modal'), closeModal: document.getElementById('close-modal'), sessionContent: document.getElementById('session-content'),
             recBtn: document.getElementById('rec-btn'), metroBtn: document.getElementById('metro-btn'), bpmSlider: document.getElementById('bpm-slider'), bpmVal: document.getElementById('bpm-val')
         };
 
         ui.sensSlider.value = stateManager.state.sens_offset; ui.sensVal.textContent = stateManager.state.sens_offset + ' dB';
         ui.scaleRoot.value = stateManager.state.scale_root; ui.scaleType.value = stateManager.state.scale_type; ui.viewMode.value = stateManager.state.view_mode;
+        ui.acousticProfile.value = stateManager.state.acoustic_profile;
 
-        // Configuración
         ui.sensSlider.oninput = (e) => { const v = parseInt(e.target.value); ui.sensVal.textContent = (v>0?'+':'')+v+' dB'; stateManager.update({ sens_offset: v }); };
         ui.bpmSlider.oninput = (e) => { ui.bpmVal.textContent = e.target.value + ' BPM'; visualMetro.setBPM(e.target.value); };
-        const updateConf = () => stateManager.update({ scale_root: parseInt(ui.scaleRoot.value), scale_type: ui.scaleType.value, view_mode: ui.viewMode.value });
-        ui.scaleRoot.onchange = updateConf; ui.scaleType.onchange = updateConf; ui.viewMode.onchange = updateConf;
+        const updateConf = () => stateManager.update({ scale_root: parseInt(ui.scaleRoot.value), scale_type: ui.scaleType.value, view_mode: ui.viewMode.value, acoustic_profile: ui.acousticProfile.value });
+        ui.scaleRoot.onchange = updateConf; ui.scaleType.onchange = updateConf; ui.viewMode.onchange = updateConf; ui.acousticProfile.onchange = updateConf;
 
-        // Menú
         ui.menu.onclick = () => ui.sidebar.classList.add('active'); ui.closeMenu.onclick = () => ui.sidebar.classList.remove('active');
 
-        // Botones Core
         ui.pause.onclick = async () => { const isP = stateManager.state.status === 'paused'; await audioEngine.setPause(!isP); ui.pause.textContent = isP ? "Pausar Detección" : "Reanudar Escucha"; ui.pause.style.backgroundColor = isP ? "var(--accent)" : "#ffaa00"; ui.sidebar.classList.remove('active'); };
         ui.stop.onclick = () => { audioEngine.stop(); ui.pause.textContent = "Pausar Detección"; ui.pause.style.backgroundColor = "var(--accent)"; ui.sidebar.classList.remove('active'); ui.overlay.style.display = 'flex'; ui.calibMsg.style.display = 'none'; };
         ui.clear.onclick = () => { stateManager.clearHistory(); ui.sidebar.classList.remove('active'); };
         
-        // Grabación Nativa y Metrónomo
         ui.recBtn.onclick = () => { audioEngine.toggleRecord(document.getElementById('rec-light'), ui.recBtn); ui.sidebar.classList.remove('active'); };
         ui.metroBtn.onclick = () => { visualMetro.toggle(ui.metroBtn); ui.sidebar.classList.remove('active'); };
 
-        // Modal Lectura de Sesiones
         ui.historyBtn.onclick = () => {
             ui.sidebar.classList.remove('active'); ui.sessionModal.style.display = 'flex';
             const sessions = stateManager.state.sessions;
-            
-            if (sessions.length === 0) {
-                ui.sessionContent.innerHTML = '<div style="color:#666;text-align:center;margin-top:40px;font-family:monospace;">No existen sesiones guardadas en memoria.<br>Presiona "INICIAR SESIÓN" para grabar una.</div>';
-                return;
-            }
+            if (sessions.length === 0) { ui.sessionContent.innerHTML = '<div style="color:#666;text-align:center;margin-top:40px;font-family:monospace;">No existen sesiones guardadas en memoria.<br>Presiona "INICIAR SESIÓN" para grabar una.</div>'; return; }
             
             let html = '';
             for (let i = sessions.length - 1; i >= 0; i--) {
-                const s = sessions[i];
-                if(s.events.length === 0) continue; 
-                
+                const s = sessions[i]; if(s.events.length === 0) continue; 
                 const sessionJSON = JSON.stringify(s).replace(/"/g, '&quot;');
                 const eventsJSON = JSON.stringify(s.events).replace(/"/g, '&quot;');
 
                 html += `
                 <div class="session-block">
                     <div class="session-header">
-                        <h4 class="session-title">Sesión Capturada: ${s.date}</h4>
+                        <h4 class="session-title">Sesión Capturada: ${s.date} <span style="font-size:11px; color:#888;">[${s.profile}]</span></h4>
                         <div class="session-controls">
                             <button class="btn-play-synth" onclick="synth.playSession(JSON.parse('${eventsJSON}'), 'chord')">▶ Bloques</button>
                             <button class="btn-play-synth" onclick="synth.playSession(JSON.parse('${eventsJSON}'), 'arp')">▶ Arpegio</button>
@@ -649,10 +623,7 @@
                     </div>
                     <div>
                         ${s.events.map(evt => `
-                            <div class="session-event">
-                                <span class="time">${evt.time}</span>
-                                <strong>${evt.name}</strong>
-                            </div>
+                            <div class="session-event"><span class="time">${evt.time}</span><strong>${evt.name}</strong></div>
                         `).join('')}
                     </div>
                 </div>`;
@@ -667,13 +638,9 @@
             const url = URL.createObjectURL(b); const a = document.createElement('a'); a.href = url; a.download = `modulo12_sesion_${sessionData.id}.json`; a.click(); URL.revokeObjectURL(url);
         };
 
-        // Renderizado del HUD
         stateManager.subscribe(s => {
             let activeEvents = [];
-            if(s.current_session_id) {
-                const currentS = s.sessions.find(ses => ses.id === s.current_session_id);
-                if(currentS) activeEvents = currentS.events;
-            }
+            if(s.current_session_id) { const currentS = s.sessions.find(ses => ses.id === s.current_session_id); if(currentS) activeEvents = currentS.events; }
             const hudHist = activeEvents.slice(-5).map(h => h.name).join(' ➔ ') || 'Esperando armónicos...';
             const notes = s.notes_detail.map(n => n.name).join(', ') || '[]';
             const sug = s.suggestion ? `<span style="color: #fff">${HarmonyEngine.getNoteName(s.suggestion.mask, s.scale_root)} ${s.suggestion.name.split(' ')[1] || ''}</span>` : 'Ninguna';
