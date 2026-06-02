@@ -261,7 +261,6 @@
                 return { level: 0.3, color: {r: 0, g: 200, b: 255}, desc: "Estable" };
             },
             suggestPath: (currentMask, scaleMask, libraryJSON) => {
-                // Validación de seguridad: Sin sonido o sin biblioteca, no hay ruta.
                 if (currentMask === 0 || !libraryJSON || !libraryJSON.diccionario_acordes) return null;
                 
                 let bestNode = null;
@@ -270,27 +269,18 @@
                 
                 const isChromatic = scaleMask === 4095;
                 
-                // 1. Escaneo del Catálogo: Iteramos sobre el diccionario funcional
                 for (const chordName in libraryJSON.diccionario_acordes) {
                     const chordData = libraryJSON.diccionario_acordes[chordName];
                     const baseMask = HarmonyEngine.createPitchClassSet(chordData.mask);
                     
-                    // 2. Transposición a las 12 raíces posibles
                     for (let r = 0; r < 12; r++) {
                         const transposedMask = HarmonyEngine.rotateMask(baseMask, r);
                         
-                        // Regla A: El destino no puede ser idéntico al origen
                         if (transposedMask === currentMask) continue;
-                        
-                        // Regla B (Filtro de Escala): Si el modo es estricto, el acorde debe encajar en el Mandala
                         if (!isChromatic && !HarmonyEngine.isSubset(transposedMask, scaleMask)) continue;
                         
-                        // 3. Ecuación de Parsimonia: Distancia de Hamming (Bitwise XOR)
                         const distance = HarmonyEngine.getHammingDistance(currentMask, transposedMask);
                         
-                        // 4. Resolución de Empates: Priorizar estabilidad
-                        // Si dos acordes requieren el mismo movimiento de dedos, el motor elegirá
-                        // el que tenga menor factor de tensión en la base de datos (resolución).
                         if (distance < minDistance || (distance === minDistance && chordData.tension < lowestTension)) {
                             minDistance = distance;
                             lowestTension = chordData.tension;
@@ -303,8 +293,6 @@
                         }
                     }
                 }
-                
-                // Retorna el nodo óptimo para que el Renderer encienda la órbita de sugerencia
                 return bestNode;
             }
         };
@@ -782,7 +770,7 @@
             ui.acousticProfile.value = stateManager.state.acoustic_profile; ui.preProfile.value = stateManager.state.acoustic_profile;
 
             ui.sensSlider.oninput = (e) => { const v = parseInt(e.target.value); ui.sensVal.textContent = v + ' dB'; stateManager.update({ sens_offset: v }); };
-            const updateConf = () => stateManager.update({ scale_root: parseInt(ui.scaleRoot.value), scale_type: ui.scaleType.value, viewMode: ui.viewMode.value, acoustic_profile: ui.acousticProfile.value });
+            const updateConf = () => stateManager.update({ scale_root: parseInt(ui.scaleRoot.value), scale_type: ui.scaleType.value, view_mode: ui.viewMode.value, acoustic_profile: ui.acousticProfile.value });
             ui.scaleRoot.onchange = updateConf; ui.scaleType.onchange = updateConf; ui.viewMode.onchange = updateConf; ui.acousticProfile.onchange = updateConf;
 
             ui.menu.onclick = () => ui.sidebar.classList.add('active'); ui.closeMenu.onclick = () => ui.sidebar.classList.remove('active');
