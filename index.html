@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
     <style>
-        :root { --bg-color: #0a0a0c; }
+        :root { --bg-color: #050508; }
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%;
             background-color: var(--bg-color); overflow: hidden;
@@ -27,13 +27,14 @@
         }
         #overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(10, 10, 12, 0.95); display: flex; justify-content: center;
+            background: rgba(5, 5, 8, 0.95); display: flex; justify-content: center;
             align-items: center; z-index: 20; flex-direction: column;
         }
         button {
             background-color: #00ff00; color: #000; border: none; padding: 15px 30px;
             font-size: 16px; font-weight: bold; cursor: pointer; border-radius: 4px;
             box-shadow: 0 0 15px rgba(0, 255, 0, 0.4); transition: all 0.2s;
+            font-family: monospace;
         }
         button:hover { background-color: #00cc00; transform: scale(1.05); }
         .history-track {
@@ -45,21 +46,22 @@
 <body>
 
     <div id="overlay">
-        <h2 style="margin-bottom: 20px;">Modulus: Sistema Solar</h2>
-        <button id="start-btn">Iniciar Escucha Cuántica</button>
+        <h2 style="margin-bottom: 20px; color: #00ff00;">Modulus: Sistema Solar Z12</h2>
+        <button id="start-btn">Activar Sensores Acústicos</button>
     </div>
 
-    <div id="debug-panel">Cargando Memoria Radial...</div>
+    <div id="debug-panel">Inicializando Matriz Radial...</div>
     <canvas id="harmonyCanvas"></canvas>
 
     <script>
         // ==========================================
-        // 1. CONSTANTES Y DICCIONARIO
+        // 1. CONSTANTES Y DICCIONARIO O(1)
         // ==========================================
         const noteNames = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
         const Z12_DICTIONARY = [];
         const createMask = (notes) => notes.reduce((m, n) => m | (1 << n), 0);
 
+        // Generación de Tríadas y Tétradas
         for(let i=0; i<12; i++) {
             Z12_DICTIONARY.push({ name: `${noteNames[i]} May`, mask: createMask([i, (i+4)%12, (i+7)%12]) });
             Z12_DICTIONARY.push({ name: `${noteNames[i]} min`, mask: createMask([i, (i+3)%12, (i+7)%12]) });
@@ -106,11 +108,11 @@
         };
 
         // ==========================================
-        // 3. MATRIZ DE ESTADO Y PERSISTENCIA
+        // 3. GESTOR DE ESTADO CON PERSISTENCIA
         // ==========================================
         const INITIAL_MATRIX = {
             "current_state": {
-                "active_mask": 0, "notes_array": [], "notes_detail": [], // Añadido array detallado con octavas
+                "active_mask": 0, "notes_array": [], "notes_detail": [], 
                 "tension_level": 0.0, "color": {"r": 34, "g": 34, "b": 34},
                 "description": "Silencio", "suggestion": null, "history": []
             }
@@ -127,7 +129,6 @@
                     let currentHistory = this.state.history || [];
                     if (newStateMatrix.active_mask > 0) {
                         const chordDef = Z12_DICTIONARY.find(c => c.mask === newStateMatrix.active_mask);
-                        // Mostrar fundamental con octava si no se reconoce el acorde
                         const chordName = chordDef ? chordDef.name : `Set [${newStateMatrix.notes_detail.map(n=>n.name).join(',')}]`;
                         const lastEntry = currentHistory[currentHistory.length - 1];
                         
@@ -149,7 +150,7 @@
         }
 
         // ==========================================
-        // 4. MÓDULO DE PERCEPCIÓN (CON OCTAVAS)
+        // 4. MÓDULO ACÚSTICO (HPS + CÁLCULO DE OCTAVA)
         // ==========================================
         class AudioSentry {
             constructor(stateManager) {
@@ -170,14 +171,14 @@
                     this.dataArray = new Float32Array(this.analyser.frequencyBinCount);
                     this.isListening = true;
                     this.listenLoop();
-                } catch (error) { alert("Error de micrófono."); }
+                } catch (error) { alert("Error de micrófono. Permisos requeridos."); }
             }
 
             listenLoop() {
                 if (!this.isListening) return;
                 this.analyser.getFloatFrequencyData(this.dataArray);
                 
-                const notesDetail = this.extractDetailedPitches(); // Extrae objetos {pitch, octave, name}
+                const notesDetail = this.extractDetailedPitches(); 
                 const rawPitches = notesDetail.map(n => n.pitch);
                 const currentMask = HarmonyEngine.createPitchClassSet(rawPitches);
                 
@@ -187,7 +188,7 @@
                 this.stateManager.updateState({
                     active_mask: currentMask,
                     notes_array: rawPitches,
-                    notes_detail: notesDetail, // Se inyecta la octava a la matriz
+                    notes_detail: notesDetail, 
                     tension_level: tensionData.level,
                     color: tensionData.color,
                     description: tensionData.desc,
@@ -214,7 +215,7 @@
                 }
 
                 let detected = [];
-                const ABSOLUTE_NOISE_FLOOR = Math.pow(Math.pow(10, -50/20), HPS_ORDER); 
+                const ABSOLUTE_NOISE_FLOOR = Math.pow(Math.pow(10, -45/20), HPS_ORDER); 
                 const RELATIVE_THRESHOLD = 0.15;
 
                 if (maxHps > ABSOLUTE_NOISE_FLOOR) {
@@ -223,7 +224,7 @@
                             const frequency = i * (sampleRate / (binCount * 2));
                             if (frequency < 20 || frequency > 4000) continue;
                             
-                            // Matemáticas exactas de MIDI y Octava
+                            // Matemáticas exactas: Nota MIDI y Octava Científica
                             const midiNote = Math.round(12 * Math.log2(frequency / 440) + 69);
                             const pitchClass = ((midiNote % 12) + 12) % 12;
                             const octave = Math.floor(midiNote / 12) - 1;
@@ -232,13 +233,13 @@
                                 pitch: pitchClass,
                                 octave: octave,
                                 midi: midiNote,
-                                name: `${noteNames[pitchClass]}${octave}`
+                                name: `${noteNames[pitchClass]}${octave}` // Ej: C4, G3
                             });
                         }
                     }
                 }
                 
-                // Deduplicar manteniendo la octava más grave (fundamental del intervalo)
+                // Deduplicar clase de tono, conservando siempre la octava más grave (Raíz fundamental)
                 let uniqueMap = new Map();
                 detected.forEach(d => {
                     if(!uniqueMap.has(d.pitch) || uniqueMap.get(d.pitch).midi > d.midi) {
@@ -246,7 +247,7 @@
                     }
                 });
                 
-                // Retornar ordenado de grave a agudo. El índice 0 será siempre el Root.
+                // Ordenar de grave a agudo. El índice 0 es el núcleo gravitacional (El Sol).
                 return Array.from(uniqueMap.values()).sort((a, b) => a.midi - b.midi);
             }
         }
@@ -275,27 +276,29 @@
                 this.ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
                 this.ctx.strokeStyle = `rgba(255, 255, 255, ${opacity})`;
                 this.ctx.lineWidth = 1;
-                if(isDashed) this.ctx.setLineDash([5, 10]);
+                if(isDashed) this.ctx.setLineDash([4, 8]);
                 this.ctx.stroke();
                 this.ctx.setLineDash([]);
             }
 
-            drawNode(name, x, y, size, color, isTextDark = true, shadowBlur = 0) {
+            drawNode(name, x, y, size, color, isTextDark = true, shadowBlur = 0, strokeColor = '#333') {
                 this.ctx.beginPath();
                 this.ctx.arc(x, y, size, 0, Math.PI * 2);
                 this.ctx.fillStyle = color;
                 this.ctx.shadowBlur = shadowBlur;
                 this.ctx.shadowColor = color;
                 this.ctx.fill();
-                this.ctx.lineWidth = 1;
-                this.ctx.strokeStyle = '#333';
+                this.ctx.lineWidth = 2;
+                this.ctx.strokeStyle = strokeColor;
                 this.ctx.stroke();
 
                 this.ctx.fillStyle = isTextDark ? '#000' : '#fff';
-                this.ctx.font = `bold ${size * 0.6}px monospace`;
+                // Ajuste de fuente para acomodar números de octava (ej. C#4)
+                let fontSize = name.length > 2 ? size * 0.5 : size * 0.65;
+                this.ctx.font = `bold ${fontSize}px monospace`;
                 this.ctx.textAlign = 'center';
                 this.ctx.textBaseline = 'middle';
-                this.ctx.shadowBlur = 0; // Apagar sombra para el texto
+                this.ctx.shadowBlur = 0; 
                 this.ctx.fillText(name, x, y);
             }
 
@@ -306,50 +309,50 @@
                 const centerX = this.canvas.width / 2;
                 const centerY = this.canvas.height / 2;
                 
-                // Radios dinámicos garantizan cero overflow en cualquier dispositivo
+                // Escala radial relativa estricta (previene overflow en móviles)
                 const minDimension = Math.min(this.canvas.width, this.canvas.height);
-                const orbit1Radius = minDimension * 0.18; // Planetas
-                const orbit2Radius = minDimension * 0.32; // Sugerencias
-                const orbit3Radius = minDimension * 0.45; // Espacio profundo
+                const orbit1Radius = minDimension * 0.20; // Planetas
+                const orbit2Radius = minDimension * 0.35; // Sugerencias (Cinturón)
+                const orbit3Radius = minDimension * 0.45; // Espacio Profundo
 
-                // Dibujar Anillos Gravitacionales
-                this.drawOrbitRing(centerX, centerY, orbit1Radius, false, 0.2);
-                this.drawOrbitRing(centerX, centerY, orbit2Radius, true, 0.1);
+                // Dibujar anillos gravitacionales de fondo
+                this.drawOrbitRing(centerX, centerY, orbit1Radius, false, 0.15);
+                this.drawOrbitRing(centerX, centerY, orbit2Radius, true, 0.2);
                 this.drawOrbitRing(centerX, centerY, orbit3Radius, false, 0.05);
 
                 const colorStr = `rgb(${color.r}, ${color.g}, ${color.b})`;
                 
-                // Si hay silencio absoluto, distribuir todo en el anillo exterior
+                // Estado 0: Silencio Absoluto (Todo en la órbita exterior)
                 if (active_mask === 0) {
                     for(let i=0; i<12; i++) {
                         const angle = (i * Math.PI * 2) / 12 - (Math.PI / 2);
                         const x = centerX + Math.cos(angle) * orbit3Radius;
                         const y = centerY + Math.sin(angle) * orbit3Radius;
-                        this.drawNode(noteNames[i], x, y, 12, '#1a1a1c', false, 0);
+                        this.drawNode(noteNames[i], x, y, 12, '#0f0f12', false, 0, '#222');
                     }
                     return;
                 }
 
                 // ==========================================
-                // LÓGICA DE DISTRIBUCIÓN RADIAL RELATIVA
+                // LÓGICA DE JERARQUÍA DEL SISTEMA SOLAR
                 // ==========================================
-                // 1. Centro (El Sol): La nota más grave detectada
+                
+                // 1. EL SOL (Raíz / Nota más grave)
                 const rootNode = notes_detail[0];
                 const rootPitch = rootNode.pitch;
                 
-                // Dibujar El Sol
-                this.drawNode(rootNode.name, centerX, centerY, 32, colorStr, true, 30);
+                // Dibujar El Sol en el centro (Nodo masivo con octava)
+                this.drawNode(rootNode.name, centerX, centerY, 38, colorStr, true, 40, '#fff');
 
-                // Clasificar el resto de los nodos
-                const planets = [];     // Resto del acorde activo
-                const moons = [];       // Nodos sugeridos
-                const deepSpace = [];   // Nodos inactivos
+                // Clasificar el resto de los nodos en el espacio
+                const planets = [];     // Resto del acorde
+                const moons = [];       // Sugerencias
+                const deepSpace = [];   // Inactivos
 
                 for(let i=0; i<12; i++) {
-                    if (i === rootPitch) continue;
+                    if (i === rootPitch) continue; // El sol ya está en el centro
                     
                     if ((active_mask & (1 << i)) !== 0) {
-                        // Buscar el detalle para mostrar la octava correcta si existe
                         const detail = notes_detail.find(n => n.pitch === i);
                         planets.push(detail ? detail : { pitch: i, name: noteNames[i] });
                     } 
@@ -361,42 +364,44 @@
                     }
                 }
 
-                // Utilidad de distribución angular
-                const distribute = (nodesArray, radius, nodeSize, nodeColor, textDark, blur) => {
+                // Función geométrica para distribuir nodos en una órbita
+                const distribute = (nodesArray, radius, nodeSize, nodeColor, textDark, blur, stroke) => {
                     const count = nodesArray.length;
                     nodesArray.forEach((nodeObj, index) => {
+                        // Distribución equidistante
                         const angle = (index * Math.PI * 2) / count - (Math.PI / 2);
                         const x = centerX + Math.cos(angle) * radius;
                         const y = centerY + Math.sin(angle) * radius;
                         
-                        // Conectar Planetas al Sol
+                        // Enlaces gravitacionales del sol a sus planetas
                         if(radius === orbit1Radius) {
                             this.ctx.beginPath();
                             this.ctx.moveTo(centerX, centerY);
                             this.ctx.lineTo(x, y);
-                            this.ctx.strokeStyle = `rgba(${color.r}, ${color.g}, ${color.b}, 0.5)`;
+                            this.ctx.strokeStyle = `rgba(${color.r}, ${color.g}, ${color.b}, 0.6)`;
+                            this.ctx.lineWidth = 2;
                             this.ctx.stroke();
                         }
                         
-                        this.drawNode(nodeObj.name, x, y, nodeSize, nodeColor, textDark, blur);
+                        this.drawNode(nodeObj.name, x, y, nodeSize, nodeColor, textDark, blur, stroke);
                     });
                 };
 
-                // Dibujar Órbitas Activas
+                // Renderizar órbitas por jerarquía
                 if (planets.length > 0) {
-                    distribute(planets, orbit1Radius, 22, colorStr, true, 15);
+                    distribute(planets, orbit1Radius, 24, colorStr, true, 20, '#fff');
                 }
                 if (moons.length > 0) {
-                    distribute(moons, orbit2Radius, 16, 'rgba(255,255,255,0.25)', false, 10);
+                    distribute(moons, orbit2Radius, 18, 'rgba(255,255,255,0.15)', false, 10, '#aaa');
                 }
                 if (deepSpace.length > 0) {
-                    distribute(deepSpace, orbit3Radius, 10, '#111', false, 0);
+                    distribute(deepSpace, orbit3Radius, 10, '#0f0f12', false, 0, '#222');
                 }
             }
         }
 
         // ==========================================
-        // 6. INICIALIZACIÓN
+        // 6. ARRANQUE DEL ENTORNO
         // ==========================================
         const stateManager = new StateManager(INITIAL_MATRIX);
         const renderer = new VisualRenderer('harmonyCanvas', stateManager);
@@ -406,18 +411,19 @@
         const startBtn = document.getElementById('start-btn');
         const overlay = document.getElementById('overlay');
 
+        // Renderizado del panel de depuración
         stateManager.subscribe((state) => {
             const sugText = state.suggestion ? `<span style="color: #fff">Ruta: ${state.suggestion.name}</span>` : 'Ninguna';
             const historyText = state.history && state.history.length > 0 
                 ? state.history.map(h => h.name).join(' ➔ ') 
-                : 'Esperando gravedad...';
+                : 'Esperando eventos...';
 
             const detailNames = state.notes_detail.map(n => n.name).join(', ');
 
             debugPanel.innerHTML = `
-                <strong style="color: #0f0;">SISTEMA SOLAR Z12</strong><br><br>
-                Nodos: [${detailNames}]<br>
-                Tensión: ${state.tension_level.toFixed(1)}<br>
+                <strong style="color: #0f0;">MODULUS Z12: ACTIVO</strong><br><br>
+                Matriz Cruda: [${detailNames}]<br>
+                Tensión Física: ${state.tension_level.toFixed(1)}<br>
                 Estado: <span style="color: rgb(${state.color.r},${state.color.g},${state.color.b})">${state.description}</span><br><br>
                 ${sugText}
                 <div class="history-track">
@@ -428,7 +434,7 @@
         });
 
         startBtn.addEventListener('click', async () => {
-            startBtn.textContent = "Activando Sensores...";
+            startBtn.textContent = "Conectando...";
             startBtn.disabled = true;
             await audioSentry.initialize();
             overlay.style.display = 'none';
@@ -437,7 +443,7 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
-                .catch(error => console.error('Modulus SW: Fallo', error));
+                .catch(error => console.error('Modulus SW: Fallo en registro', error));
             });
         }
     </script>
