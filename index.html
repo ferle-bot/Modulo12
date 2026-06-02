@@ -74,6 +74,25 @@
             margin-bottom: 20px; color: #666; line-height: 1;
         }
         #close-btn:hover { color: #fff; }
+
+        /* Controles de Configuración */
+        .config-group {
+            margin-top: 30px; border-top: 1px solid #222; padding-top: 20px;
+        }
+        .config-label {
+            font-size: 12px; color: #aaa; margin-bottom: 10px; display: flex; justify-content: space-between;
+        }
+        input[type=range] {
+            width: 100%; -webkit-appearance: none; background: transparent; margin: 10px 0;
+        }
+        input[type=range]:focus { outline: none; }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; cursor: pointer; background: #333; border-radius: 2px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            height: 16px; width: 16px; border-radius: 50%; background: var(--accent);
+            cursor: pointer; -webkit-appearance: none; margin-top: -6px;
+        }
     </style>
 </head>
 <body>
@@ -88,10 +107,19 @@
         <button id="stop-btn" class="menu-action-btn btn-stop">Detener Hardware</button>
         <button id="clear-btn" class="menu-action-btn btn-clear">Purgar Memoria</button>
         
-        <div style="color: #555; font-size: 12px; margin-top: 40px; line-height: 2.5;">
-            <div style="border-bottom: 1px solid #222; padding-bottom: 10px; margin-bottom: 10px;">CONFIGURACIÓN</div>
+        <div class="config-group">
+            <div class="config-label">
+                <span>Sensibilidad</span>
+                <span id="sens-val">75%</span>
+            </div>
+            <input type="range" id="sens-slider" min="1" max="100" value="75">
+            <div style="color: #555; font-size: 10px; line-height: 1.4; margin-top: 8px;">
+                Disminuye para filtrar ruido de fondo (lluvia/viento). Aumenta para captar armónicos sutiles.
+            </div>
+        </div>
+        
+        <div style="color: #555; font-size: 12px; margin-top: 30px;">
             <div>▶ Selector de Escalas (Próx.)</div>
-            <div>▶ Sensibilidad Mic (Próx.)</div>
         </div>
     </div>
 
@@ -165,11 +193,20 @@
                     active_mask: 0, notes_array: [], notes_detail: [], 
                     tension_level: 0.0, color: {r: 34, g: 34, b: 34},
                     description: "Silencio", suggestion: null, history: [],
-                    status: "standby" // 'standby', 'active', 'paused'
+                    status: "standby", sensitivity: 75
                 };
                 
                 const saved = localStorage.getItem('modulus_state_v2');
-                this.state = saved ? { ...JSON.parse(saved), status: "standby", active_mask: 0, notes_array: [], notes_detail: [] } : initial;
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    this.state = { 
+                        ...initial, 
+                        history: parsed.history || [], 
+                        sensitivity: parsed.sensitivity !== undefined ? parsed.sensitivity : 75 
+                    };
+                } else {
+                    this.state = initial;
+                }
                 this.listeners = [];
             }
             
@@ -177,7 +214,6 @@
                 const prevMask = this.state.active_mask;
                 this.state = { ...this.state, ...newState };
 
-                // Gestión de historial: Añadir si la máscara cambia y es válida, y no estamos pausados
                 if (newState.active_mask !== undefined && newState.active_mask !== prevMask) {
                     if (this.state.status === 'active' && this.state.active_mask > 0) {
                         const chordDef = Z12_DICTIONARY.find(c => c.mask === this.state.active_mask);
@@ -186,18 +222,23 @@
                         const hist = this.state.history;
                         if (hist.length === 0 || hist[hist.length - 1].mask !== this.state.active_mask) {
                             hist.push({ mask: this.state.active_mask, name });
-                            if (hist.length > 8) hist.shift(); // Aumentado a 8 entradas
+                            if (hist.length > 8) hist.shift();
                         }
                     }
                 }
                 
-                localStorage.setItem('modulus_state_v2', JSON.stringify({ history: this.state.history }));
+                localStorage.setItem('modulus_state_v2', JSON.stringify({ 
+                    history: this.state.history,
+                    sensitivity: this.state.sensitivity
+                }));
                 this.notify();
             }
 
             clearHistory() {
                 this.state.history = [];
-                localStorage.setItem('modulus_state_v2', JSON.stringify({ history: [] }));
+                localStorage.setItem('modulus_state_v2', JSON.stringify({ 
+                    history: [], sensitivity: this.state.sensitivity 
+                }));
                 this.notify();
             }
 
@@ -209,7 +250,7 @@
         }
 
         // ==========================================
-        // 3. MÓDULO DE PERCEPCIÓN ACÚSTICA (ALTO RENDIMIENTO)
+        // 3. MÓDULO DE PERCEPCIÓN ACÚSTICA (CON UMBRAL DE RUIDO)
         // ==========================================
         class AudioEngine {
             constructor(stateManager) {
@@ -221,14 +262,8 @@
 
             async start() {
                 try {
-                    // Restricciones críticas para apagar el DSP del teléfono y obtener audio crudo
                     const constraints = {
-                        audio: {
-                            echoCancellation: false,
-                            autoGainControl: false,
-                            noiseSuppression: false,
-                            channelCount: 1
-                        }
+                        audio: { echoCancellation: false, autoGainControl: false, noiseSuppression: false, channelCount: 1 }
                     };
                     
                     this.stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -237,7 +272,7 @@
 
                     const source = this.audioCtx.createMediaStreamSource(this.stream);
                     this.analyser = this.audioCtx.createAnalyser();
-                    this.analyser.fftSize = 8192; // Resolución duplicada para notas graves
+                    this.analyser.fftSize = 8192;
                     this.analyser.smoothingTimeConstant = 0.6;
                     
                     source.connect(this.analyser);
@@ -273,29 +308,30 @@
                 this.animationId = requestAnimationFrame(() => this.processFrame());
             }
 
-            // Algoritmo de extracción de picos con umbral dinámico (Adaptable a volumen)
             extractPitchesDynamic() {
                 const binCount = this.analyser.frequencyBinCount;
                 const sampleRate = this.audioCtx.sampleRate;
                 
-                // 1. Encontrar el volumen máximo en la muestra actual
                 let maxAmp = -Infinity;
                 for (let i = 0; i < binCount; i++) {
                     if (this.dataArray[i] > maxAmp) maxAmp = this.dataArray[i];
                 }
 
-                // Si el pico máximo es muy bajo, consideramos que es silencio ambiental
-                if (maxAmp < -75) return [];
+                // Cálculo de Piso de Ruido (Noise Floor) basado en Sensibilidad [1 a 100]
+                // 100 = -90dB (Hipersensible, capta todo). 1 = -30dB (Sordo, requiere sonido fuerte/cercano).
+                const sens = this.stateManager.state.sensitivity;
+                const noiseFloor = -30 - (sens * 0.6); 
 
-                // 2. Umbral dinámico: Solo aceptar picos que estén dentro de los 30dB del pico más alto
-                const dynamicThreshold = maxAmp - 30;
+                if (maxAmp < noiseFloor) return [];
+
+                const dynamicThreshold = maxAmp - 30; // Solo nodos a menos de 30dB del pico dominante
                 let detected = [];
 
                 for (let i = 2; i < binCount - 2; i++) {
                     const amp = this.dataArray[i];
-                    if (amp > dynamicThreshold && amp > this.dataArray[i-1] && amp > this.dataArray[i+1]) {
+                    if (amp > noiseFloor && amp > dynamicThreshold && amp > this.dataArray[i-1] && amp > this.dataArray[i+1]) {
                         const freq = i * (sampleRate / (binCount * 2));
-                        if (freq < 50 || freq > 3000) continue; // Rango útil musical
+                        if (freq < 50 || freq > 3000) continue; 
                         
                         const midi = Math.round(12 * Math.log2(freq / 440) + 69);
                         const pitch = ((midi % 12) + 12) % 12;
@@ -305,7 +341,6 @@
                     }
                 }
 
-                // 3. Deduplicación conservando la octava más grave (el ancla armónica)
                 const map = new Map();
                 for (const d of detected) {
                     if (!map.has(d.pitch) || d.midi < map.get(d.pitch).midi) {
@@ -353,7 +388,6 @@
             }
 
             resize(state) {
-                // Soporte para pantallas Retina / High-DPI
                 const dpr = window.devicePixelRatio || 1;
                 this.canvas.width = window.innerWidth * dpr;
                 this.canvas.height = window.innerHeight * dpr;
@@ -377,11 +411,10 @@
                 const w = window.innerWidth, h = window.innerHeight;
                 this.ctx.clearRect(0, 0, w, h);
                 
-                const { active_mask, notes_detail, color, suggestion, status } = state;
+                const { active_mask, notes_detail, color, suggestion } = state;
                 const cx = w / 2, cy = h / 2;
                 const dim = Math.min(w, h);
                 
-                // Radios orbitales relativos
                 const r1 = dim * 0.18, r2 = dim * 0.32, r3 = dim * 0.42;
 
                 const drawRing = (r, dash, op) => {
@@ -403,7 +436,6 @@
                     return;
                 }
 
-                // Centro: Fundamental
                 const root = notes_detail[0];
                 this.drawNode(root.name, cx, cy, 40, rgb, true, 30, '#fff');
 
@@ -452,8 +484,19 @@
             start: document.getElementById('start-btn'), menu: document.getElementById('menu-btn'),
             close: document.getElementById('close-btn'), sidebar: document.getElementById('sidebar'),
             pause: document.getElementById('pause-btn'), stop: document.getElementById('stop-btn'),
-            clear: document.getElementById('clear-btn')
+            clear: document.getElementById('clear-btn'),
+            sensSlider: document.getElementById('sens-slider'), sensVal: document.getElementById('sens-val')
         };
+
+        // Binding de Configuración de Sensibilidad
+        ui.sensSlider.value = stateManager.state.sensitivity;
+        ui.sensVal.textContent = stateManager.state.sensitivity + '%';
+
+        ui.sensSlider.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            ui.sensVal.textContent = val + '%';
+            stateManager.update({ sensitivity: val });
+        });
 
         ui.menu.onclick = () => ui.sidebar.classList.add('active');
         ui.close.onclick = () => ui.sidebar.classList.remove('active');
