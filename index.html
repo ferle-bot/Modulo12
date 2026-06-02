@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Modulo12 - Captura y Perfilado Acústico</title>
+    <title>Modulo12 - Motor Híbrido Z12</title>
     
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#050508">
@@ -184,9 +184,10 @@
     <div id="profiler-modal" class="modal-bg">
         <div id="profiler-box">
             <h3 style="margin-top:0; color:#fff;">Perfilado Acústico del Instrumento</h3>
-            <p style="color:#aaa; font-size:13px; margin-bottom:15px;" id="profiler-desc">Toca la nota solicitada 3 veces consecutivas para mapear tu entorno.</p>
+            <p style="color:#aaa; font-size:13px; margin-bottom:15px;" id="profiler-desc">Toca la nota solicitada 3 veces. El motor aprenderá la huella de tu instrumento.</p>
             
             <div class="profiler-target" id="profiler-target-note">C2</div>
+            <div id="profiler-autocorr-readout" style="color:#0f0; font-size:11px; margin-bottom:10px; height:15px;">Buscando frecuencia base...</div>
             
             <div class="profiler-strikes">
                 <div class="strike-dot" id="sd-1"></div>
@@ -208,10 +209,10 @@
         <div id="pre-config-box" style="width: 80%; max-width: 320px; text-align: left;">
             <label style="color: #00ffcc; font-size: 12px; margin-bottom: 8px; display: block;">1. Selecciona tu instrumento base:</label>
             <select id="pre-profile" class="menu-select" style="margin-bottom: 25px; padding: 12px; font-size: 16px; background: #0a0a0e; border-color: #333;">
-                <option value="piano">Piano Acústico / Teclado</option>
+                <option value="piano">Piano Acústico / Teclado (88T)</option>
                 <option value="guitar">Guitarra Acústica / Eléctrica</option>
                 <option value="voice">Voz Humana</option>
-                <option value="synth">Genérico / Sintetizador (Sin Perfilado)</option>
+                <option value="synth">Genérico / Sintetizador</option>
             </select>
         </div>
 
@@ -285,9 +286,9 @@
         // 2. MATRIZ DE PERFILES Y ESTADO
         // ==========================================
         const PROFILES = {
-            piano:  { tol: 40, minFreq: 27, maxFreq: 4186, targets: [{n:"Do Grave (C2)", m:36}, {n:"Re Grave (D2)", m:38}, {n:"Do Central (C4)", m:60}] },
-            guitar: { tol: 45, minFreq: 80, maxFreq: 1200, targets: [{n:"6ta Cuerda Aire (E2)", m:40}, {n:"1ra Cuerda Aire (E4)", m:64}] },
-            voice:  { tol: 60, minFreq: 80, maxFreq: 1200, targets: [{n:"Canta una nota grave", m:"low"}, {n:"Canta una nota aguda", m:"high"}] },
+            piano:  { tol: 40, minFreq: 27, maxFreq: 4186, targets: [{n:"Do Grave (C2)", f:65.41, m:36}, {n:"Re Grave (D2)", f:73.42, m:38}, {n:"Do Central (C4)", f:261.63, m:60}] },
+            guitar: { tol: 45, minFreq: 80, maxFreq: 1200, targets: [{n:"6ta Cuerda Aire (E2)", f:82.41, m:40}, {n:"1ra Cuerda Aire (E4)", f:329.63, m:64}] },
+            voice:  { tol: 60, minFreq: 80, maxFreq: 1200, targets: [{n:"Canta una nota grave", f:0, m:"low"}, {n:"Canta una nota aguda", f:0, m:"high"}] },
             synth:  { tol: 35, minFreq: 20, maxFreq: 5000, targets: [] } 
         };
 
@@ -299,7 +300,7 @@
                     status: "standby", sens_offset: 0, view_mode: "radial", scale_root: 0, scale_type: "Cromática", scale_mask: 4095,
                     acoustic_profile: "piano", profiler_step: 0, calibration_map: {}
                 };
-                const saved = localStorage.getItem('modulus_state_v14');
+                const saved = localStorage.getItem('modulus_state_v15');
                 this.state = saved ? { ...initial, ...JSON.parse(saved), active_mask: 0, status: 'standby', current_session_id: null, profiler_step: 0, scale_mask: HarmonyEngine.getScaleMask(JSON.parse(saved).scale_root||0, JSON.parse(saved).scale_type||"Cromática") } : initial;
                 this.listeners = [];
             }
@@ -339,25 +340,25 @@
                 }
                 this.save(); this.notify();
             }
-            save() { localStorage.setItem('modulus_state_v14', JSON.stringify({ sessions: this.state.sessions, sens_offset: this.state.sens_offset, view_mode: this.state.view_mode, scale_root: this.state.scale_root, scale_type: this.state.scale_type, acoustic_profile: this.state.acoustic_profile, calibration_map: this.state.calibration_map })); }
+            save() { localStorage.setItem('modulus_state_v15', JSON.stringify({ sessions: this.state.sessions, sens_offset: this.state.sens_offset, view_mode: this.state.view_mode, scale_root: this.state.scale_root, scale_type: this.state.scale_type, acoustic_profile: this.state.acoustic_profile, calibration_map: this.state.calibration_map })); }
             clearHistory() { this.state.sessions = []; this.state.current_session_id = null; this.save(); this.update({}); }
             subscribe(cb) { this.listeners.push(cb); this.notify(); }
             notify() { const snap = JSON.parse(JSON.stringify(this.state)); this.listeners.forEach(cb => cb(snap)); }
         }
 
         // ==========================================
-        // 3. MOTOR ACÚSTICO
+        // 3. MOTOR ACÚSTICO HÍBRIDO (FFT + AUTOCORRELACIÓN)
         // ==========================================
         class AudioEngine {
             constructor(stateManager) {
                 this.stateManager = stateManager; this.audioCtx = null; this.analyser = null;
-                this.dataArray = null; this.stream = null; this.animationId = null;
+                this.freqData = null; this.timeData = null; this.stream = null; this.animationId = null;
                 this.baseNoiseFloor = -60; this.ANALYSIS_FPS = 15; this.lastTime = 0;
-                this.mediaRecorder = null; this.audioChunks = []; this.isRecording = false;
                 
                 this.strikeCount = 0; this.isStriking = false; this.strikeData = [];
                 this.vuCalib = document.getElementById('calib-vu-fill');
                 this.vuProf = document.getElementById('profiler-vu-fill');
+                this.profReadout = document.getElementById('profiler-autocorr-readout');
             }
             
             updateVU(amplitude) {
@@ -366,6 +367,32 @@
                 percent = Math.max(0, Math.min(100, percent));
                 if (this.vuCalib) this.vuCalib.style.width = `${percent}%`;
                 if (this.vuProf) this.vuProf.style.width = `${percent}%`;
+            }
+
+            // Algoritmo de Autocorrelación (Dominio del Tiempo) para Profiler
+            autoCorrelate(buf, sampleRate) {
+                let SIZE = buf.length; let rms = 0;
+                for (let i = 0; i < SIZE; i++) rms += buf[i] * buf[i];
+                rms = Math.sqrt(rms / SIZE);
+                if (rms < 0.01) return -1; // Señal muy débil
+
+                let r1 = 0, r2 = SIZE - 1, thres = 0.2;
+                for (let i = 0; i < SIZE / 2; i++) if (Math.abs(buf[i]) < thres) { r1 = i; break; }
+                for (let i = 1; i < SIZE / 2; i++) if (Math.abs(buf[SIZE - i]) < thres) { r2 = SIZE - i; break; }
+                buf = buf.slice(r1, r2); SIZE = buf.length;
+
+                let c = new Array(SIZE).fill(0);
+                for (let i = 0; i < SIZE; i++) {
+                    for (let j = 0; j < SIZE - i; j++) c[i] += buf[j] * buf[j + i];
+                }
+
+                let d = 0; while (c[d] > c[d + 1]) d++;
+                let maxval = -1, maxpos = -1;
+                for (let i = d; i < SIZE; i++) {
+                    if (c[i] > maxval) { maxval = c[i]; maxpos = i; }
+                }
+                let T0 = maxpos;
+                return sampleRate / T0;
             }
 
             async startAndCalibrate() {
@@ -377,15 +404,17 @@
                     this.analyser = this.audioCtx.createAnalyser(); 
                     this.analyser.fftSize = 8192; this.analyser.smoothingTimeConstant = 0.6;
                     source.connect(this.analyser);
-                    this.dataArray = new Float32Array(this.analyser.frequencyBinCount);
+                    
+                    this.freqData = new Float32Array(this.analyser.frequencyBinCount);
+                    this.timeData = new Float32Array(this.analyser.fftSize); // Buffer para Autocorrelación
                     
                     this.stateManager.update({ status: 'calibrating' });
 
                     let noiseSamples = []; const endTime = Date.now() + 2000;
                     return new Promise((resolve) => {
                         const tick = () => {
-                            this.analyser.getFloatFrequencyData(this.dataArray);
-                            let fMax = -Infinity; for(let i=0; i<this.dataArray.length; i++) if(this.dataArray[i] > fMax && this.dataArray[i] < 0) fMax = this.dataArray[i];
+                            this.analyser.getFloatFrequencyData(this.freqData);
+                            let fMax = -Infinity; for(let i=0; i<this.freqData.length; i++) if(this.freqData[i] > fMax && this.freqData[i] < 0) fMax = this.freqData[i];
                             this.updateVU(fMax); 
                             
                             if(fMax > -100) noiseSamples.push(fMax);
@@ -411,7 +440,7 @@
                 } catch(e) { return false; }
             }
 
-            // CORRECCIÓN ABSOLUTA: TRUST THE SUPERVISOR (APRENDIZAJE NO RÍGIDO)
+            // PERFILADO CON APRENDIZAJE SUPERVISADO Y AUTOCORRELACIÓN
             runProfiler() {
                 if (this.stateManager.state.status !== 'profiling') return;
                 
@@ -427,40 +456,68 @@
                 const target = profileDef.targets[step];
                 document.getElementById('profiler-target-note').textContent = target.n;
                 
-                this.analyser.getFloatFrequencyData(this.dataArray);
+                // Extraer datos crudos (Ambos dominios)
+                this.analyser.getFloatFrequencyData(this.freqData);
+                this.analyser.getFloatTimeDomainData(this.timeData);
                 
+                // Volumen Espectral
                 let fMax = -Infinity;
                 for(let i=2; i<this.analyser.frequencyBinCount-2; i++) {
-                    if (this.dataArray[i] > fMax) fMax = this.dataArray[i];
+                    if (this.freqData[i] > fMax) fMax = this.freqData[i];
                 }
                 this.updateVU(fMax);
 
-                const details = this.extractPitchesDynamic();
-                let currentPeak = null;
                 let isHit = false;
+                const strikeThreshold = this.baseNoiseFloor + 12; 
 
-                // Definición de "Golpe": 15dB por encima del ruido de fondo. No importa la nota.
-                const strikeThreshold = this.baseNoiseFloor + 15;
-
+                // Si hay sonido fuerte, usamos Autocorrelación para leer la fundamental física
                 if (fMax > strikeThreshold) {
-                    isHit = true;
-                    // Guardamos la huella acústica dominante de este golpe
-                    if (details.length > 0) {
-                        const dominant = details.reduce((prev, curr) => (prev.amp > curr.amp) ? prev : curr, details[0]);
-                        currentPeak = dominant.midi;
+                    const acfFreq = this.autoCorrelate(this.timeData, this.audioCtx.sampleRate);
+                    
+                    if (acfFreq > 20 && acfFreq < 4000) {
+                        const acfMidi = Math.round(12 * Math.log2(acfFreq/440) + 69);
+                        this.profReadout.textContent = `Pitch ACF: ${Math.round(acfFreq)}Hz (Midi: ${acfMidi})`;
+                        
+                        // Validar si el pitch del ACF se acerca al objetivo
+                        if (target.m === 'low') { isHit = acfMidi < 60; }
+                        else if (target.m === 'high') { isHit = acfMidi >= 60; }
+                        else {
+                            // Validar usando Pitch Class (Confiamos en la octava que detecte el usuario)
+                            const targetPitch = ((target.m % 12) + 12) % 12;
+                            const detectedPitch = ((acfMidi % 12) + 12) % 12;
+                            if (targetPitch === detectedPitch) isHit = true;
+                        }
+                    } else {
+                        // Respaldo de FFT si ACF falla
+                        this.profReadout.textContent = `Buscando fundamental...`;
+                        isHit = true; // Forzamos el hit por volumen si la ACF es inestable, confiando en el usuario.
                     }
+                } else {
+                    this.profReadout.textContent = `Esperando golpe...`;
                 }
 
-                // Lógica 3 Strikes con bloqueo de rebote
+                // Registro del Strike (Se guarda el perfil del FFT defectuoso para usarlo después)
                 if (isHit && !this.isStriking) {
                     this.isStriking = true;
                     this.strikeCount++;
-                    if(currentPeak) this.strikeData.push(currentPeak);
+                    
+                    // Extraer los 3 picos FFT más fuertes de este instante (La huella digital)
+                    let peaks = [];
+                    for(let i=2; i<this.analyser.frequencyBinCount-2; i++) {
+                        if(this.freqData[i] > strikeThreshold && this.freqData[i] > this.freqData[i-1] && this.freqData[i] > this.freqData[i+1]) {
+                            peaks.push({ amp: this.freqData[i], bin: i });
+                        }
+                    }
+                    peaks.sort((a,b) => b.amp - a.amp); // Ordenar por fuerza
+                    const topBins = peaks.slice(0,3).map(p => p.bin);
+                    
+                    this.strikeData.push(topBins);
                     this.updateStrikeUI();
                     
                     if (this.strikeCount >= 3) {
                         const calibMap = this.stateManager.state.calibration_map;
-                        calibMap[target.n] = this.strikeData; // Guardamos lo que escuchó el micrófono como la verdad de esa nota
+                        // Guardar la huella (se usará en iteraciones futuras para "corregir" el FFT)
+                        calibMap[target.m] = this.strikeData;
                         this.stateManager.update({ calibration_map: calibMap });
 
                         setTimeout(() => {
@@ -470,7 +527,7 @@
                         }, 800);
                         return;
                     }
-                    setTimeout(() => { this.isStriking = false; }, 400); // Deadzone
+                    setTimeout(() => { this.isStriking = false; }, 400); 
                 } else if (!isHit && fMax < this.baseNoiseFloor + 5) {
                     this.isStriking = false; 
                 }
@@ -505,7 +562,8 @@
                 if(this.stateManager.state.status !== 'active') return;
                 const now = performance.now();
                 if(now - this.lastTime >= 1000/this.ANALYSIS_FPS) {
-                    this.lastTime = now; this.analyser.getFloatFrequencyData(this.dataArray);
+                    this.lastTime = now; 
+                    this.analyser.getFloatFrequencyData(this.freqData);
                     const details = this.extractPitchesDynamic(); const rawPitches = details.map(d=>d.pitch);
                     const mask = HarmonyEngine.createPitchClassSet(rawPitches);
                     this.stateManager.update({ active_mask: mask, notes_array: rawPitches, notes_detail: details, tension_level: HarmonyEngine.evaluateTension(rawPitches).level, color: HarmonyEngine.evaluateTension(rawPitches).color, description: HarmonyEngine.evaluateTension(rawPitches).desc, suggestion: HarmonyEngine.suggestPath(mask, this.stateManager.state.scale_mask) });
@@ -523,9 +581,9 @@
                 let rawPeaks = [];
 
                 for(let i=2; i<binCount-2; i++) {
-                    const beta = this.dataArray[i];
-                    if(beta > limit && beta > this.dataArray[i-1] && beta > this.dataArray[i+1]) {
-                        const alpha = this.dataArray[i-1]; const gamma = this.dataArray[i+1];
+                    const beta = this.freqData[i];
+                    if(beta > limit && beta > this.freqData[i-1] && beta > this.freqData[i+1]) {
+                        const alpha = this.freqData[i-1]; const gamma = this.freqData[i+1];
                         let p = 0; const denom = alpha - 2 * beta + gamma;
                         if (denom !== 0) p = 0.5 * (alpha - gamma) / denom;
                         
@@ -543,10 +601,10 @@
                 let correctedPeaks = [];
                 const fundamentalTolDb = 15; 
 
+                // Lógica de corrección de octava (FFT Híbrido)
                 rawPeaks.forEach(peak => {
                     let isHarmonic = false;
                     let fundamentalFreq = peak.freq;
-                    let fundamentalAmp = peak.amp;
 
                     if (this.stateManager.state.acoustic_profile === 'piano' || this.stateManager.state.acoustic_profile === 'guitar') {
                         const expectedSub1Bin = Math.round(peak.bin / 2);
@@ -557,8 +615,8 @@
                             let maxA = -Infinity; let maxI = 0;
                             for(let w = -2; w <= 2; w++) {
                                 const idx = targetBin + w;
-                                if (idx > 0 && idx < binCount && this.dataArray[idx] > maxA) {
-                                    maxA = this.dataArray[idx]; maxI = idx;
+                                if (idx > 0 && idx < binCount && this.freqData[idx] > maxA) {
+                                    maxA = this.freqData[idx]; maxI = idx;
                                 }
                             }
                             if (maxA > limit && maxA > (peak.amp - fundamentalTolDb)) {
@@ -569,15 +627,11 @@
 
                         const sub2Data = checkWindow(expectedSub2Bin);
                         if (sub2Data && sub2Data.freq >= profileDef.minFreq) {
-                            fundamentalFreq = sub2Data.freq;
-                            fundamentalAmp = sub2Data.amp; 
-                            isHarmonic = true;
+                            fundamentalFreq = sub2Data.freq; isHarmonic = true;
                         } else {
                             const sub1Data = checkWindow(expectedSub1Bin);
                             if (sub1Data && sub1Data.freq >= profileDef.minFreq) {
-                                fundamentalFreq = sub1Data.freq;
-                                fundamentalAmp = sub1Data.amp;
-                                isHarmonic = true;
+                                fundamentalFreq = sub1Data.freq; isHarmonic = true;
                             }
                         }
                     }
@@ -587,7 +641,7 @@
                     const p = ((fMidi%12)+12)%12;
                     const oct = Math.floor(fMidi/12)-1;
                     
-                    correctedPeaks.push({ pitch: p, octave: oct, midi: fMidi, amp: isHarmonic ? peak.amp : peak.amp, freq: fundamentalFreq });
+                    correctedPeaks.push({ pitch: p, octave: oct, midi: fMidi, amp: peak.amp, freq: fundamentalFreq });
                 });
 
                 const map = new Map(); 
@@ -605,28 +659,10 @@
             }
             stop() {
                 if(this.animationId) cancelAnimationFrame(this.animationId);
-                if(this.isRecording) this.toggleRecord(document.getElementById('rec-light'), document.getElementById('rec-btn'));
                 if(this.stream) this.stream.getTracks().forEach(t=>t.stop());
                 if(this.audioCtx) this.audioCtx.close();
                 this.stateManager.endCurrentSession();
                 this.stateManager.update({status:'standby', active_mask:0, notes_detail:[], tension_level:0, suggestion:null});
-            }
-            toggleRecord(ledEl, btnEl) {
-                if(!this.stream) return;
-                if(!this.isRecording) {
-                    this.audioChunks = []; this.mediaRecorder = new MediaRecorder(this.stream);
-                    this.mediaRecorder.ondataavailable = e => { if(e.data.size > 0) this.audioChunks.push(e.data); };
-                    this.mediaRecorder.onstop = () => {
-                        const blob = new Blob(this.audioChunks, { type: 'audio/webm' });
-                        const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `modulo12_rec_${Date.now()}.webm`;
-                        a.click(); URL.revokeObjectURL(url);
-                    };
-                    this.mediaRecorder.start(); this.isRecording = true; ledEl.classList.add('active');
-                    btnEl.textContent = "⏹ Detener Grabación"; btnEl.style.color = "#fff";
-                } else {
-                    this.mediaRecorder.stop(); this.isRecording = false; ledEl.classList.remove('active');
-                    btnEl.textContent = "⏺ Grabar Audio (Mic)"; btnEl.style.color = "#ff3333";
-                }
             }
         }
 
@@ -779,7 +815,7 @@
             clear: document.getElementById('clear-btn'), calibMsg: document.getElementById('calibration-msg'), sensSlider: document.getElementById('sens-slider'), sensVal: document.getElementById('sens-val'),
             scaleRoot: document.getElementById('scale-root'), scaleType: document.getElementById('scale-type'), viewMode: document.getElementById('view-mode'), acousticProfile: document.getElementById('acoustic-profile'),
             preProfile: document.getElementById('pre-profile'), preConfigBox: document.getElementById('pre-config-box'), historyBtn: document.getElementById('history-btn'), sessionModal: document.getElementById('session-modal'), closeModal: document.getElementById('close-modal'), sessionContent: document.getElementById('session-content'),
-            recBtn: document.getElementById('rec-btn'), metroBtn: document.getElementById('metro-btn'), bpmSlider: document.getElementById('bpm-slider'), bpmVal: document.getElementById('bpm-val'),
+            metroBtn: document.getElementById('metro-btn'), bpmSlider: document.getElementById('bpm-slider'), bpmVal: document.getElementById('bpm-val'),
             profilerSkip: document.getElementById('profiler-skip-btn')
         };
 
@@ -798,9 +834,7 @@
         ui.stop.onclick = () => { audioEngine.stop(); ui.pause.textContent = "Pausar Detección"; ui.pause.style.backgroundColor = "var(--accent)"; ui.sidebar.classList.remove('active'); ui.overlay.style.display = 'flex'; ui.preConfigBox.style.display = 'block'; ui.calibMsg.style.display = 'none'; };
         ui.clear.onclick = () => { stateManager.clearHistory(); ui.sidebar.classList.remove('active'); };
         
-        ui.recBtn.onclick = () => { audioEngine.toggleRecord(document.getElementById('rec-light'), ui.recBtn); ui.sidebar.classList.remove('active'); };
         ui.metroBtn.onclick = () => { visualMetro.toggle(ui.metroBtn); ui.sidebar.classList.remove('active'); };
-
         ui.profilerSkip.onclick = () => { audioEngine.forceProfilerSkip(); };
 
         ui.historyBtn.onclick = () => {
