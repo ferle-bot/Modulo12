@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Modulus (PWA) - Sistema Solar Z12</title>
+    <title>Modulo12</title>
     
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#0a0a0c">
@@ -19,35 +19,72 @@
             font-family: monospace; user-select: none; color: #fff;
         }
         canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
+        
+        /* Panel de depuración */
         #debug-panel {
             position: absolute; top: 20px; left: 20px;
             background: rgba(0, 0, 0, 0.85); padding: 15px;
             border-radius: 8px; pointer-events: none; border: 1px solid #333;
             z-index: 10; min-width: 250px;
         }
+        
+        /* Pantalla de inicio */
         #overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(5, 5, 8, 0.95); display: flex; justify-content: center;
             align-items: center; z-index: 20; flex-direction: column;
         }
         button {
-            background-color: #00ff00; color: #000; border: none; padding: 15px 30px;
-            font-size: 16px; font-weight: bold; cursor: pointer; border-radius: 4px;
+            background-color: #00ff00; color: #000; border: none; padding: 15px 40px;
+            font-size: 18px; font-weight: bold; cursor: pointer; border-radius: 4px;
             box-shadow: 0 0 15px rgba(0, 255, 0, 0.4); transition: all 0.2s;
             font-family: monospace;
         }
         button:hover { background-color: #00cc00; transform: scale(1.05); }
+        button:disabled { background-color: #555; box-shadow: none; cursor: not-allowed; color: #aaa; }
+        
         .history-track {
             color: #888; font-size: 11px; margin-top: 10px;
             border-top: 1px solid #333; padding-top: 10px;
         }
+
+        /* Menú Hamburguesa y Sidebar */
+        #menu-btn {
+            position: absolute; top: 20px; right: 20px; z-index: 30;
+            font-size: 32px; color: #fff; cursor: pointer;
+            text-shadow: 0 0 10px rgba(0,0,0,0.8);
+        }
+        #sidebar {
+            position: fixed; top: 0; right: -280px; width: 240px; height: 100%;
+            background: rgba(10, 10, 12, 0.98); border-left: 1px solid #333;
+            transition: right 0.3s ease; z-index: 40; padding: 20px;
+            box-shadow: -5px 0 20px rgba(0,0,0,0.8);
+        }
+        #sidebar.active { right: 0; }
+        #close-btn {
+            font-size: 32px; cursor: pointer; text-align: right; 
+            margin-bottom: 20px; color: #888;
+        }
+        #close-btn:hover { color: #fff; }
     </style>
 </head>
 <body>
 
+    <div id="menu-btn">☰</div>
+    <div id="sidebar">
+        <div id="close-btn">×</div>
+        <h3 style="color: #00ff00; margin-top: 0;">Modulo12</h3>
+        <hr style="border-color: #333;">
+        <div style="color: #888; font-size: 13px; margin-top: 20px; line-height: 2;">
+            <p>▶ Selector de Escalas (Próximamente)</p>
+            <p>▶ Ajustes de Sensibilidad (Próximamente)</p>
+            <p>▶ Exportar Historial (Próximamente)</p>
+        </div>
+    </div>
+
     <div id="overlay">
-        <h2 style="margin-bottom: 20px; color: #00ff00;">Modulus: Sistema Solar Z12</h2>
-        <button id="start-btn">Activar Sensores Acústicos</button>
+        <h1 style="margin-bottom: 30px; color: #00ff00; letter-spacing: 2px;">Modulo12</h1>
+        <button id="start-btn">Iniciar</button>
     </div>
 
     <div id="debug-panel">Inicializando Matriz Radial...</div>
@@ -55,13 +92,12 @@
 
     <script>
         // ==========================================
-        // 1. CONSTANTES Y DICCIONARIO O(1)
+        // 1. CONSTANTES Y DICCIONARIO
         // ==========================================
         const noteNames = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
         const Z12_DICTIONARY = [];
         const createMask = (notes) => notes.reduce((m, n) => m | (1 << n), 0);
 
-        // Generación de Tríadas y Tétradas
         for(let i=0; i<12; i++) {
             Z12_DICTIONARY.push({ name: `${noteNames[i]} May`, mask: createMask([i, (i+4)%12, (i+7)%12]) });
             Z12_DICTIONARY.push({ name: `${noteNames[i]} min`, mask: createMask([i, (i+3)%12, (i+7)%12]) });
@@ -72,7 +108,7 @@
         }
 
         // ==========================================
-        // 2. MOTOR LÓGICO
+        // 2. MOTOR LÓGICO Y MAPEO DE COLOR
         // ==========================================
         const HarmonyEngine = {
             createPitchClassSet: createMask,
@@ -82,7 +118,8 @@
                 return count;
             },
             evaluateTension: (notesArray) => {
-                if (notesArray.length < 2) return { level: 0.0, color: {r: 0, g: 255, b: 0}, desc: "Reposo" };
+                // Colores basados estrictamente en la guía de diseño del visualizador
+                if (notesArray.length < 2) return { level: 0.0, color: {r: 0, g: 255, b: 0}, desc: "Reposo absoluto" };
                 let hasTritone = false, hasMinorSecond = false;
                 for (let i=0; i<notesArray.length; i++) {
                     for (let j=i+1; j<notesArray.length; j++) {
@@ -91,9 +128,9 @@
                         if (interval === 1 || interval === 11) hasMinorSecond = true;
                     }
                 }
-                if (hasTritone) return { level: 1.0, color: {r: 255, g: 0, b: 0}, desc: "Inestabilidad (Tritono)" };
-                if (hasMinorSecond) return { level: 0.7, color: {r: 255, g: 165, b: 0}, desc: "Tensión (2da menor)" };
-                return { level: 0.3, color: {r: 0, g: 255, b: 255}, desc: "Estabilidad matizada" };
+                if (hasTritone) return { level: 1.0, color: {r: 255, g: 0, b: 0}, desc: "Máxima inestabilidad (Tritono)" }; [span_0](start_span)//[span_0](end_span)
+                if (hasMinorSecond) return { level: 0.7, color: {r: 255, g: 165, b: 0}, desc: "Tensión creciente" }; [span_1](start_span)//[span_1](end_span)
+                return { level: 0.3, color: {r: 0, g: 255, b: 255}, desc: "Estabilidad matizada" }; [span_2](start_span)//[span_2](end_span)
             },
             suggestNextPath: (currentMask) => {
                 if(currentMask === 0) return null;
@@ -108,7 +145,7 @@
         };
 
         // ==========================================
-        // 3. GESTOR DE ESTADO CON PERSISTENCIA
+        // 3. GESTOR DE ESTADO
         // ==========================================
         const INITIAL_MATRIX = {
             "current_state": {
@@ -150,7 +187,7 @@
         }
 
         // ==========================================
-        // 4. MÓDULO ACÚSTICO (HPS + CÁLCULO DE OCTAVA)
+        // 4. MÓDULO ACÚSTICO (ROBUSTO CONTRA FALLOS)
         // ==========================================
         class AudioSentry {
             constructor(stateManager) {
@@ -161,17 +198,39 @@
 
             async initialize() {
                 try {
+                    // Validar soporte de API antes de pedir permisos
+                    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                        alert("El navegador no soporta acceso al micrófono o requiere conexión HTTPS segura.");
+                        return false;
+                    }
+
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    
+                    // Inicialización segura del AudioContext
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    this.audioContext = new AudioCtx();
+                    
+                    // Reanudar contexto si el navegador lo inicia suspendido
+                    if (this.audioContext.state === 'suspended') {
+                        await this.audioContext.resume();
+                    }
+
                     const source = this.audioContext.createMediaStreamSource(stream);
                     this.analyser = this.audioContext.createAnalyser();
                     this.analyser.fftSize = 4096;
                     this.analyser.smoothingTimeConstant = 0.85;
                     source.connect(this.analyser);
+                    
                     this.dataArray = new Float32Array(this.analyser.frequencyBinCount);
                     this.isListening = true;
                     this.listenLoop();
-                } catch (error) { alert("Error de micrófono. Permisos requeridos."); }
+                    
+                    return true;
+                } catch (error) { 
+                    console.error("AudioSentry Init Error:", error);
+                    alert("No se pudo acceder al micrófono. Verifica que los permisos estén habilitados en la configuración de Chrome."); 
+                    return false;
+                }
             }
 
             listenLoop() {
@@ -224,7 +283,6 @@
                             const frequency = i * (sampleRate / (binCount * 2));
                             if (frequency < 20 || frequency > 4000) continue;
                             
-                            // Matemáticas exactas: Nota MIDI y Octava Científica
                             const midiNote = Math.round(12 * Math.log2(frequency / 440) + 69);
                             const pitchClass = ((midiNote % 12) + 12) % 12;
                             const octave = Math.floor(midiNote / 12) - 1;
@@ -233,13 +291,12 @@
                                 pitch: pitchClass,
                                 octave: octave,
                                 midi: midiNote,
-                                name: `${noteNames[pitchClass]}${octave}` // Ej: C4, G3
+                                name: `${noteNames[pitchClass]}${octave}`
                             });
                         }
                     }
                 }
                 
-                // Deduplicar clase de tono, conservando siempre la octava más grave (Raíz fundamental)
                 let uniqueMap = new Map();
                 detected.forEach(d => {
                     if(!uniqueMap.has(d.pitch) || uniqueMap.get(d.pitch).midi > d.midi) {
@@ -247,13 +304,12 @@
                     }
                 });
                 
-                // Ordenar de grave a agudo. El índice 0 es el núcleo gravitacional (El Sol).
                 return Array.from(uniqueMap.values()).sort((a, b) => a.midi - b.midi);
             }
         }
 
         // ==========================================
-        // 5. PROYECTOR VISUAL (SISTEMA SOLAR RELATIVO)
+        // 5. PROYECTOR VISUAL (SISTEMA SOLAR)
         // ==========================================
         class VisualRenderer {
             constructor(canvasId, stateManager) {
@@ -293,7 +349,6 @@
                 this.ctx.stroke();
 
                 this.ctx.fillStyle = isTextDark ? '#000' : '#fff';
-                // Ajuste de fuente para acomodar números de octava (ej. C#4)
                 let fontSize = name.length > 2 ? size * 0.5 : size * 0.65;
                 this.ctx.font = `bold ${fontSize}px monospace`;
                 this.ctx.textAlign = 'center';
@@ -309,20 +364,17 @@
                 const centerX = this.canvas.width / 2;
                 const centerY = this.canvas.height / 2;
                 
-                // Escala radial relativa estricta (previene overflow en móviles)
                 const minDimension = Math.min(this.canvas.width, this.canvas.height);
-                const orbit1Radius = minDimension * 0.20; // Planetas
-                const orbit2Radius = minDimension * 0.35; // Sugerencias (Cinturón)
-                const orbit3Radius = minDimension * 0.45; // Espacio Profundo
+                const orbit1Radius = minDimension * 0.20; 
+                const orbit2Radius = minDimension * 0.35; 
+                const orbit3Radius = minDimension * 0.45; 
 
-                // Dibujar anillos gravitacionales de fondo
                 this.drawOrbitRing(centerX, centerY, orbit1Radius, false, 0.15);
                 this.drawOrbitRing(centerX, centerY, orbit2Radius, true, 0.2);
                 this.drawOrbitRing(centerX, centerY, orbit3Radius, false, 0.05);
 
                 const colorStr = `rgb(${color.r}, ${color.g}, ${color.b})`;
                 
-                // Estado 0: Silencio Absoluto (Todo en la órbita exterior)
                 if (active_mask === 0) {
                     for(let i=0; i<12; i++) {
                         const angle = (i * Math.PI * 2) / 12 - (Math.PI / 2);
@@ -333,24 +385,17 @@
                     return;
                 }
 
-                // ==========================================
-                // LÓGICA DE JERARQUÍA DEL SISTEMA SOLAR
-                // ==========================================
-                
-                // 1. EL SOL (Raíz / Nota más grave)
+                // El Sol
                 const rootNode = notes_detail[0];
                 const rootPitch = rootNode.pitch;
-                
-                // Dibujar El Sol en el centro (Nodo masivo con octava)
                 this.drawNode(rootNode.name, centerX, centerY, 38, colorStr, true, 40, '#fff');
 
-                // Clasificar el resto de los nodos en el espacio
-                const planets = [];     // Resto del acorde
-                const moons = [];       // Sugerencias
-                const deepSpace = [];   // Inactivos
+                const planets = [];     
+                const moons = [];       
+                const deepSpace = [];   
 
                 for(let i=0; i<12; i++) {
-                    if (i === rootPitch) continue; // El sol ya está en el centro
+                    if (i === rootPitch) continue; 
                     
                     if ((active_mask & (1 << i)) !== 0) {
                         const detail = notes_detail.find(n => n.pitch === i);
@@ -364,16 +409,13 @@
                     }
                 }
 
-                // Función geométrica para distribuir nodos en una órbita
                 const distribute = (nodesArray, radius, nodeSize, nodeColor, textDark, blur, stroke) => {
                     const count = nodesArray.length;
                     nodesArray.forEach((nodeObj, index) => {
-                        // Distribución equidistante
                         const angle = (index * Math.PI * 2) / count - (Math.PI / 2);
                         const x = centerX + Math.cos(angle) * radius;
                         const y = centerY + Math.sin(angle) * radius;
                         
-                        // Enlaces gravitacionales del sol a sus planetas
                         if(radius === orbit1Radius) {
                             this.ctx.beginPath();
                             this.ctx.moveTo(centerX, centerY);
@@ -387,21 +429,14 @@
                     });
                 };
 
-                // Renderizar órbitas por jerarquía
-                if (planets.length > 0) {
-                    distribute(planets, orbit1Radius, 24, colorStr, true, 20, '#fff');
-                }
-                if (moons.length > 0) {
-                    distribute(moons, orbit2Radius, 18, 'rgba(255,255,255,0.15)', false, 10, '#aaa');
-                }
-                if (deepSpace.length > 0) {
-                    distribute(deepSpace, orbit3Radius, 10, '#0f0f12', false, 0, '#222');
-                }
+                if (planets.length > 0) distribute(planets, orbit1Radius, 24, colorStr, true, 20, '#fff');
+                if (moons.length > 0) distribute(moons, orbit2Radius, 18, 'rgba(255,255,255,0.15)', false, 10, '#aaa');
+                if (deepSpace.length > 0) distribute(deepSpace, orbit3Radius, 10, '#0f0f12', false, 0, '#222');
             }
         }
 
         // ==========================================
-        // 6. ARRANQUE DEL ENTORNO
+        // 6. ARRANQUE E INTERACCIONES DE UI
         // ==========================================
         const stateManager = new StateManager(INITIAL_MATRIX);
         const renderer = new VisualRenderer('harmonyCanvas', stateManager);
@@ -410,8 +445,14 @@
         const debugPanel = document.getElementById('debug-panel');
         const startBtn = document.getElementById('start-btn');
         const overlay = document.getElementById('overlay');
+        const menuBtn = document.getElementById('menu-btn');
+        const closeBtn = document.getElementById('close-btn');
+        const sidebar = document.getElementById('sidebar');
 
-        // Renderizado del panel de depuración
+        // Control del Menú Hamburguesa
+        menuBtn.addEventListener('click', () => sidebar.classList.add('active'));
+        closeBtn.addEventListener('click', () => sidebar.classList.remove('active'));
+
         stateManager.subscribe((state) => {
             const sugText = state.suggestion ? `<span style="color: #fff">Ruta: ${state.suggestion.name}</span>` : 'Ninguna';
             const historyText = state.history && state.history.length > 0 
@@ -421,29 +462,38 @@
             const detailNames = state.notes_detail.map(n => n.name).join(', ');
 
             debugPanel.innerHTML = `
-                <strong style="color: #0f0;">MODULUS Z12: ACTIVO</strong><br><br>
-                Matriz Cruda: [${detailNames}]<br>
+                <strong style="color: #0f0;">MODULO12: ACTIVO</strong><br><br>
+                Nodos: [${detailNames}]<br>
                 Tensión Física: ${state.tension_level.toFixed(1)}<br>
                 Estado: <span style="color: rgb(${state.color.r},${state.color.g},${state.color.b})">${state.description}</span><br><br>
                 ${sugText}
                 <div class="history-track">
-                    <strong>Registro Orbital:</strong><br>
+                    <strong>Registro de Sesión:</strong><br>
                     ${historyText}
                 </div>
             `;
         });
 
         startBtn.addEventListener('click', async () => {
+            // Protección contra el congelamiento
             startBtn.textContent = "Conectando...";
             startBtn.disabled = true;
-            await audioSentry.initialize();
-            overlay.style.display = 'none';
+            
+            const initSuccess = await audioSentry.initialize();
+            
+            if (initSuccess) {
+                overlay.style.display = 'none';
+            } else {
+                // Liberar el botón si ocurrió un error silencioso o el usuario denegó permiso
+                startBtn.textContent = "Iniciar";
+                startBtn.disabled = false;
+            }
         });
 
+        // Registro del Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                .catch(error => console.error('Modulus SW: Fallo en registro', error));
+                navigator.serviceWorker.register('./sw.js').catch(e => console.error(e));
             });
         }
     </script>
