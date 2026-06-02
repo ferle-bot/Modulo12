@@ -17,8 +17,12 @@
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; border: 1px solid #0a0a0e; }
         
         #header { background: rgba(10, 10, 15, 0.95); border-bottom: 1px solid #222; padding: 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; backdrop-filter: blur(10px); }
-        .title { color: var(--accent); margin: 0; letter-spacing: 2px; font-size: 24px; }
+        .title { color: var(--accent); margin: 0; letter-spacing: 2px; font-size: 24px; display: flex; align-items: center; gap: 15px;}
         
+        #live-status { font-size: 12px; padding: 4px 8px; border-radius: 4px; background: #222; color: #888; border: 1px solid #333; letter-spacing: 0; }
+        #live-status.active { background: #330000; color: #ff3300; border-color: #ff3300; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
         .upload-btn { background-color: #111; color: var(--accent); border: 1px solid var(--accent); padding: 10px 20px; font-size: 14px; font-weight: bold; cursor: pointer; border-radius: 4px; font-family: monospace; transition: all 0.2s; }
         .upload-btn:hover { background-color: var(--accent); color: #000; }
         input[type="file"] { display: none; }
@@ -41,7 +45,7 @@
 <body>
 
     <div id="header">
-        <h1 class="title">ModuloScore</h1>
+        <h1 class="title">ModuloScore <span id="live-status">ESPERANDO SEÑAL Z12...</span></h1>
         <div style="display:flex; gap:10px;">
             <button class="upload-btn" onclick="loadFromDB()">⟳ Refrescar DB Local</button>
             <label class="upload-btn" style="border-color:#555; color:#aaa;">
@@ -64,7 +68,7 @@
             <div id="audio-synth"></div>
             <div id="sheet-music" class="abc-container">
                 <div style="text-align: center; color: #888; margin-top: 50px;">
-                    Selecciona una sesión de la base de datos lateral para renderizar el pentagrama.
+                    Selecciona una sesión de la base de datos lateral o comienza a tocar en Modulo12 para visualización en vivo.
                 </div>
             </div>
         </div>
@@ -74,7 +78,21 @@
         'use strict';
 
         // ==========================================
-        // 1. CONEXIÓN A LA TUBERÍA DE DATOS (ModuloDB)
+        // 1. Z12 BROADCAST BUS (RECEPTOR EN VIVO)
+        // ==========================================
+        const z12Bus = new BroadcastChannel('z12_composition_bus');
+        const liveIndicator = document.getElementById('live-status');
+
+        z12Bus.onmessage = (event) => {
+            if (event.data && event.data.type === 'SESSION_UPDATE') {
+                liveIndicator.textContent = '🔴 MODO LIVE';
+                liveIndicator.classList.add('active');
+                processSession(event.data.session);
+            }
+        };
+
+        // ==========================================
+        // 2. CONEXIÓN A LA TUBERÍA DE DATOS (ModuloDB)
         // ==========================================
         const ModuloDB = {
             init() {
@@ -103,6 +121,9 @@
 
         async function loadFromDB() {
             const listDiv = document.getElementById('db-list');
+            liveIndicator.textContent = 'ESPERANDO SEÑAL Z12...';
+            liveIndicator.classList.remove('active');
+
             try {
                 const sessions = await ModuloDB.getAllSessions();
                 if (sessions.length === 0) {
@@ -116,7 +137,11 @@
                     const btn = document.createElement('button');
                     btn.className = 'db-session-btn';
                     btn.innerHTML = `<strong style="color:var(--accent)">${s.date}</strong><br>Perfil: ${s.profile}<br>Nodos: ${s.events ? s.events.length : 0}`;
-                    btn.onclick = () => processSession(s);
+                    btn.onclick = () => {
+                        liveIndicator.textContent = 'LECTURA DB';
+                        liveIndicator.classList.remove('active');
+                        processSession(s);
+                    };
                     listDiv.appendChild(btn);
                 }
             } catch (err) {
@@ -127,14 +152,12 @@
         window.onload = loadFromDB;
 
         // ==========================================
-        // 2. MOTOR DE TRADUCCIÓN (Corrección Sintáctica ABC)
+        // 3. MOTOR DE TRADUCCIÓN (ABC)
         // ==========================================
         const Translator = {
             midiToAbcNote: (midi, scaleContextStr) => {
-                // Deducción de enarmonía basada en el contexto de la escala
                 const isFlatContext = scaleContextStr && (scaleContextStr.includes("b") || scaleContextStr.includes("F Mayor"));
                 
-                // Corrección ABC: El bemol se escribe con '_' y el sostenido con '^'
                 const notesSharps = ["C", "^C", "D", "^D", "E", "F", "^F", "G", "^G", "A", "^A", "B"];
                 const notesFlats  = ["C", "_D", "D", "_E", "E", "F", "_G", "G", "_A", "A", "_B", "B"];
                 
@@ -142,7 +165,6 @@
                 const octave = Math.floor(midi / 12) - 1;
                 const noteStr = isFlatContext ? notesFlats[pitch] : notesSharps[pitch];
 
-                // Reglas estrictas de octavación ABC
                 if (octave === 4) return noteStr;                    
                 if (octave === 5) return noteStr.toLowerCase();      
                 if (octave === 6) return noteStr.toLowerCase() + "'"; 
@@ -163,9 +185,6 @@
                 abcString += `M: 4/4\n`;
                 abcString += `L: 1/4\n`; 
                 abcString += `Q: 1/4=100\n`; 
-                
-                // Si la escala es conocida, intentar aplicarla como armadura (Key Signature)
-                // Por defecto, lo dejamos en C para evitar conflictos con alteraciones accidentales.
                 abcString += `K: C\n`; 
                 
                 let measureCount = 0;
@@ -174,7 +193,6 @@
                 events.forEach((event) => {
                     if (!event.midi_notes || event.midi_notes.length === 0) return;
                     
-                    // Ensamblar Acorde
                     const chordNotes = event.midi_notes.map(m => Translator.midiToAbcNote(m, scaleInfo)).join("");
                     lineString += `[${chordNotes}] `;
                     
@@ -191,16 +209,11 @@
         const sheetMusicDiv = document.getElementById('sheet-music');
 
         function processSession(sessionData) {
-            if (!sessionData.events || sessionData.events.length === 0) {
-                alert("La sesión seleccionada no contiene matrices de eventos válidas.");
-                return;
-            }
+            if (!sessionData.events || sessionData.events.length === 0) return;
 
-            // 1. Traducir Matriz a ABC
             const abcText = Translator.buildAbcString(sessionData);
             abcRawDisplay.textContent = abcText;
 
-            // 2. Renderizar Partitura (CORRECCIÓN: Objeto Global ABCJS en mayúsculas)
             sheetMusicDiv.innerHTML = ""; 
             try {
                 const visualObj = ABCJS.renderAbc("sheet-music", abcText, {
@@ -209,7 +222,6 @@
                     staffwidth: 800
                 });
 
-                // 3. Integrar Sintetizador Visual de Lector
                 if (ABCJS.synth.supportsAudio()) {
                     const synthControl = new ABCJS.synth.SynthController();
                     synthControl.load("#audio-synth", null, {
@@ -223,7 +235,7 @@
         }
 
         // ==========================================
-        // 3. CARGA MANUAL DE EMERGENCIA
+        // 4. CARGA MANUAL DE EMERGENCIA
         // ==========================================
         document.getElementById('json-upload').addEventListener('change', (event) => {
             const file = event.target.files[0];
@@ -231,6 +243,8 @@
             const reader = new FileReader();
             reader.onload = (e) => {
                 try {
+                    liveIndicator.textContent = 'MODO ARCHIVO OFFLINE';
+                    liveIndicator.classList.remove('active');
                     const data = JSON.parse(e.target.result);
                     const session = data.session || data; 
                     if (data.session_events) session.events = data.session_events;
