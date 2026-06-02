@@ -52,6 +52,8 @@
         .btn-stop:hover { background-color: #cc0000; }
         .btn-clear { background-color: transparent; color: #ff3333; border: 1px solid #ff3333; }
         .btn-clear:hover { background-color: rgba(255,51,51,0.1); }
+        .btn-history { background-color: #1a1a24; color: #fff; border: 1px solid #444; margin-top: 15px;}
+        .btn-history:hover { background-color: #2a2a3a; border-color: #666; }
 
         .history-track {
             color: #888; font-size: 11px; margin-top: 12px;
@@ -90,6 +92,21 @@
         
         #calibration-msg { display: none; color: #ffaa00; margin-top: 20px; font-size: 14px; text-align: center; animation: pulse 1s infinite alternate; }
         @keyframes pulse { from { opacity: 0.5; } to { opacity: 1; } }
+
+        /* Modal de Sesión Histórica */
+        #session-modal {
+            display: none; position: fixed; top: 10%; left: 50%; transform: translateX(-50%);
+            width: 90%; max-width: 600px; height: 80%; background: rgba(10, 10, 15, 0.95);
+            z-index: 50; border: 1px solid #333; border-radius: 8px; padding: 25px;
+            flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            backdrop-filter: blur(8px);
+        }
+        #session-content {
+            flex: 1; overflow-y: auto; font-size: 15px; line-height: 2; margin-top: 20px;
+            border: 1px solid #222; padding: 15px; background: #08080a;
+        }
+        .session-item { border-bottom: 1px dashed #333; padding: 5px 0; color: #ddd; }
+        .session-time { color: #666; font-size: 12px; margin-right: 15px; }
     </style>
 </head>
 <body>
@@ -103,6 +120,7 @@
         <button id="pause-btn" class="menu-action-btn btn-pause">Pausar Detección</button>
         <button id="stop-btn" class="menu-action-btn btn-stop">Detener Hardware</button>
         <button id="clear-btn" class="menu-action-btn btn-clear">Purgar Memoria</button>
+        <button id="history-btn" class="menu-action-btn btn-history">▶ Leer Sesión Completa</button>
         
         <div class="config-group">
             <div class="config-label"><span>Selector de Proyección (Visor)</span></div>
@@ -128,6 +146,10 @@
                     <option value="Mayor">Mayor</option>
                     <option value="Menor Nat.">Menor Natural</option>
                     <option value="Menor Arm.">Menor Armónica</option>
+                    <option value="Menor Melód.">Menor Melódica</option>
+                    <option value="Pentatónica May.">Pentatónica May.</option>
+                    <option value="Pentatónica Men.">Pentatónica Men.</option>
+                    <option value="Blues">Blues</option>
                 </select>
             </div>
         </div>
@@ -136,6 +158,13 @@
             <div class="config-label"><span>Sensibilidad de Piso de Ruido</span><span id="sens-val">0 dB</span></div>
             <input type="range" id="sens-slider" min="-20" max="20" value="0">
         </div>
+    </div>
+
+    <div id="session-modal">
+        <h2 style="color: var(--accent); margin: 0;">Registro de Sesión Activa</h2>
+        <p style="color: #888; font-size: 12px; margin-top: 5px;">Matriz exportable para futura ModuloScore.</p>
+        <div id="session-content"></div>
+        <button id="close-modal" class="menu-action-btn" style="background: #333; color: #fff; margin-top: 20px;">Cerrar Lector</button>
     </div>
 
     <div id="overlay">
@@ -151,13 +180,11 @@
         'use strict';
 
         // ==========================================
-        // 1. MOTOR MATEMÁTICO Y ORTOGRAFÍA ENARMÓNICA
+        // 1. MOTOR MATEMÁTICO: DICCIONARIOS Y ESCALAS EXTENDIDAS
         // ==========================================
         const noteNamesSharps = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
         const noteNamesFlats =  ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "Cb"];
-        
-        // Raíces que gramaticalmente usan bemoles en la notación musical estándar
-        const flatRoots = [1, 3, 5, 8, 10]; // Db, Eb, F, Ab, Bb
+        const flatRoots = [1, 3, 5, 8, 10]; 
         
         const createMask = (notes) => notes.reduce((m, n) => m | (1 << (n % 12)), 0);
         
@@ -167,22 +194,27 @@
             { name: `Maj7`, mask: createMask([i, i+4, i+7, i+11]) },
             { name: `min7`, mask: createMask([i, i+3, i+7, i+10]) },
             { name: `7`, mask: createMask([i, i+4, i+7, i+10]) },
-            { name: `dim7`, mask: createMask([i, i+3, i+6, i+9]) }
+            { name: `dim7`, mask: createMask([i, i+3, i+6, i+9]) },
+            { name: `sus4`, mask: createMask([i, i+5, i+7]) },
+            { name: `sus2`, mask: createMask([i, i+2, i+7]) }
         ]);
 
         const SCALES_DEF = {
             "Cromática": [0,1,2,3,4,5,6,7,8,9,10,11],
             "Mayor": [0,2,4,5,7,9,11],
             "Menor Nat.": [0,2,3,5,7,8,10],
-            "Menor Arm.": [0,2,3,5,7,8,11]
+            "Menor Arm.": [0,2,3,5,7,8,11],
+            "Menor Melód.": [0,2,3,5,7,9,11],
+            "Pentatónica May.": [0,2,4,7,9],
+            "Pentatónica Men.": [0,3,5,7,10],
+            "Blues": [0,3,5,6,7,10]
         };
 
         const HarmonyEngine = {
             createPitchClassSet: createMask,
             
-            // Selector Enarmónico Dinámico (Prepara los datos para la futura Partitura)
             getNoteName: (pitch, scaleRoot) => {
-                const useFlats = flatRoots.includes(scaleRoot) || (scaleRoot === 0 && pitch === 10); // Lógica básica de armadura
+                const useFlats = flatRoots.includes(scaleRoot) || (scaleRoot === 0 && pitch === 10); 
                 return useFlats ? noteNamesFlats[pitch] : noteNamesSharps[pitch];
             },
 
@@ -225,7 +257,7 @@
         };
 
         // ==========================================
-        // 2. MATRIZ DE ESTADO PERSISTENTE
+        // 2. MATRIZ DE ESTADO PERSISTENTE (MEMORIA AMPLIADA)
         // ==========================================
         class StateManager {
             constructor() {
@@ -237,7 +269,7 @@
                     scale_root: 0, scale_type: "Cromática", scale_mask: 4095
                 };
                 
-                const saved = localStorage.getItem('modulus_state_v4');
+                const saved = localStorage.getItem('modulus_state_v5');
                 if (saved) {
                     const parsed = JSON.parse(saved);
                     this.state = { 
@@ -272,23 +304,22 @@
                         
                         const hist = this.state.history;
                         if (hist.length === 0 || hist[hist.length - 1].mask !== this.state.active_mask) {
-                            hist.push({ mask: this.state.active_mask, name });
-                            if (hist.length > 8) hist.shift();
+                            // Expansión a 100 eventos para que la lectura de sesión sea funcional
+                            const timestamp = new Date().toLocaleTimeString('es-MX', { hour12: false, hour: '2-digit', minute: '2-digit', second:'2-digit' });
+                            hist.push({ mask: this.state.active_mask, name, time: timestamp });
+                            if (hist.length > 100) hist.shift();
                         }
                     }
                 }
                 
-                localStorage.setItem('modulus_state_v4', JSON.stringify({ 
+                localStorage.setItem('modulus_state_v5', JSON.stringify({ 
                     history: this.state.history, sens_offset: this.state.sens_offset,
                     view_mode: this.state.view_mode, scale_root: this.state.scale_root, scale_type: this.state.scale_type
                 }));
                 this.notify();
             }
 
-            clearHistory() {
-                this.state.history = []; this.update({});
-            }
-
+            clearHistory() { this.state.history = []; this.update({}); }
             subscribe(cb) { this.listeners.push(cb); this.notify(); }
             notify() {
                 const snap = JSON.parse(JSON.stringify(this.state));
@@ -370,7 +401,7 @@
                 const sampleRate = this.audioCtx.sampleRate;
                 const offset = this.stateManager.state.sens_offset; 
                 const currentNoiseFloor = this.baseNoiseFloor - offset;
-                const scaleRoot = this.stateManager.state.scale_root; // Para Enarmonía
+                const scaleRoot = this.stateManager.state.scale_root; 
 
                 let detected = [];
 
@@ -418,7 +449,7 @@
         }
 
         // ==========================================
-        // 4. MOTOR DE PROYECCIÓN MÚLTIPLE (SOLAR / LINEAL)
+        // 4. MOTOR DE PROYECCIÓN MÚLTIPLE
         // ==========================================
         class Renderer {
             constructor(canvasId, stateManager) {
@@ -450,11 +481,8 @@
             }
 
             draw(state) {
-                if (state.view_mode === 'linear') {
-                    this.drawLinearMap(state);
-                } else {
-                    this.drawRadialSystem(state);
-                }
+                if (state.view_mode === 'linear') this.drawLinearMap(state);
+                else this.drawRadialSystem(state);
             }
 
             drawRadialSystem(state) {
@@ -523,20 +551,16 @@
                 dist(space, r3, 12, '#0a0a0c', false, 0, '#222', false, true);
             }
 
-            // Nuevo Visor Estructural de Partitura (Linear Map)
             drawLinearMap(state) {
                 const w = window.innerWidth, h = window.innerHeight;
                 this.ctx.clearRect(0, 0, w, h);
-                const { active_mask, notes_detail, color, scale_root } = state;
-                
+                const { active_mask, notes_detail, color } = state;
                 const rgb = `rgb(${color.r},${color.g},${color.b})`;
                 const octaves = [2, 3, 4, 5, 6];
                 const keyWidth = w / 14;
                 const rowHeight = h / (octaves.length + 2);
                 
-                this.ctx.fillStyle = '#222';
-                this.ctx.font = '10px monospace';
-                this.ctx.textAlign = 'right';
+                this.ctx.fillStyle = '#222'; this.ctx.font = '10px monospace'; this.ctx.textAlign = 'right';
                 
                 octaves.forEach((oct, i) => {
                     const y = h - (i * rowHeight) - rowHeight*1.5;
@@ -551,8 +575,6 @@
                             const x = 70 + (note.pitch * keyWidth);
                             const y = h - ((note.octave - 2) * rowHeight) - rowHeight*1.5;
                             this.drawNode(note.name, x, y, 20, rgb, true, 15, '#fff');
-                            
-                            // Linea vertical de guía
                             this.ctx.beginPath(); this.ctx.moveTo(x, y + 20); this.ctx.lineTo(x, h);
                             this.ctx.strokeStyle = `rgba(${color.r},${color.g},${color.b},0.2)`; 
                             this.ctx.lineWidth = 2; this.ctx.stroke();
@@ -577,14 +599,14 @@
             clear: document.getElementById('clear-btn'), calibMsg: document.getElementById('calibration-msg'),
             sensSlider: document.getElementById('sens-slider'), sensVal: document.getElementById('sens-val'),
             scaleRoot: document.getElementById('scale-root'), scaleType: document.getElementById('scale-type'),
-            viewMode: document.getElementById('view-mode')
+            viewMode: document.getElementById('view-mode'),
+            historyBtn: document.getElementById('history-btn'), sessionModal: document.getElementById('session-modal'),
+            closeModal: document.getElementById('close-modal'), sessionContent: document.getElementById('session-content')
         };
 
         // Binding UI
-        ui.sensSlider.value = stateManager.state.sens_offset;
-        ui.sensVal.textContent = stateManager.state.sens_offset + ' dB';
-        ui.scaleRoot.value = stateManager.state.scale_root;
-        ui.scaleType.value = stateManager.state.scale_type;
+        ui.sensSlider.value = stateManager.state.sens_offset; ui.sensVal.textContent = stateManager.state.sens_offset + ' dB';
+        ui.scaleRoot.value = stateManager.state.scale_root; ui.scaleType.value = stateManager.state.scale_type;
         ui.viewMode.value = stateManager.state.view_mode;
 
         ui.sensSlider.addEventListener('input', (e) => {
@@ -594,10 +616,7 @@
         });
 
         const updateConfig = () => {
-            stateManager.update({ 
-                scale_root: parseInt(ui.scaleRoot.value), scale_type: ui.scaleType.value,
-                view_mode: ui.viewMode.value
-            });
+            stateManager.update({ scale_root: parseInt(ui.scaleRoot.value), scale_type: ui.scaleType.value, view_mode: ui.viewMode.value });
         };
         ui.scaleRoot.addEventListener('change', updateConfig);
         ui.scaleType.addEventListener('change', updateConfig);
@@ -624,8 +643,24 @@
 
         ui.clear.onclick = () => { stateManager.clearHistory(); ui.sidebar.classList.remove('active'); };
 
+        // Apertura y Poblado de Lector de Sesión
+        ui.historyBtn.onclick = () => {
+            ui.sidebar.classList.remove('active');
+            ui.sessionModal.style.display = 'flex';
+            const hist = stateManager.state.history;
+            if (hist.length === 0) {
+                ui.sessionContent.innerHTML = '<div style="color:#666; text-align:center; margin-top:20px;">No hay eventos registrados en esta sesión.</div>';
+            } else {
+                ui.sessionContent.innerHTML = hist.map(h => 
+                    `<div class="session-item"><span class="session-time">[${h.time || '00:00'}]</span> <strong>${h.name}</strong> (Mask: ${h.mask})</div>`
+                ).reverse().join('');
+            }
+        };
+        ui.closeModal.onclick = () => ui.sessionModal.style.display = 'none';
+
         stateManager.subscribe(s => {
-            const hist = s.history.length ? s.history.map(h => h.name).join(' ➔ ') : 'Memoria vacía';
+            // Mostrar solo los últimos 6 en el HUD para no colapsar la pantalla
+            const hudHist = s.history.slice(-6).map(h => h.name).join(' ➔ ') || 'Memoria vacía';
             const notes = s.notes_detail.map(n => n.name).join(', ') || '[]';
             const sug = s.suggestion ? `<span style="color: #fff">${HarmonyEngine.getNoteName(s.suggestion.mask, s.scale_root)} ${s.suggestion.name.split(' ')[1] || ''}</span>` : 'Ninguna';
             let statColor = '#888';
@@ -634,16 +669,12 @@
             if (s.status === 'calibrating') statColor = '#f0f';
 
             ui.panel.innerHTML = `
-                <div style="color: ${statColor}; font-weight: bold; font-size: 14px; margin-bottom: 10px;">
-                    ESTADO: ${s.status.toUpperCase()}
-                </div>
+                <div style="color: ${statColor}; font-weight: bold; font-size: 14px; margin-bottom: 10px;">ESTADO: ${s.status.toUpperCase()}</div>
                 Escala: ${HarmonyEngine.getNoteName(s.scale_root, s.scale_root)} ${s.scale_type}<br>
                 Nodos: ${notes}<br>
                 Tensión: ${s.tension_level.toFixed(2)}<br>
                 Ruta: ${sug}
-                <div class="history-track">
-                    <strong>Matriz Histórica:</strong><br>${hist}
-                </div>
+                <div class="history-track"><strong>Progresión:</strong><br>${hudHist}</div>
             `;
         });
 
