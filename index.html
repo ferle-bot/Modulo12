@@ -184,12 +184,16 @@
     <div id="profiler-modal" class="modal-bg">
         <div id="profiler-box">
             <h3 style="margin-top:0; color:#fff;">Perfilado Acústico del Instrumento</h3>
-            <p style="color:#aaa; font-size:13px; margin-bottom:15px;" id="profiler-desc">Toca la nota solicitada 3 veces consecutivas.</p>
-            <div class="profiler-target" id="profiler-target-note">C2</div>
-            <div class="profiler-strikes">
-                <div class="strike-dot" id="sd-1"></div><div class="strike-dot" id="sd-2"></div><div class="strike-dot" id="sd-3"></div>
-            </div>
+            <p style="color:#aaa; font-size:13px; margin-bottom:15px;" id="profiler-desc">Toca la nota solicitada 3 veces consecutivas para mapear tu entorno.</p>
             
+            <div class="profiler-target" id="profiler-target-note">C2</div>
+            
+            <div class="profiler-strikes">
+                <div class="strike-dot" id="sd-1"></div>
+                <div class="strike-dot" id="sd-2"></div>
+                <div class="strike-dot" id="sd-3"></div>
+            </div>
+
             <div class="vu-meter-bg"><div id="profiler-vu-fill" class="vu-meter-fill"></div></div>
             
             <div class="profiler-bar-bg"><div id="profiler-bar-fill"></div></div>
@@ -204,10 +208,10 @@
         <div id="pre-config-box" style="width: 80%; max-width: 320px; text-align: left;">
             <label style="color: #00ffcc; font-size: 12px; margin-bottom: 8px; display: block;">1. Selecciona tu instrumento base:</label>
             <select id="pre-profile" class="menu-select" style="margin-bottom: 25px; padding: 12px; font-size: 16px; background: #0a0a0e; border-color: #333;">
-                <option value="piano">Piano Acústico / Teclado (88T)</option>
+                <option value="piano">Piano Acústico / Teclado</option>
                 <option value="guitar">Guitarra Acústica / Eléctrica</option>
                 <option value="voice">Voz Humana</option>
-                <option value="synth">Genérico / Sintetizador</option>
+                <option value="synth">Genérico / Sintetizador (Sin Perfilado)</option>
             </select>
         </div>
 
@@ -407,7 +411,7 @@
                 } catch(e) { return false; }
             }
 
-            // CORRECCIÓN: ASISTENTE USANDO EXTRACTOR INTELIGENTE EN LUGAR DE RAW PEAK
+            // CORRECCIÓN ABSOLUTA: TRUST THE SUPERVISOR (APRENDIZAJE NO RÍGIDO)
             runProfiler() {
                 if (this.stateManager.state.status !== 'profiling') return;
                 
@@ -431,26 +435,24 @@
                 }
                 this.updateVU(fMax);
 
-                // USAR EXTRACTOR INTELIGENTE
                 const details = this.extractPitchesDynamic();
-                let isHit = false; let currentPeak = null;
+                let currentPeak = null;
+                let isHit = false;
 
-                if (details.length > 0) {
-                    // Tomar la nota con mayor amplitud
-                    const dominant = details.reduce((prev, curr) => (prev.amp > curr.amp) ? prev : curr, details[0]);
-                    currentPeak = dominant.midi;
+                // Definición de "Golpe": 15dB por encima del ruido de fondo. No importa la nota.
+                const strikeThreshold = this.baseNoiseFloor + 15;
 
-                    if (target.m === 'low') { isHit = dominant.midi < 60; }
-                    else if (target.m === 'high') { isHit = dominant.midi >= 60; }
-                    else { 
-                        // Validar coincidencia de Pitch Class (Ej: Si pide C2, y detecta C4, vale porque es un 'C')
-                        const targetPitch = ((target.m % 12) + 12) % 12;
-                        isHit = (dominant.pitch === targetPitch); 
+                if (fMax > strikeThreshold) {
+                    isHit = true;
+                    // Guardamos la huella acústica dominante de este golpe
+                    if (details.length > 0) {
+                        const dominant = details.reduce((prev, curr) => (prev.amp > curr.amp) ? prev : curr, details[0]);
+                        currentPeak = dominant.midi;
                     }
                 }
 
-                // Lógica 3 Strikes con umbral seguro por encima del piso de ruido
-                if (isHit && !this.isStriking && fMax > this.baseNoiseFloor + 10) {
+                // Lógica 3 Strikes con bloqueo de rebote
+                if (isHit && !this.isStriking) {
                     this.isStriking = true;
                     this.strikeCount++;
                     if(currentPeak) this.strikeData.push(currentPeak);
@@ -458,7 +460,7 @@
                     
                     if (this.strikeCount >= 3) {
                         const calibMap = this.stateManager.state.calibration_map;
-                        calibMap[target.n] = this.strikeData;
+                        calibMap[target.n] = this.strikeData; // Guardamos lo que escuchó el micrófono como la verdad de esa nota
                         this.stateManager.update({ calibration_map: calibMap });
 
                         setTimeout(() => {
@@ -468,7 +470,7 @@
                         }, 800);
                         return;
                     }
-                    setTimeout(() => { this.isStriking = false; }, 400); 
+                    setTimeout(() => { this.isStriking = false; }, 400); // Deadzone
                 } else if (!isHit && fMax < this.baseNoiseFloor + 5) {
                     this.isStriking = false; 
                 }
