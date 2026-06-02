@@ -283,7 +283,6 @@
                 }
                 return bestNode;
             },
-            // PHASE 3: PROBABILISTIC INFERENCE ENGINE
             inferScale: (accumulatedMask, libraryJSON) => {
                 if (!libraryJSON || !libraryJSON.escalas || accumulatedMask === 0) return null;
                 
@@ -298,23 +297,19 @@
                         const baseArray = cat[scaleName].mask;
                         const baseMask = HarmonyEngine.createPitchClassSet(baseArray);
                         
-                        // Test against all 12 roots
                         for (let r = 0; r < 12; r++) {
                             const transposedScale = HarmonyEngine.rotateMask(baseMask, r);
                             
-                            // Bitwise AND to find matching notes
                             let intersection = accumulatedMask & transposedScale;
                             let matchCount = 0;
                             while (intersection > 0) { matchCount += intersection & 1; intersection >>= 1; }
                             
-                            // Count total bits in the scale to compute ratio
                             let scaleBits = 0;
                             let temp = transposedScale;
                             while(temp > 0) { scaleBits += temp & 1; temp >>= 1; }
 
-                            const score = matchCount / scaleBits; // Match percentage
+                            const score = matchCount / scaleBits;
 
-                            // 80% Threshold for confident deduction
                             if (score > highestScore && score >= 0.8) {
                                 highestScore = score;
                                 bestMatch = { root: r, type: scaleName, score: score, mask: transposedScale };
@@ -372,12 +367,15 @@
                     description: "Silencio", suggestion: null, current_session: null,
                     status: "standby", sens_offset: -55, view_mode: "radial", scale_root: 0, scale_type: "Cromática", scale_mask: 4095,
                     acoustic_profile: "piano", profiler_step: 0, calibration_map: {},
-                    inferenceBuffer: [], inferredScale: null // Sliding window for Phase 3
+                    inferenceBuffer: [], inferredScale: null
                 };
-                const saved = localStorage.getItem('modulus_settings_v6');
+                const saved = localStorage.getItem('modulus_settings_v7');
                 this.state = saved ? { ...initial, ...JSON.parse(saved), active_mask: 0, status: 'standby', current_session: null, profiler_step: 0, inferenceBuffer: [], inferredScale: null } : initial;
                 this.state.scale_mask = HarmonyEngine.getScaleMask(this.state.scale_root, this.state.scale_type, Z12_LIBRARY);
                 this.listeners = [];
+                
+                // INJECTION: Z12 Broadcast Bus for Multi-Tab Interoperability
+                this.bus = new BroadcastChannel('z12_composition_bus');
             }
             startNewSession() {
                 const id = Date.now();
@@ -398,29 +396,24 @@
                 
                 if (newState.scale_root !== undefined || newState.scale_type !== undefined) {
                     this.state.scale_mask = HarmonyEngine.getScaleMask(this.state.scale_root, this.state.scale_type, Z12_LIBRARY);
-                    this.state.inferenceBuffer = []; // Reset inference when user explicitly changes scale
+                    this.state.inferenceBuffer = []; 
                     this.state.inferredScale = null;
                 }
 
                 if (newState.active_mask !== undefined && newState.active_mask !== prevMask) {
                     if (this.state.status === 'active' && this.state.active_mask > 0 && this.state.current_session) {
                         
-                        // Phase 3: Push to Inference Buffer
                         this.state.notes_array.forEach(pitch => {
                             if (!this.state.inferenceBuffer.includes(pitch)) {
                                 this.state.inferenceBuffer.push(pitch);
-                                if (this.state.inferenceBuffer.length > 10) this.state.inferenceBuffer.shift(); // Max 10 recent unique notes
+                                if (this.state.inferenceBuffer.length > 10) this.state.inferenceBuffer.shift(); 
                             }
                         });
 
-                        // Run Probabilistic Deduction if in Chromatic mode
                         if (this.state.scale_type === "Cromática" || this.state.scale_type === "Cromática (Sin Guía)") {
                             const bufferMask = HarmonyEngine.createPitchClassSet(this.state.inferenceBuffer);
                             const deduction = HarmonyEngine.inferScale(bufferMask, Z12_LIBRARY);
-                            if (deduction) {
-                                this.state.inferredScale = deduction;
-                                // We DO NOT overwrite user's setting, we just store the inferred scale for the UI to suggest
-                            }
+                            if (deduction) this.state.inferredScale = deduction;
                         }
 
                         const rootPitch = this.state.notes_detail[0]?.pitch || 0;
@@ -444,12 +437,15 @@
                             const time = new Date().toLocaleTimeString('es-MX', { hour12: false, hour: '2-digit', minute: '2-digit', second:'2-digit' });
                             events.push({ mask: this.state.active_mask, name, time, midi_notes: this.state.notes_detail.map(n => n.midi) });
                             ModuloDB.saveSession(this.state.current_session); 
+                            
+                            // INJECTION: Broadcast the session update across tabs instantly
+                            this.bus.postMessage({ type: 'SESSION_UPDATE', session: this.state.current_session });
                         }
                     }
                 }
                 this.saveSettings(); this.notify();
             }
-            saveSettings() { localStorage.setItem('modulus_settings_v6', JSON.stringify({ sens_offset: this.state.sens_offset, view_mode: this.state.view_mode, scale_root: this.state.scale_root, scale_type: this.state.scale_type, acoustic_profile: this.state.acoustic_profile, calibration_map: this.state.calibration_map })); }
+            saveSettings() { localStorage.setItem('modulus_settings_v7', JSON.stringify({ sens_offset: this.state.sens_offset, view_mode: this.state.view_mode, scale_root: this.state.scale_root, scale_type: this.state.scale_type, acoustic_profile: this.state.acoustic_profile, calibration_map: this.state.calibration_map })); }
             async clearHistory() { await ModuloDB.clearAll(); this.state.current_session = null; this.state.inferenceBuffer = []; this.update({}); }
             subscribe(cb) { this.listeners.push(cb); this.notify(); }
             notify() { const snap = JSON.parse(JSON.stringify(this.state)); this.listeners.forEach(cb => cb(snap)); }
@@ -572,8 +568,7 @@
                         const rawPitches = details.map(d=>d.pitch);
                         const mask = HarmonyEngine.createPitchClassSet(rawPitches);
                         
-                        // Suggest using the inferred scale if available and user is in Chromatic Mode
-                        const activeScaleMask = (this.stateManager.state.inferredScale && this.stateManager.state.scale_type === "Cromática") ? 
+                        const activeScaleMask = (this.stateManager.state.inferredScale && (this.stateManager.state.scale_type === "Cromática" || this.stateManager.state.scale_type === "Cromática (Sin Guía)")) ? 
                             this.stateManager.state.inferredScale.mask : this.stateManager.state.scale_mask;
 
                         this.stateManager.update({ 
@@ -679,7 +674,6 @@
                     this.ctx.moveTo(scaleNodes[0].x, scaleNodes[0].y);
                     for(let i=1; i<scaleNodes.length; i++) this.ctx.lineTo(scaleNodes[i].x, scaleNodes[i].y);
                     this.ctx.closePath();
-                    // Inferred scales are drawn with a slightly different color to distinguish from manual guides
                     this.ctx.strokeStyle = isInferred ? 'rgba(255, 204, 0, 0.15)' : 'rgba(0, 255, 204, 0.15)'; 
                     this.ctx.lineWidth = 1; this.ctx.stroke();
                 }
@@ -704,7 +698,6 @@
                 
                 const isChromatic = scale_mask === 4095;
 
-                // Visual Tension Alert
                 if (tension_level > 0.6) {
                     const glow = this.ctx.createRadialGradient(cx, cy, 0, cx, cy, dim);
                     glow.addColorStop(0, 'rgba(255, 51, 0, 0.15)');
@@ -715,21 +708,17 @@
 
                 if (view_mode === 'linear') { this.drawLinearMap(state); return; }
 
-                // Static Mandala Background
                 if (!isChromatic) {
                     this.drawMandalaSkeleton(cx, cy, r3, scale_mask, scale_root, false);
                 } else if (inferredScale) {
-                    // Phase 3: Draw inferred mandala dynamically
                     this.drawMandalaSkeleton(cx, cy, r3, inferredScale.mask, inferredScale.root, true);
                 }
 
                 if (active_mask === 0 || notes_detail.length === 0) return;
 
-                // Center Root Note
                 const rootNote = notes_detail[0];
                 let centerColor = 'var(--accent)'; 
                 
-                // Tension coloring logic adapts if we are using an inferred scale
                 const activeReferenceMask = (!isChromatic) ? scale_mask : (inferredScale ? inferredScale.mask : 4095);
                 
                 if (activeReferenceMask !== 4095 && (activeReferenceMask & (1 << rootNote.pitch)) === 0) {
@@ -741,7 +730,6 @@
                 for(let i=0; i<12; i++) {
                     if (i === rootNote.pitch) continue;
                     
-                    // Display name based on the root of the active scale (manual or inferred)
                     const refRoot = (!isChromatic) ? scale_root : (inferredScale ? inferredScale.root : 0);
                     const sName = HarmonyEngine.getNoteName(i, refRoot);
                     
@@ -752,7 +740,6 @@
                     }
                 }
 
-                // Orbit 2: Suggestions (Pathfinding)
                 moons.forEach(n => {
                     const angle = (n.pitch * Math.PI*2)/12 - Math.PI/2;
                     const nx = cx + Math.cos(angle)*r2, ny = cy + Math.sin(angle)*r2;
@@ -762,7 +749,6 @@
                     this.drawNode(n.name, nx, ny, 18, 'transparent', false, 5, 'rgba(255, 255, 255, 0.5)', 0.8);
                 });
 
-                // Orbit 1: Active Planets
                 planets.forEach(n => {
                     const angle = (n.pitch * Math.PI*2)/12 - Math.PI/2;
                     const nx = cx + Math.cos(angle)*r1, ny = cy + Math.sin(angle)*r1;
@@ -865,7 +851,6 @@
                 const tensionState = s.tension_level > 0.6 ? `<span style="color:var(--alert); font-weight:bold;">¡Ruptura Armónica! (${s.tension_level.toFixed(2)})</span>` : `<span style="color:var(--accent);">Estable (${s.tension_level.toFixed(2)})</span>`;
                 let statColor = '#888'; if(s.status==='active') statColor='var(--accent)'; if(s.status==='paused') statColor='#fa0'; if(s.status==='calibrating') statColor='#f0f'; if(s.status==='profiling') statColor='#0ff';
 
-                // Display Inferred Scale if in Chromatic Mode
                 let guideText = `${HarmonyEngine.getNoteName(s.scale_root, s.scale_root)} ${s.scale_type}`;
                 if (s.inferredScale && (s.scale_type === "Cromática" || s.scale_type === "Cromática (Sin Guía)")) {
                     guideText = `<span style="color:#fa0;">Deducción Auto: ${HarmonyEngine.getNoteName(s.inferredScale.root, s.inferredScale.root)} ${s.inferredScale.type} (${(s.inferredScale.score*100).toFixed(0)}%)</span>`;
