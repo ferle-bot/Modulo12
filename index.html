@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Modulo12 - Núcleo de Captura</title>
+    <title>Modulo12 - Captura y Perfilado Acústico</title>
     
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#050508">
@@ -77,7 +77,8 @@
         .session-event { display: inline-block; background: #111; border: 1px solid #222; padding: 6px 12px; margin: 4px; border-radius: 6px; color: #fff; font-size: 13px; }
         .session-event .time { color: #666; font-size: 10px; display: block; margin-bottom: 4px; }
 
-        /* Asistente y VU Meter */
+        /* Asistente de Perfilado */
+        #profiler-modal { z-index: 10000; }
         #profiler-box { background: #0a0a0e; border: 1px solid #00ffcc; border-radius: 8px; padding: 30px; text-align: center; box-shadow: 0 0 40px rgba(0, 255, 204, 0.15); max-width: 450px; width: 90%; }
         .profiler-target { font-size: 28px; color: #00ffcc; font-weight: bold; margin: 15px 0; letter-spacing: 1px; }
         .profiler-strikes { display: flex; justify-content: center; gap: 15px; margin-bottom: 25px; }
@@ -294,7 +295,7 @@
                     status: "standby", sens_offset: 0, view_mode: "radial", scale_root: 0, scale_type: "Cromática", scale_mask: 4095,
                     acoustic_profile: "piano", profiler_step: 0, calibration_map: {}
                 };
-                const saved = localStorage.getItem('modulus_state_v13');
+                const saved = localStorage.getItem('modulus_state_v14');
                 this.state = saved ? { ...initial, ...JSON.parse(saved), active_mask: 0, status: 'standby', current_session_id: null, profiler_step: 0, scale_mask: HarmonyEngine.getScaleMask(JSON.parse(saved).scale_root||0, JSON.parse(saved).scale_type||"Cromática") } : initial;
                 this.listeners = [];
             }
@@ -334,14 +335,14 @@
                 }
                 this.save(); this.notify();
             }
-            save() { localStorage.setItem('modulus_state_v13', JSON.stringify({ sessions: this.state.sessions, sens_offset: this.state.sens_offset, view_mode: this.state.view_mode, scale_root: this.state.scale_root, scale_type: this.state.scale_type, acoustic_profile: this.state.acoustic_profile, calibration_map: this.state.calibration_map })); }
+            save() { localStorage.setItem('modulus_state_v14', JSON.stringify({ sessions: this.state.sessions, sens_offset: this.state.sens_offset, view_mode: this.state.view_mode, scale_root: this.state.scale_root, scale_type: this.state.scale_type, acoustic_profile: this.state.acoustic_profile, calibration_map: this.state.calibration_map })); }
             clearHistory() { this.state.sessions = []; this.state.current_session_id = null; this.save(); this.update({}); }
             subscribe(cb) { this.listeners.push(cb); this.notify(); }
             notify() { const snap = JSON.parse(JSON.stringify(this.state)); this.listeners.forEach(cb => cb(snap)); }
         }
 
         // ==========================================
-        // 3. MOTOR ACÚSTICO: PERFILADO Y PRECISIÓN PARABÓLICA
+        // 3. MOTOR ACÚSTICO
         // ==========================================
         class AudioEngine {
             constructor(stateManager) {
@@ -351,14 +352,11 @@
                 this.mediaRecorder = null; this.audioChunks = []; this.isRecording = false;
                 
                 this.strikeCount = 0; this.isStriking = false; this.strikeData = [];
-                
-                // Elementos VU Meter
                 this.vuCalib = document.getElementById('calib-vu-fill');
                 this.vuProf = document.getElementById('profiler-vu-fill');
             }
             
             updateVU(amplitude) {
-                // Mapear de dB (-100 a -30) a porcentaje (0 a 100)
                 const minDb = -100; const maxDb = -20;
                 let percent = ((amplitude - minDb) / (maxDb - minDb)) * 100;
                 percent = Math.max(0, Math.min(100, percent));
@@ -384,8 +382,7 @@
                         const tick = () => {
                             this.analyser.getFloatFrequencyData(this.dataArray);
                             let fMax = -Infinity; for(let i=0; i<this.dataArray.length; i++) if(this.dataArray[i] > fMax && this.dataArray[i] < 0) fMax = this.dataArray[i];
-                            
-                            this.updateVU(fMax); // Actualizar VU visual
+                            this.updateVU(fMax); 
                             
                             if(fMax > -100) noiseSamples.push(fMax);
                             
@@ -410,6 +407,7 @@
                 } catch(e) { return false; }
             }
 
+            // CORRECCIÓN: ASISTENTE USANDO EXTRACTOR INTELIGENTE EN LUGAR DE RAW PEAK
             runProfiler() {
                 if (this.stateManager.state.status !== 'profiling') return;
                 
@@ -426,27 +424,33 @@
                 document.getElementById('profiler-target-note').textContent = target.n;
                 
                 this.analyser.getFloatFrequencyData(this.dataArray);
-                const limit = this.baseNoiseFloor + 12; 
                 
-                let fMax = -Infinity; let maxBin = 0;
+                let fMax = -Infinity;
                 for(let i=2; i<this.analyser.frequencyBinCount-2; i++) {
-                    if (this.dataArray[i] > fMax) { fMax = this.dataArray[i]; maxBin = i; }
+                    if (this.dataArray[i] > fMax) fMax = this.dataArray[i];
                 }
-                
                 this.updateVU(fMax);
 
+                // USAR EXTRACTOR INTELIGENTE
+                const details = this.extractPitchesDynamic();
                 let isHit = false; let currentPeak = null;
-                if (fMax > limit) {
-                    const freq = maxBin * (this.audioCtx.sampleRate / (this.analyser.frequencyBinCount * 2));
-                    const midi = Math.round(12 * Math.log2(freq/440) + 69);
-                    currentPeak = midi;
 
-                    if (target.m === 'low') { isHit = midi < 60; }
-                    else if (target.m === 'high') { isHit = midi > 60; }
-                    else { isHit = Math.abs(midi - target.m) <= 12; } 
+                if (details.length > 0) {
+                    // Tomar la nota con mayor amplitud
+                    const dominant = details.reduce((prev, curr) => (prev.amp > curr.amp) ? prev : curr, details[0]);
+                    currentPeak = dominant.midi;
+
+                    if (target.m === 'low') { isHit = dominant.midi < 60; }
+                    else if (target.m === 'high') { isHit = dominant.midi >= 60; }
+                    else { 
+                        // Validar coincidencia de Pitch Class (Ej: Si pide C2, y detecta C4, vale porque es un 'C')
+                        const targetPitch = ((target.m % 12) + 12) % 12;
+                        isHit = (dominant.pitch === targetPitch); 
+                    }
                 }
 
-                if (isHit && !this.isStriking) {
+                // Lógica 3 Strikes con umbral seguro por encima del piso de ruido
+                if (isHit && !this.isStriking && fMax > this.baseNoiseFloor + 10) {
                     this.isStriking = true;
                     this.strikeCount++;
                     if(currentPeak) this.strikeData.push(currentPeak);
@@ -507,7 +511,6 @@
                 this.animationId = requestAnimationFrame(() => this.processFrame());
             }
             
-            // Extracción: Interpolación Parabólica + DESCENSO SUB-ARMÓNICO EN VENTANA (Solución C2 vs C4)
             extractPitchesDynamic() {
                 const limit = this.baseNoiseFloor - this.stateManager.state.sens_offset;
                 const binCount = this.analyser.frequencyBinCount;
@@ -517,7 +520,6 @@
                 
                 let rawPeaks = [];
 
-                // 1. Identificación de Picos Crudos
                 for(let i=2; i<binCount-2; i++) {
                     const beta = this.dataArray[i];
                     if(beta > limit && beta > this.dataArray[i-1] && beta > this.dataArray[i+1]) {
@@ -536,48 +538,39 @@
                     }
                 }
 
-                // 2. Ingeniería Inversa (Descenso Armónico Analítico)
                 let correctedPeaks = [];
-                const fundamentalTolDb = 15; // La sub-octava puede estar hasta 15dB por debajo del armónico principal
+                const fundamentalTolDb = 15; 
 
                 rawPeaks.forEach(peak => {
                     let isHarmonic = false;
                     let fundamentalFreq = peak.freq;
                     let fundamentalAmp = peak.amp;
 
-                    // Si es un sonido de cuerdas, buscar hasta 2 octavas abajo (f/2 y f/4)
                     if (this.stateManager.state.acoustic_profile === 'piano' || this.stateManager.state.acoustic_profile === 'guitar') {
-                        // Búsqueda en ventana para f/2 (Primera octava baja)
                         const expectedSub1Bin = Math.round(peak.bin / 2);
-                        // Búsqueda en ventana para f/4 (Segunda octava baja, común en pianos acústicos)
                         const expectedSub2Bin = Math.round(peak.bin / 4);
 
-                        // Función para buscar energía en una ventana alrededor del bin teórico
                         const checkWindow = (targetBin) => {
                             if (targetBin < 2) return null;
                             let maxA = -Infinity; let maxI = 0;
-                            // Ventana de tolerancia: +/- 2 bins
                             for(let w = -2; w <= 2; w++) {
                                 const idx = targetBin + w;
                                 if (idx > 0 && idx < binCount && this.dataArray[idx] > maxA) {
                                     maxA = this.dataArray[idx]; maxI = idx;
                                 }
                             }
-                            // Exigimos que la energía exista y no esté sepultada en el ruido
                             if (maxA > limit && maxA > (peak.amp - fundamentalTolDb)) {
                                 return { amp: maxA, freq: maxI * (sampleRate / (binCount * 2)) };
                             }
                             return null;
                         };
 
-                        // Comprobar la fundamental más profunda primero (f/4)
                         const sub2Data = checkWindow(expectedSub2Bin);
                         if (sub2Data && sub2Data.freq >= profileDef.minFreq) {
                             fundamentalFreq = sub2Data.freq;
-                            fundamentalAmp = sub2Data.amp; // Usar la amplitud real de la fundamental
+                            fundamentalAmp = sub2Data.amp; 
                             isHarmonic = true;
                         } else {
-                            // Si no hay f/4, buscar f/2
                             const sub1Data = checkWindow(expectedSub1Bin);
                             if (sub1Data && sub1Data.freq >= profileDef.minFreq) {
                                 fundamentalFreq = sub1Data.freq;
@@ -587,13 +580,11 @@
                         }
                     }
 
-                    // Convertir la frecuencia resuelta a MIDI
                     const fMidiExact = 12 * Math.log2(fundamentalFreq/440) + 69;
                     const fMidi = Math.round(fMidiExact);
                     const p = ((fMidi%12)+12)%12;
                     const oct = Math.floor(fMidi/12)-1;
                     
-                    // Si se hizo la corrección, añadirla con la amplitud del pico alto para asegurar que gane en el filtro posterior
                     correctedPeaks.push({ pitch: p, octave: oct, midi: fMidi, amp: isHarmonic ? peak.amp : peak.amp, freq: fundamentalFreq });
                 });
 
