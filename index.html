@@ -6,12 +6,12 @@
     <title>Modulo12</title>
     
     <link rel="manifest" href="./manifest.json">
-    <meta name="theme-color" content="#0a0a0c">
+    <meta name="theme-color" content="#050508">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
     <style>
-        :root { --bg-color: #050508; }
+        :root { --bg-color: #050508; --accent: #00ff00; --accent-hover: #00cc00; }
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%;
             background-color: var(--bg-color); overflow: hidden;
@@ -22,45 +22,56 @@
         
         #debug-panel {
             position: absolute; top: 20px; left: 20px;
-            background: rgba(0, 0, 0, 0.85); padding: 15px;
-            border-radius: 8px; pointer-events: none; border: 1px solid #333;
-            z-index: 10; min-width: 250px;
+            background: rgba(5, 5, 8, 0.9); padding: 15px;
+            border-radius: 8px; pointer-events: none; border: 1px solid #222;
+            z-index: 10; min-width: 250px; backdrop-filter: blur(4px);
         }
         
         #overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(5, 5, 8, 0.95); display: flex; justify-content: center;
+            background: rgba(5, 5, 8, 0.98); display: flex; justify-content: center;
             align-items: center; z-index: 20; flex-direction: column;
         }
-        button {
-            background-color: #00ff00; color: #000; border: none; padding: 15px 40px;
-            font-size: 18px; font-weight: bold; cursor: pointer; border-radius: 4px;
-            box-shadow: 0 0 15px rgba(0, 255, 0, 0.4); transition: all 0.2s;
-            font-family: monospace;
-        }
-        button:hover { background-color: #00cc00; transform: scale(1.05); }
-        button:disabled { background-color: #555; box-shadow: none; cursor: not-allowed; color: #aaa; }
         
+        button {
+            background-color: var(--accent); color: #000; border: none; padding: 15px 40px;
+            font-size: 18px; font-weight: bold; cursor: pointer; border-radius: 4px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3); transition: all 0.2s ease;
+            font-family: monospace; letter-spacing: 1px;
+        }
+        button:hover { background-color: var(--accent-hover); transform: scale(1.02); }
+        button:disabled { background-color: #333; box-shadow: none; cursor: not-allowed; color: #777; }
+        
+        .menu-action-btn {
+            padding: 12px; font-size: 14px; width: 100%; margin-bottom: 12px;
+            text-align: center; box-shadow: none; letter-spacing: 0;
+        }
+        .btn-pause { background-color: var(--accent); color: #000; }
+        .btn-stop { background-color: #ff3333; color: #fff; }
+        .btn-stop:hover { background-color: #cc0000; }
+        .btn-clear { background-color: transparent; color: #ff3333; border: 1px solid #ff3333; }
+        .btn-clear:hover { background-color: rgba(255,51,51,0.1); }
+
         .history-track {
-            color: #888; font-size: 11px; margin-top: 10px;
-            border-top: 1px solid #333; padding-top: 10px;
+            color: #888; font-size: 11px; margin-top: 12px;
+            border-top: 1px solid #333; padding-top: 12px; line-height: 1.6;
         }
 
         #menu-btn {
             position: absolute; top: 20px; right: 20px; z-index: 30;
-            font-size: 32px; color: #fff; cursor: pointer;
-            text-shadow: 0 0 10px rgba(0,0,0,0.8);
+            font-size: 28px; color: #fff; cursor: pointer;
+            text-shadow: 0 0 10px rgba(0,0,0,0.8); padding: 5px;
         }
         #sidebar {
-            position: fixed; top: 0; right: -280px; width: 240px; height: 100%;
-            background: rgba(10, 10, 12, 0.98); border-left: 1px solid #333;
-            transition: right 0.3s ease; z-index: 40; padding: 20px;
-            box-shadow: -5px 0 20px rgba(0,0,0,0.8);
+            position: fixed; top: 0; right: -300px; width: 260px; height: 100%;
+            background: rgba(10, 10, 12, 0.98); border-left: 1px solid #222;
+            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 40; padding: 25px;
+            box-shadow: -10px 0 30px rgba(0,0,0,0.8); box-sizing: border-box;
         }
         #sidebar.active { right: 0; }
         #close-btn {
             font-size: 32px; cursor: pointer; text-align: right; 
-            margin-bottom: 20px; color: #888;
+            margin-bottom: 20px; color: #666; line-height: 1;
         }
         #close-btn:hover { color: #fff; }
     </style>
@@ -70,413 +81,435 @@
     <div id="menu-btn">☰</div>
     <div id="sidebar">
         <div id="close-btn">×</div>
-        <h3 style="color: #00ff00; margin-top: 0;">Modulo12</h3>
-        <hr style="border-color: #333;">
-        <div style="color: #888; font-size: 13px; margin-top: 20px; line-height: 2;">
-            <p>▶ Selector de Escalas (Próximamente)</p>
-            <p>▶ Ajustes de Sensibilidad (Próximamente)</p>
-            <p>▶ Exportar Historial (Próximamente)</p>
+        <h3 style="color: var(--accent); margin-top: 0; letter-spacing: 1px; font-size: 20px;">Modulo12</h3>
+        <hr style="border-color: #222; margin-bottom: 25px;">
+        
+        <button id="pause-btn" class="menu-action-btn btn-pause">Pausar Detección</button>
+        <button id="stop-btn" class="menu-action-btn btn-stop">Detener Hardware</button>
+        <button id="clear-btn" class="menu-action-btn btn-clear">Purgar Memoria</button>
+        
+        <div style="color: #555; font-size: 12px; margin-top: 40px; line-height: 2.5;">
+            <div style="border-bottom: 1px solid #222; padding-bottom: 10px; margin-bottom: 10px;">CONFIGURACIÓN</div>
+            <div>▶ Selector de Escalas (Próx.)</div>
+            <div>▶ Sensibilidad Mic (Próx.)</div>
         </div>
     </div>
 
     <div id="overlay">
-        <h1 style="margin-bottom: 30px; color: #00ff00; letter-spacing: 2px;">Modulo12</h1>
-        <button id="start-btn">Iniciar</button>
+        <h1 style="margin-bottom: 40px; color: var(--accent); letter-spacing: 4px; font-size: 2.5rem; text-shadow: 0 0 20px rgba(0,255,0,0.3);">Modulo12</h1>
+        <button id="start-btn">INICIAR MOTOR</button>
     </div>
 
-    <div id="debug-panel">Inicializando Matriz Radial...</div>
+    <div id="debug-panel">Cargando dependencias matemáticas...</div>
     <canvas id="harmonyCanvas"></canvas>
 
     <script>
+        'use strict';
+
         // ==========================================
-        // 1. CONSTANTES Y DICCIONARIO
+        // 1. MOTOR MATEMÁTICO Y DICCIONARIO
         // ==========================================
         const noteNames = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
-        const Z12_DICTIONARY = [];
         const createMask = (notes) => notes.reduce((m, n) => m | (1 << n), 0);
+        
+        const Z12_DICTIONARY = Array.from({length: 12}).flatMap((_, i) => [
+            { name: `${noteNames[i]} May`, mask: createMask([i, (i+4)%12, (i+7)%12]) },
+            { name: `${noteNames[i]} min`, mask: createMask([i, (i+3)%12, (i+7)%12]) },
+            { name: `${noteNames[i]}Maj7`, mask: createMask([i, (i+4)%12, (i+7)%12, (i+11)%12]) },
+            { name: `${noteNames[i]}min7`, mask: createMask([i, (i+3)%12, (i+7)%12, (i+10)%12]) },
+            { name: `${noteNames[i]}7`, mask: createMask([i, (i+4)%12, (i+7)%12, (i+10)%12]) },
+            { name: `${noteNames[i]}dim7`, mask: createMask([i, (i+3)%12, (i+6)%12, (i+9)%12]) }
+        ]);
 
-        for(let i=0; i<12; i++) {
-            Z12_DICTIONARY.push({ name: `${noteNames[i]} May`, mask: createMask([i, (i+4)%12, (i+7)%12]) });
-            Z12_DICTIONARY.push({ name: `${noteNames[i]} min`, mask: createMask([i, (i+3)%12, (i+7)%12]) });
-            Z12_DICTIONARY.push({ name: `${noteNames[i]}Maj7`, mask: createMask([i, (i+4)%12, (i+7)%12, (i+11)%12]) });
-            Z12_DICTIONARY.push({ name: `${noteNames[i]}min7`, mask: createMask([i, (i+3)%12, (i+7)%12, (i+10)%12]) });
-            Z12_DICTIONARY.push({ name: `${noteNames[i]}7`, mask: createMask([i, (i+4)%12, (i+7)%12, (i+10)%12]) });
-            Z12_DICTIONARY.push({ name: `${noteNames[i]}dim7`, mask: createMask([i, (i+3)%12, (i+6)%12, (i+9)%12]) });
-        }
-
-        // ==========================================
-        // 2. MOTOR LÓGICO
-        // ==========================================
         const HarmonyEngine = {
             createPitchClassSet: createMask,
             calculateParsimony: (maskA, maskB) => {
-                let intersection = maskA & maskB; let count = 0;
-                while (intersection > 0) { count += intersection & 1; intersection >>= 1; }
+                let count = 0;
+                for (let intersection = maskA & maskB; intersection > 0; intersection >>= 1) {
+                    count += intersection & 1;
+                }
                 return count;
             },
-            evaluateTension: (notesArray) => {
-                if (notesArray.length < 2) return { level: 0.0, color: {r: 0, g: 255, b: 0}, desc: "Reposo absoluto" };
+            evaluateTension: (notes) => {
+                if (notes.length < 2) return { level: 0.0, color: {r: 0, g: 255, b: 0}, desc: "Reposo absoluto" };
                 let hasTritone = false, hasMinorSecond = false;
-                for (let i=0; i<notesArray.length; i++) {
-                    for (let j=i+1; j<notesArray.length; j++) {
-                        let interval = Math.abs(notesArray[i] - notesArray[j]) % 12;
+                for (let i = 0; i < notes.length; i++) {
+                    for (let j = i + 1; j < notes.length; j++) {
+                        let interval = Math.abs(notes[i] - notes[j]) % 12;
                         if (interval === 6) hasTritone = true;
                         if (interval === 1 || interval === 11) hasMinorSecond = true;
                     }
                 }
-                if (hasTritone) return { level: 1.0, color: {r: 255, g: 0, b: 0}, desc: "Máxima inestabilidad" };
-                if (hasMinorSecond) return { level: 0.7, color: {r: 255, g: 165, b: 0}, desc: "Tensión creciente" };
-                return { level: 0.3, color: {r: 0, g: 255, b: 255}, desc: "Estabilidad matizada" };
+                if (hasTritone) return { level: 1.0, color: {r: 255, g: 0, b: 0}, desc: "Máxima inestabilidad (Tritono)" };
+                if (hasMinorSecond) return { level: 0.7, color: {r: 255, g: 165, b: 0}, desc: "Tensión armónica" };
+                return { level: 0.3, color: {r: 0, g: 200, b: 255}, desc: "Estabilidad matizada" };
             },
-            suggestNextPath: (currentMask) => {
+            suggestPath: (currentMask) => {
                 if(currentMask === 0) return null;
-                let bestSuggestion = null; let maxShared = -1;
+                let best = null, maxShared = 0;
                 for(const chord of Z12_DICTIONARY) {
                     if(chord.mask === currentMask) continue; 
                     let shared = HarmonyEngine.calculateParsimony(currentMask, chord.mask);
-                    if(shared > maxShared) { maxShared = shared; bestSuggestion = chord; }
+                    if(shared > maxShared) { maxShared = shared; best = chord; }
                 }
-                return maxShared > 0 ? bestSuggestion : null;
+                return maxShared > 0 ? best : null;
             }
         };
 
         // ==========================================
-        // 3. GESTOR DE ESTADO
+        // 2. GESTIÓN DE ESTADO LOCAL-FIRST
         // ==========================================
-        const INITIAL_MATRIX = {
-            "current_state": {
-                "active_mask": 0, "notes_array": [], "notes_detail": [], 
-                "tension_level": 0.0, "color": {"r": 34, "g": 34, "b": 34},
-                "description": "Silencio", "suggestion": null, "history": []
-            }
-        };
-
         class StateManager {
-            constructor(initialMatrix) {
-                const savedState = localStorage.getItem('modulus_z12_state');
-                this.state = savedState ? JSON.parse(savedState) : JSON.parse(JSON.stringify(initialMatrix.current_state));
+            constructor() {
+                const initial = {
+                    active_mask: 0, notes_array: [], notes_detail: [], 
+                    tension_level: 0.0, color: {r: 34, g: 34, b: 34},
+                    description: "Silencio", suggestion: null, history: [],
+                    status: "standby" // 'standby', 'active', 'paused'
+                };
+                
+                const saved = localStorage.getItem('modulus_state_v2');
+                this.state = saved ? { ...JSON.parse(saved), status: "standby", active_mask: 0, notes_array: [], notes_detail: [] } : initial;
                 this.listeners = [];
             }
-            updateState(newStateMatrix) {
-                if (this.state.active_mask !== newStateMatrix.active_mask) {
-                    let currentHistory = this.state.history || [];
-                    if (newStateMatrix.active_mask > 0) {
-                        const chordDef = Z12_DICTIONARY.find(c => c.mask === newStateMatrix.active_mask);
-                        const chordName = chordDef ? chordDef.name : `Set [${newStateMatrix.notes_detail.map(n=>n.name).join(',')}]`;
-                        const lastEntry = currentHistory[currentHistory.length - 1];
+            
+            update(newState) {
+                const prevMask = this.state.active_mask;
+                this.state = { ...this.state, ...newState };
+
+                // Gestión de historial: Añadir si la máscara cambia y es válida, y no estamos pausados
+                if (newState.active_mask !== undefined && newState.active_mask !== prevMask) {
+                    if (this.state.status === 'active' && this.state.active_mask > 0) {
+                        const chordDef = Z12_DICTIONARY.find(c => c.mask === this.state.active_mask);
+                        const name = chordDef ? chordDef.name : `[${this.state.notes_detail.map(n=>n.name).join(',')}]`;
                         
-                        if (!lastEntry || lastEntry.mask !== newStateMatrix.active_mask) {
-                            currentHistory.push({ mask: newStateMatrix.active_mask, name: chordName });
-                            if (currentHistory.length > 5) currentHistory.shift();
+                        const hist = this.state.history;
+                        if (hist.length === 0 || hist[hist.length - 1].mask !== this.state.active_mask) {
+                            hist.push({ mask: this.state.active_mask, name });
+                            if (hist.length > 8) hist.shift(); // Aumentado a 8 entradas
                         }
                     }
-                    this.state = { ...this.state, ...newStateMatrix, history: currentHistory };
-                    localStorage.setItem('modulus_z12_state', JSON.stringify(this.state));
-                    this.notify();
                 }
+                
+                localStorage.setItem('modulus_state_v2', JSON.stringify({ history: this.state.history }));
+                this.notify();
             }
-            subscribe(callback) { this.listeners.push(callback); this.notify(); }
+
+            clearHistory() {
+                this.state.history = [];
+                localStorage.setItem('modulus_state_v2', JSON.stringify({ history: [] }));
+                this.notify();
+            }
+
+            subscribe(cb) { this.listeners.push(cb); this.notify(); }
             notify() {
-                const stateSnapshot = JSON.parse(JSON.stringify(this.state));
-                this.listeners.forEach(listener => listener(stateSnapshot));
+                const snap = JSON.parse(JSON.stringify(this.state));
+                this.listeners.forEach(cb => cb(snap));
             }
         }
 
         // ==========================================
-        // 4. MÓDULO ACÚSTICO (CORREGIDO Y PRECISO)
+        // 3. MÓDULO DE PERCEPCIÓN ACÚSTICA (ALTO RENDIMIENTO)
         // ==========================================
-        class AudioSentry {
+        class AudioEngine {
             constructor(stateManager) {
                 this.stateManager = stateManager;
-                this.audioContext = null; this.analyser = null;
-                this.dataArray = null; this.isListening = false;
-                this.AMPLITUDE_THRESHOLD = -48; // Umbral óptimo de sensibilidad en dB
+                this.audioCtx = null; this.analyser = null;
+                this.dataArray = null; this.stream = null;
+                this.animationId = null;
             }
 
-            async initialize() {
+            async start() {
                 try {
-                    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                        alert("El navegador requiere conexión HTTPS segura.");
-                        return false;
-                    }
-
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-                    this.audioContext = new AudioCtx();
+                    // Restricciones críticas para apagar el DSP del teléfono y obtener audio crudo
+                    const constraints = {
+                        audio: {
+                            echoCancellation: false,
+                            autoGainControl: false,
+                            noiseSuppression: false,
+                            channelCount: 1
+                        }
+                    };
                     
-                    if (this.audioContext.state === 'suspended') {
-                        await this.audioContext.resume();
-                    }
+                    this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    await this.audioCtx.resume();
 
-                    const source = this.audioContext.createMediaStreamSource(stream);
-                    this.analyser = this.audioContext.createAnalyser();
-                    this.analyser.fftSize = 4096; // Alta resolución espectral
-                    this.analyser.smoothingTimeConstant = 0.5; // Menor inercia para refresco inmediato
+                    const source = this.audioCtx.createMediaStreamSource(this.stream);
+                    this.analyser = this.audioCtx.createAnalyser();
+                    this.analyser.fftSize = 8192; // Resolución duplicada para notas graves
+                    this.analyser.smoothingTimeConstant = 0.6;
+                    
                     source.connect(this.analyser);
-                    
                     this.dataArray = new Float32Array(this.analyser.frequencyBinCount);
-                    this.isListening = true;
-                    this.listenLoop();
                     
+                    this.stateManager.update({ status: 'active' });
+                    this.processFrame();
                     return true;
-                } catch (error) { 
-                    console.error("Error micrófono:", error);
-                    alert("Permiso denegado o hardware ocupado."); 
+                } catch (err) {
+                    console.error("Audio error:", err);
+                    alert("No se pudo acceder al hardware de audio crudo.");
                     return false;
                 }
             }
 
-            listenLoop() {
-                if (!this.isListening) return;
+            processFrame() {
+                if (this.stateManager.state.status !== 'active') return;
+                
                 this.analyser.getFloatFrequencyData(this.dataArray);
+                const details = this.extractPitchesDynamic();
+                const rawPitches = details.map(d => d.pitch);
+                const mask = HarmonyEngine.createPitchClassSet(rawPitches);
                 
-                const notesDetail = this.extractDetailedPitches(); 
-                const rawPitches = notesDetail.map(n => n.pitch);
-                const currentMask = HarmonyEngine.createPitchClassSet(rawPitches);
-                
-                const tensionData = HarmonyEngine.evaluateTension(rawPitches);
-                const suggestedPath = HarmonyEngine.suggestNextPath(currentMask);
+                const tension = HarmonyEngine.evaluateTension(rawPitches);
+                const path = HarmonyEngine.suggestPath(mask);
 
-                this.stateManager.updateState({
-                    active_mask: currentMask,
-                    notes_array: rawPitches,
-                    notes_detail: notesDetail, 
-                    tension_level: tensionData.level,
-                    color: tensionData.color,
-                    description: tensionData.desc,
-                    suggestion: suggestedPath
+                this.stateManager.update({
+                    active_mask: mask, notes_array: rawPitches, notes_detail: details,
+                    tension_level: tension.level, color: tension.color, 
+                    description: tension.desc, suggestion: path
                 });
 
-                requestAnimationFrame(() => this.listenLoop());
+                this.animationId = requestAnimationFrame(() => this.processFrame());
             }
 
-            extractDetailedPitches() {
-                const sampleRate = this.audioContext.sampleRate;
+            // Algoritmo de extracción de picos con umbral dinámico (Adaptable a volumen)
+            extractPitchesDynamic() {
                 const binCount = this.analyser.frequencyBinCount;
+                const sampleRate = this.audioCtx.sampleRate;
+                
+                // 1. Encontrar el volumen máximo en la muestra actual
+                let maxAmp = -Infinity;
+                for (let i = 0; i < binCount; i++) {
+                    if (this.dataArray[i] > maxAmp) maxAmp = this.dataArray[i];
+                }
+
+                // Si el pico máximo es muy bajo, consideramos que es silencio ambiental
+                if (maxAmp < -75) return [];
+
+                // 2. Umbral dinámico: Solo aceptar picos que estén dentro de los 30dB del pico más alto
+                const dynamicThreshold = maxAmp - 30;
                 let detected = [];
 
                 for (let i = 2; i < binCount - 2; i++) {
-                    const amplitude = this.dataArray[i];
-                    
-                    // Selección estricta de picos espectrales locales locales para evitar armónicos falsos
-                    if (amplitude > this.AMPLITUDE_THRESHOLD) {
-                        if (amplitude > this.dataArray[i-1] && amplitude > this.dataArray[i+1]) {
-                            const frequency = i * (sampleRate / (binCount * 2));
-                            
-                            // Filtrado estricto del rango musical fundamental (A1 a C7)
-                            if (frequency < 55 || frequency > 2100) continue;
-                            
-                            const midiNote = Math.round(12 * Math.log2(frequency / 440) + 69);
-                            const pitchClass = ((midiNote % 12) + 12) % 12;
-                            const octave = Math.floor(midiNote / 12) - 1;
-                            
-                            detected.push({
-                                pitch: pitchClass,
-                                octave: octave,
-                                midi: midiNote,
-                                amplitude: amplitude,
-                                name: `${noteNames[pitchClass]}${octave}`
-                            });
-                        }
+                    const amp = this.dataArray[i];
+                    if (amp > dynamicThreshold && amp > this.dataArray[i-1] && amp > this.dataArray[i+1]) {
+                        const freq = i * (sampleRate / (binCount * 2));
+                        if (freq < 50 || freq > 3000) continue; // Rango útil musical
+                        
+                        const midi = Math.round(12 * Math.log2(freq / 440) + 69);
+                        const pitch = ((midi % 12) + 12) % 12;
+                        const oct = Math.floor(midi / 12) - 1;
+                        
+                        detected.push({ pitch, octave: oct, midi, amp, name: `${noteNames[pitch]}${oct}` });
+                    }
+                }
+
+                // 3. Deduplicación conservando la octava más grave (el ancla armónica)
+                const map = new Map();
+                for (const d of detected) {
+                    if (!map.has(d.pitch) || d.midi < map.get(d.pitch).midi) {
+                        map.set(d.pitch, d);
                     }
                 }
                 
-                // Agrupar por clase de tono, conservando la octava con mayor energía (pico real)
-                let uniqueMap = new Map();
-                detected.forEach(d => {
-                    if(!uniqueMap.has(d.pitch) || uniqueMap.get(d.pitch).amplitude < d.amplitude) {
-                        uniqueMap.set(d.pitch, d);
-                    }
+                return Array.from(map.values()).sort((a, b) => a.midi - b.midi);
+            }
+
+            async setPause(pause) {
+                if (!this.audioCtx) return;
+                if (pause) {
+                    await this.audioCtx.suspend();
+                    if(this.animationId) cancelAnimationFrame(this.animationId);
+                    this.stateManager.update({ status: 'paused' });
+                } else {
+                    await this.audioCtx.resume();
+                    this.stateManager.update({ status: 'active' });
+                    this.processFrame();
+                }
+            }
+
+            stop() {
+                if (this.animationId) cancelAnimationFrame(this.animationId);
+                if (this.stream) this.stream.getTracks().forEach(t => t.stop());
+                if (this.audioCtx) this.audioCtx.close();
+                this.stateManager.update({ 
+                    status: 'standby', active_mask: 0, notes_array: [], notes_detail: [],
+                    tension_level: 0, color: {r:34,g:34,b:34}, description: "Hardware desconectado", suggestion: null
                 });
-                
-                // Ordenar por frecuencia (El índice 0 se convierte en la raíz del Sistema Solar)
-                return Array.from(uniqueMap.values()).sort((a, b) => a.midi - b.midi);
             }
         }
 
         // ==========================================
-        // 5. PROYECTOR VISUAL
+        // 4. PROYECTOR VISUAL (HIGH-DPI SISTEMA SOLAR)
         // ==========================================
-        class VisualRenderer {
+        class Renderer {
             constructor(canvasId, stateManager) {
                 this.canvas = document.getElementById(canvasId);
                 this.ctx = this.canvas.getContext('2d');
-                this.stateManager = stateManager;
-                this.stateManager.subscribe((state) => this.render(state));
-                this.resize();
-                window.addEventListener('resize', () => this.resize());
+                stateManager.subscribe(s => this.draw(s));
+                window.addEventListener('resize', () => this.resize(stateManager.state));
+                this.resize(stateManager.state);
             }
 
-            resize() {
-                this.canvas.width = window.innerWidth;
-                this.canvas.height = window.innerHeight;
-                this.render(this.stateManager.state);
+            resize(state) {
+                // Soporte para pantallas Retina / High-DPI
+                const dpr = window.devicePixelRatio || 1;
+                this.canvas.width = window.innerWidth * dpr;
+                this.canvas.height = window.innerHeight * dpr;
+                this.canvas.style.width = `${window.innerWidth}px`;
+                this.canvas.style.height = `${window.innerHeight}px`;
+                this.ctx.scale(dpr, dpr);
+                this.draw(state);
             }
 
-            drawOrbitRing(centerX, centerY, radius, isDashed = false, opacity = 0.1) {
-                this.ctx.beginPath();
-                this.ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-                this.ctx.strokeStyle = `rgba(255, 255, 255, ${opacity})`;
-                this.ctx.lineWidth = 1;
-                if(isDashed) this.ctx.setLineDash([4, 8]);
-                this.ctx.stroke();
-                this.ctx.setLineDash([]);
+            drawNode(n, x, y, size, col, isDark, blur, stroke) {
+                this.ctx.beginPath(); this.ctx.arc(x, y, size, 0, Math.PI * 2);
+                this.ctx.fillStyle = col; this.ctx.shadowBlur = blur; this.ctx.shadowColor = col; this.ctx.fill();
+                this.ctx.lineWidth = 2; this.ctx.strokeStyle = stroke; this.ctx.stroke();
+                this.ctx.fillStyle = isDark ? '#000' : '#fff';
+                this.ctx.font = `bold ${size * 0.55}px monospace`; 
+                this.ctx.textAlign = 'center'; this.ctx.textBaseline = 'middle';
+                this.ctx.shadowBlur = 0; this.ctx.fillText(n, x, y);
             }
 
-            drawNode(name, x, y, size, color, isTextDark = true, shadowBlur = 0, strokeColor = '#333') {
-                this.ctx.beginPath();
-                this.ctx.arc(x, y, size, 0, Math.PI * 2);
-                this.ctx.fillStyle = color;
-                this.ctx.shadowBlur = shadowBlur;
-                this.ctx.shadowColor = color;
-                this.ctx.fill();
-                this.ctx.lineWidth = 2;
-                this.ctx.strokeStyle = strokeColor;
-                this.ctx.stroke();
-
-                this.ctx.fillStyle = isTextDark ? '#000' : '#fff';
-                let fontSize = name.length > 2 ? size * 0.5 : size * 0.65;
-                this.ctx.font = `bold ${fontSize}px monospace`;
-                this.ctx.textAlign = 'center';
-                this.ctx.textBaseline = 'middle';
-                this.ctx.shadowBlur = 0; 
-                this.ctx.fillText(name, x, y);
-            }
-
-            render(state) {
-                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
-                const { active_mask, notes_detail, color, suggestion } = state;
-                const centerX = this.canvas.width / 2;
-                const centerY = this.canvas.height / 2;
+            draw(state) {
+                const w = window.innerWidth, h = window.innerHeight;
+                this.ctx.clearRect(0, 0, w, h);
                 
-                const minDimension = Math.min(this.canvas.width, this.canvas.height);
-                const orbit1Radius = minDimension * 0.20; 
-                const orbit2Radius = minDimension * 0.35; 
-                const orbit3Radius = minDimension * 0.45; 
-
-                this.drawOrbitRing(centerX, centerY, orbit1Radius, false, 0.15);
-                this.drawOrbitRing(centerX, centerY, orbit2Radius, true, 0.2);
-                this.drawOrbitRing(centerX, centerY, orbit3Radius, false, 0.05);
-
-                const colorStr = `rgb(${color.r}, ${color.g}, ${color.b})`;
+                const { active_mask, notes_detail, color, suggestion, status } = state;
+                const cx = w / 2, cy = h / 2;
+                const dim = Math.min(w, h);
                 
-                if (active_mask === 0) {
+                // Radios orbitales relativos
+                const r1 = dim * 0.18, r2 = dim * 0.32, r3 = dim * 0.42;
+
+                const drawRing = (r, dash, op) => {
+                    this.ctx.beginPath(); this.ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                    this.ctx.strokeStyle = `rgba(255,255,255,${op})`; this.ctx.lineWidth = 1;
+                    if(dash) this.ctx.setLineDash([4, 8]);
+                    this.ctx.stroke(); this.ctx.setLineDash([]);
+                };
+
+                drawRing(r1, false, 0.1); drawRing(r2, true, 0.15); drawRing(r3, false, 0.05);
+
+                const rgb = `rgb(${color.r},${color.g},${color.b})`;
+
+                if (active_mask === 0 || notes_detail.length === 0) {
                     for(let i=0; i<12; i++) {
-                        const angle = (i * Math.PI * 2) / 12 - (Math.PI / 2);
-                        const x = centerX + Math.cos(angle) * orbit3Radius;
-                        const y = centerY + Math.sin(angle) * orbit3Radius;
-                        this.drawNode(noteNames[i], x, y, 12, '#0f0f12', false, 0, '#222');
+                        const a = (i * Math.PI*2)/12 - Math.PI/2;
+                        this.drawNode(noteNames[i], cx+Math.cos(a)*r3, cy+Math.sin(a)*r3, 14, '#0a0a0c', false, 0, '#222');
                     }
                     return;
                 }
 
-                // El Sol (Nota más grave)
-                const rootNode = notes_detail[0];
-                const rootPitch = rootNode.pitch;
-                this.drawNode(rootNode.name, centerX, centerY, 38, colorStr, true, 40, '#fff');
+                // Centro: Fundamental
+                const root = notes_detail[0];
+                this.drawNode(root.name, cx, cy, 40, rgb, true, 30, '#fff');
 
-                const planets = [];     
-                const moons = [];       
-                const deepSpace = [];   
-
+                const planets = [], moons = [], space = [];
                 for(let i=0; i<12; i++) {
-                    if (i === rootPitch) continue; 
-                    
-                    if ((active_mask & (1 << i)) !== 0) {
-                        const detail = notes_detail.find(n => n.pitch === i);
-                        planets.push(detail ? detail : { pitch: i, name: noteNames[i] });
-                    } 
-                    else if (suggestion && (suggestion.mask & (1 << i)) !== 0) {
-                        moons.push({ pitch: i, name: noteNames[i] });
-                    } 
-                    else {
-                        deepSpace.push({ pitch: i, name: noteNames[i] });
+                    if (i === root.pitch) continue;
+                    if ((active_mask & (1<<i))) {
+                        const d = notes_detail.find(n => n.pitch === i);
+                        planets.push(d ? d : {pitch: i, name: noteNames[i]});
+                    } else if (suggestion && (suggestion.mask & (1<<i))) {
+                        moons.push({pitch: i, name: noteNames[i]});
+                    } else {
+                        space.push({pitch: i, name: noteNames[i]});
                     }
                 }
 
-                const distribute = (nodesArray, radius, nodeSize, nodeColor, textDark, blur, stroke) => {
-                    const count = nodesArray.length;
-                    nodesArray.forEach((nodeObj, index) => {
-                        const angle = (index * Math.PI * 2) / count - (Math.PI / 2);
-                        const x = centerX + Math.cos(angle) * radius;
-                        const y = centerY + Math.sin(angle) * radius;
-                        
-                        if(radius === orbit1Radius) {
-                            this.ctx.beginPath();
-                            this.ctx.moveTo(centerX, centerY);
-                            this.ctx.lineTo(x, y);
-                            this.ctx.strokeStyle = `rgba(${color.r}, ${color.g}, ${color.b}, 0.6)`;
-                            this.ctx.lineWidth = 2;
-                            this.ctx.stroke();
+                const dist = (arr, r, size, col, dark, blur, stroke, link) => {
+                    const cnt = arr.length;
+                    arr.forEach((n, i) => {
+                        const a = (i * Math.PI*2)/cnt - Math.PI/2;
+                        const nx = cx+Math.cos(a)*r, ny = cy+Math.sin(a)*r;
+                        if(link) {
+                            this.ctx.beginPath(); this.ctx.moveTo(cx, cy); this.ctx.lineTo(nx, ny);
+                            this.ctx.strokeStyle = `rgba(${color.r},${color.g},${color.b},0.4)`; 
+                            this.ctx.lineWidth = 2; this.ctx.stroke();
                         }
-                        
-                        this.drawNode(nodeObj.name, x, y, nodeSize, nodeColor, textDark, blur, stroke);
+                        this.drawNode(n.name, nx, ny, size, col, dark, blur, stroke);
                     });
                 };
 
-                if (planets.length > 0) distribute(planets, orbit1Radius, 24, colorStr, true, 20, '#fff');
-                if (moons.length > 0) distribute(moons, orbit2Radius, 18, 'rgba(255,255,255,0.15)', false, 10, '#aaa');
-                if (deepSpace.length > 0) distribute(deepSpace, orbit3Radius, 10, '#0f0f12', false, 0, '#222');
+                dist(planets, r1, 26, rgb, true, 15, '#fff', true);
+                dist(moons, r2, 18, 'rgba(255,255,255,0.1)', false, 0, '#666', false);
+                dist(space, r3, 12, '#0a0a0c', false, 0, '#222', false);
             }
         }
 
         // ==========================================
-        // 6. CONTROLADORES DE INTERFAZ
+        // 5. INICIALIZACIÓN E INTERFACES
         // ==========================================
-        const stateManager = new StateManager(INITIAL_MATRIX);
-        const renderer = new VisualRenderer('harmonyCanvas', stateManager);
-        const audioSentry = new AudioSentry(stateManager);
+        const stateManager = new StateManager();
+        const audioEngine = new AudioEngine(stateManager);
+        const renderer = new Renderer('harmonyCanvas', stateManager);
         
-        const debugPanel = document.getElementById('debug-panel');
-        const startBtn = document.getElementById('start-btn');
-        const overlay = document.getElementById('overlay');
-        const menuBtn = document.getElementById('menu-btn');
-        const closeBtn = document.getElementById('close-btn');
-        const sidebar = document.getElementById('sidebar');
+        const ui = {
+            panel: document.getElementById('debug-panel'), overlay: document.getElementById('overlay'),
+            start: document.getElementById('start-btn'), menu: document.getElementById('menu-btn'),
+            close: document.getElementById('close-btn'), sidebar: document.getElementById('sidebar'),
+            pause: document.getElementById('pause-btn'), stop: document.getElementById('stop-btn'),
+            clear: document.getElementById('clear-btn')
+        };
 
-        menuBtn.addEventListener('click', () => sidebar.classList.add('active'));
-        closeBtn.addEventListener('click', () => sidebar.classList.remove('active'));
+        ui.menu.onclick = () => ui.sidebar.classList.add('active');
+        ui.close.onclick = () => ui.sidebar.classList.remove('active');
 
-        stateManager.subscribe((state) => {
-            const sugText = state.suggestion ? `<span style="color: #fff">Ruta: ${state.suggestion.name}</span>` : 'Ninguna';
-            const historyText = state.history && state.history.length > 0 
-                ? state.history.map(h => h.name).join(' ➔ ') 
-                : 'Esperando eventos...';
+        ui.pause.onclick = async () => {
+            const isPaused = stateManager.state.status === 'paused';
+            await audioEngine.setPause(!isPaused);
+            ui.pause.textContent = isPaused ? "Pausar Detección" : "Reanudar Escucha";
+            ui.pause.style.backgroundColor = isPaused ? "var(--accent)" : "#ffaa00";
+            ui.sidebar.classList.remove('active');
+        };
 
-            const detailNames = state.notes_detail.map(n => n.name).join(', ');
+        ui.stop.onclick = () => {
+            audioEngine.stop();
+            ui.pause.textContent = "Pausar Detección"; ui.pause.style.backgroundColor = "var(--accent)";
+            ui.sidebar.classList.remove('active');
+            ui.overlay.style.display = 'flex';
+        };
 
-            debugPanel.innerHTML = `
-                <strong style="color: #00ff00;">MODULO12: ACTIVO</strong><br><br>
-                Nodos: [${detailNames || 'Ninguno'}]<br>
-                Tensión: ${state.tension_level.toFixed(1)}<br>
-                Estado: <span style="color: rgb(${state.color.r},${state.color.g},${state.color.b})">${state.description}</span><br><br>
-                ${sugText}
+        ui.clear.onclick = () => {
+            stateManager.clearHistory();
+            ui.sidebar.classList.remove('active');
+        };
+
+        stateManager.subscribe(s => {
+            const hist = s.history.length ? s.history.map(h => h.name).join(' ➔ ') : 'Memoria vacía';
+            const notes = s.notes_detail.map(n => n.name).join(', ') || '[]';
+            const sug = s.suggestion ? `<span style="color: #fff">${s.suggestion.name}</span>` : 'Ninguna';
+            const statColor = s.status === 'active' ? '#0f0' : (s.status === 'paused' ? '#fa0' : '#888');
+
+            ui.panel.innerHTML = `
+                <div style="color: ${statColor}; font-weight: bold; font-size: 14px; margin-bottom: 10px;">
+                    ESTADO: ${s.status.toUpperCase()}
+                </div>
+                Nodos: ${notes}<br>
+                Tensión: ${s.tension_level.toFixed(2)}<br>
+                Color: <span style="color: rgb(${s.color.r},${s.color.g},${s.color.b})">${s.description}</span><br>
+                Path: ${sug}
                 <div class="history-track">
-                    <strong>Registro de Sesión:</strong><br>
-                    ${historyText}
+                    <strong>Matriz Histórica:</strong><br>${hist}
                 </div>
             `;
         });
 
-        startBtn.addEventListener('click', async () => {
-            startBtn.textContent = "Conectando...";
-            startBtn.disabled = true;
-            
-            const initSuccess = await audioSentry.initialize();
-            
-            if (initSuccess) {
-                overlay.style.display = 'none';
-            } else {
-                startBtn.textContent = "Iniciar";
-                startBtn.disabled = false;
+        ui.start.onclick = async () => {
+            ui.start.textContent = "CONECTANDO DSP...";
+            ui.start.disabled = true;
+            if (await audioEngine.start()) {
+                ui.overlay.style.display = 'none';
             }
-        });
+            ui.start.textContent = "INICIAR MOTOR";
+            ui.start.disabled = false;
+        };
 
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js').catch(e => console.error(e));
-            });
+            window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
         }
     </script>
 </body>
