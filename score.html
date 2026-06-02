@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ModuloScore - Lector de Partituras Z12</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/abcjs@6.2.2/dist/abcjs-basic-min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/abcjs@6.2.2/abcjs-audio.css">
+
+    <style>
+        :root { --bg-color: #050508; --accent: #00ffcc; --panel: #0a0a0e; }
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: var(--bg-color); color: #fff;
+            font-family: monospace; overflow-x: hidden;
+        }
+        
+        /* Cabecera y Controles */
+        #header {
+            background: rgba(10, 10, 15, 0.95); border-bottom: 1px solid #222;
+            padding: 20px; display: flex; justify-content: space-between; align-items: center;
+            position: sticky; top: 0; z-index: 100; backdrop-filter: blur(10px);
+        }
+        .title { color: var(--accent); margin: 0; letter-spacing: 2px; font-size: 24px; }
+        
+        .upload-btn {
+            background-color: transparent; color: var(--accent);
+            border: 1px solid var(--accent); padding: 10px 20px;
+            font-size: 14px; font-weight: bold; cursor: pointer; border-radius: 4px;
+            font-family: monospace; transition: all 0.2s;
+        }
+        .upload-btn:hover { background-color: var(--accent); color: #000; }
+        input[type="file"] { display: none; }
+
+        /* Contenedores Principales */
+        #main-container { display: flex; height: calc(100vh - 80px); }
+        
+        #data-panel {
+            width: 300px; background: var(--panel); border-right: 1px solid #222;
+            padding: 20px; overflow-y: auto; box-sizing: border-box;
+        }
+        
+        #score-panel {
+            flex: 1; padding: 40px; overflow-y: auto;
+            background: #e8e8e8; /* Fondo claro indispensable para la lectura de partituras */
+            display: flex; flex-direction: column; align-items: center;
+        }
+
+        /* Elementos de la Partitura */
+        .abc-container {
+            background: #fff; padding: 30px; border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: 100%; max-width: 900px;
+            color: #000; margin-bottom: 20px;
+        }
+
+        .meta-info { color: #888; font-size: 12px; margin-bottom: 15px; line-height: 1.8; }
+        .meta-value { color: var(--accent); font-weight: bold; }
+        
+        /* Sintetizador Visual de abcjs */
+        .abcjs-inline-audio { max-width: 900px; width: 100%; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+    <div id="header">
+        <h1 class="title">ModuloScore</h1>
+        <label class="upload-btn">
+            Cargar Sesión JSON (Modulo12)
+            <input type="file" id="json-upload" accept=".json">
+        </label>
+    </div>
+
+    <div id="main-container">
+        <div id="data-panel">
+            <h3 style="color: var(--accent); margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px;">Metadatos</h3>
+            <div id="meta-display" class="meta-info">Esperando archivo de sesión...</div>
+            <h3 style="color: #fff; margin-top: 30px; border-bottom: 1px solid #333; padding-bottom: 10px;">Traductor ABC</h3>
+            <pre id="abc-raw" style="color: #888; font-size: 11px; white-space: pre-wrap; word-wrap: break-word;"></pre>
+        </div>
+
+        <div id="score-panel">
+            <div id="audio-synth"></div>
+            <div id="sheet-music" class="abc-container">
+                <div style="text-align: center; color: #888; margin-top: 50px;">
+                    La partitura se renderizará aquí.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        'use strict';
+
+        // ==========================================
+        // 1. MOTOR DE TRADUCCIÓN (MIDI A ABC NOTATION)
+        // ==========================================
+        const Translator = {
+            // Convierte nota MIDI a sintaxis ABC
+            midiToAbcNote: (midi) => {
+                const notes = ["C", "^C", "D", "^D", "E", "F", "^F", "G", "^G", "A", "^A", "B"];
+                const pitch = midi % 12;
+                const octave = Math.floor(midi / 12) - 1;
+                const noteStr = notes[pitch];
+
+                // Reglas estrictas de octava en ABC Notation
+                if (octave === 4) return noteStr;                    // C4 -> C
+                if (octave === 5) return noteStr.toLowerCase();      // C5 -> c
+                if (octave === 6) return noteStr.toLowerCase() + "'"; // C6 -> c'
+                if (octave === 7) return noteStr.toLowerCase() + "''"; // C7 -> c''
+                if (octave === 3) return noteStr + ",";              // C3 -> C,
+                if (octave === 2) return noteStr + ",,";             // C2 -> C,,
+                if (octave === 1) return noteStr + ",,,";            // C1 -> C,,,
+                return noteStr; 
+            },
+
+            // Ensambla el string completo de la partitura
+            buildAbcString: (sessionData, metadata) => {
+                const scaleInfo = metadata.scale || "Libre";
+                
+                // Cabecera estándar ABC
+                let abcString = `X: 1\n`;
+                abcString += `T: Sesión Modulo12\n`;
+                abcString += `C: Entorno: ${scaleInfo}\n`;
+                abcString += `M: 4/4\n`;
+                abcString += `L: 1/4\n`; // Cuartos (negras) por defecto
+                abcString += `Q: 1/4=100\n`; // Tempo base
+                abcString += `K: C\n`; // Tonalidad base (se ajustará por armadura futura)
+                
+                let measureCount = 0;
+                let lineString = "";
+
+                // Construcción de Acordes
+                sessionData.forEach((event, index) => {
+                    if (!event.midi_notes || event.midi_notes.length === 0) return;
+                    
+                    // Agrupar en formato de acorde ABC: [C E G]
+                    const chordNotes = event.midi_notes.map(m => Translator.midiToAbcNote(m)).join("");
+                    lineString += `[${chordNotes}] `;
+                    
+                    measureCount++;
+                    
+                    // Divisiones de compás (4/4) y salto de línea para legibilidad
+                    if (measureCount % 4 === 0) {
+                        lineString += "| ";
+                    }
+                    if (measureCount % 16 === 0) {
+                        lineString += "\n";
+                    }
+                });
+
+                return abcString + lineString + "||";
+            }
+        };
+
+        // ==========================================
+        // 2. GESTOR DE EVENTOS Y RENDERIZADO
+        // ==========================================
+        const fileInput = document.getElementById('json-upload');
+        const metaDisplay = document.getElementById('meta-display');
+        const abcRawDisplay = document.getElementById('abc-raw');
+        const sheetMusicDiv = document.getElementById('sheet-music');
+
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    processSession(data);
+                } catch (err) {
+                    alert("Error al leer el archivo JSON. Verifica que provenga de Modulo12.");
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        function processSession(data) {
+            const sessionEvents = data.session_events || data.session;
+            const metadata = data.metadata || {};
+
+            if (!sessionEvents || sessionEvents.length === 0) {
+                alert("La sesión está vacía o el formato no es válido.");
+                return;
+            }
+
+            // 1. Mostrar Metadatos
+            metaDisplay.innerHTML = `
+                <span class="meta-value">App:</span> ${metadata.app || 'Desconocido'}<br>
+                <span class="meta-value">Fecha:</span> ${metadata.timestamp || metadata.export_time || 'Desconocido'}<br>
+                <span class="meta-value">Contexto:</span> ${metadata.scale_context || metadata.scale || 'Cromático'}<br>
+                <span class="meta-value">Eventos:</span> ${sessionEvents.length}
+            `;
+
+            // 2. Traducir a ABC Notation
+            const abcText = Translator.buildAbcString(sessionEvents, metadata);
+            abcRawDisplay.textContent = abcText;
+
+            // 3. Renderizar Partitura
+            sheetMusicDiv.innerHTML = ""; // Limpiar estado anterior
+            
+            // Ejecución del motor abcjs
+            const visualObj = abcjs.renderAbc("sheet-music", abcText, {
+                responsive: "resize",
+                add_classes: true
+            });
+
+            // 4. Integrar Sintetizador Visual de abcjs (Lectura guiada)
+            if (abcjs.synth.supportsAudio()) {
+                const synthControl = new abcjs.synth.SynthController();
+                synthControl.load("#audio-synth", null, {
+                    displayRestart: true,
+                    displayPlay: true,
+                    displayProgress: true,
+                    displayWarp: true
+                });
+                synthControl.setTune(visualObj[0], false);
+            }
+        }
+    </script>
+</body>
+</html>
