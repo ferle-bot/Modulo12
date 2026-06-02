@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Modulus (PWA) - Motor Z12</title>
+    <title>Modulus (PWA) - Tonnetz Z12</title>
     
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#0a0a0c">
@@ -79,11 +79,8 @@
 <body>
 
     <div id="overlay">
-        <h2 style="margin-bottom: 20px;">Modulus: Percepción Acústica</h2>
-        <button id="start-btn">Habilitar Micrófono</button>
-        <p style="color: #666; margin-top: 20px; max-width: 400px; text-align: center;">
-            Alojado en GitHub Pages para garantizar entorno seguro (HTTPS).
-        </p>
+        <h2 style="margin-bottom: 20px;">Modulus: Red Tonnetz</h2>
+        <button id="start-btn">Inicializar Motor Acústico</button>
     </div>
 
     <div id="debug-panel">Cargando Motor...</div>
@@ -91,38 +88,35 @@
 
     <script>
         // ==========================================
-        // 1. DICCIONARIO ARMÓNICO Y CONSTANTES
+        // 1. DICCIONARIO ARMÓNICO (Tríadas y Tétradas)
         // ==========================================
         const Z12_DICTIONARY = [];
         const noteNames = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
         
-        // Generación O(1) de tríadas mayores y menores para el Pathfinding
+        const createMask = (notes) => notes.reduce((m, n) => m | (1 << n), 0);
+
         for(let i=0; i<12; i++) {
-            // Mayor: Raíz, +4, +7
-            let majNotes = [i, (i+4)%12, (i+7)%12];
-            let majMask = majNotes.reduce((m, n) => m | (1 << n), 0);
-            Z12_DICTIONARY.push({ name: `${noteNames[i]} May`, mask: majMask, notes: majNotes });
-            
-            // Menor: Raíz, +3, +7
-            let minNotes = [i, (i+3)%12, (i+7)%12];
-            let minMask = minNotes.reduce((m, n) => m | (1 << n), 0);
-            Z12_DICTIONARY.push({ name: `${noteNames[i]} min`, mask: minMask, notes: minNotes });
+            // Tríadas
+            Z12_DICTIONARY.push({ name: `${noteNames[i]} May`, mask: createMask([i, (i+4)%12, (i+7)%12]) });
+            Z12_DICTIONARY.push({ name: `${noteNames[i]} min`, mask: createMask([i, (i+3)%12, (i+7)%12]) });
+            // Tétradas Funcionales
+            Z12_DICTIONARY.push({ name: `${noteNames[i]}Maj7`, mask: createMask([i, (i+4)%12, (i+7)%12, (i+11)%12]) });
+            Z12_DICTIONARY.push({ name: `${noteNames[i]}min7`, mask: createMask([i, (i+3)%12, (i+7)%12, (i+10)%12]) });
+            Z12_DICTIONARY.push({ name: `${noteNames[i]}7`, mask: createMask([i, (i+4)%12, (i+7)%12, (i+10)%12]) });
+            Z12_DICTIONARY.push({ name: `${noteNames[i]}dim7`, mask: createMask([i, (i+3)%12, (i+6)%12, (i+9)%12]) });
+            Z12_DICTIONARY.push({ name: `${noteNames[i]}m7b5`, mask: createMask([i, (i+3)%12, (i+6)%12, (i+10)%12]) });
         }
 
         // ==========================================
-        // 2. MOTOR MATEMÁTICO Y PATHFINDING Z12
+        // 2. MOTOR MATEMÁTICO Z12
         // ==========================================
         const HarmonyEngine = {
-            createPitchClassSet: (notes) => notes.reduce((mask, note) => mask | (1 << note), 0),
+            createPitchClassSet: createMask,
             
-            // Calcula cuántas notas en común tienen dos máscaras (Parsimonia / Intersección Bitwise)
             calculateParsimony: (maskA, maskB) => {
                 let intersection = maskA & maskB;
                 let count = 0;
-                while (intersection > 0) {
-                    count += intersection & 1;
-                    intersection >>= 1;
-                }
+                while (intersection > 0) { count += intersection & 1; intersection >>= 1; }
                 return count;
             },
 
@@ -141,19 +135,14 @@
                 return { level: 0.3, color: {r: 0, g: 255, b: 255}, desc: "Estabilidad matizada" };
             },
 
-            // Motor de sugerencia geométrica (Espacio Orbifold)
             suggestNextPath: (currentMask) => {
                 if(currentMask === 0) return null;
-                
                 let bestSuggestion = null;
                 let maxSharedTones = -1;
 
-                // Buscar el acorde del diccionario que comparta más notas pero que sea distinto
                 for(const chord of Z12_DICTIONARY) {
-                    if(chord.mask === currentMask) continue; // Ignorar el acorde actual exacto
-                    
+                    if(chord.mask === currentMask) continue; 
                     let shared = HarmonyEngine.calculateParsimony(currentMask, chord.mask);
-                    
                     if(shared > maxSharedTones) {
                         maxSharedTones = shared;
                         bestSuggestion = chord;
@@ -164,7 +153,7 @@
         };
 
         // ==========================================
-        // 3. MATRIZ BASE JSON (Estado Inicial)
+        // 3. MATRIZ BASE JSON
         // ==========================================
         const INITIAL_MATRIX = {
             "current_state": {
@@ -202,7 +191,7 @@
         }
 
         // ==========================================
-        // 5. MÓDULO DE PERCEPCIÓN ACÚSTICA
+        // 5. MÓDULO DE PERCEPCIÓN ACÚSTICA (HPS FILTER)
         // ==========================================
         class AudioSentry {
             constructor(stateManager) {
@@ -211,7 +200,6 @@
                 this.analyser = null;
                 this.dataArray = null;
                 this.isListening = false;
-                this.AMPLITUDE_THRESHOLD = -45; // dB
             }
 
             async initialize() {
@@ -260,24 +248,47 @@
             extractPitchClasses() {
                 const sampleRate = this.audioContext.sampleRate;
                 const binCount = this.analyser.frequencyBinCount;
-                let activePitchClasses = new Set();
+                
+                // Conversión O(N) a escala lineal para el cálculo matemático
+                const linearData = new Float32Array(binCount);
+                for(let i = 0; i < binCount; i++) {
+                    linearData[i] = Math.pow(10, this.dataArray[i] / 20);
+                }
 
-                for (let i = 0; i < binCount; i++) {
-                    const amplitude = this.dataArray[i];
-                    if (amplitude > this.AMPLITUDE_THRESHOLD) {
-                        const frequency = i * (sampleRate / (binCount * 2));
-                        if (frequency < 65 || frequency > 2000) continue;
-                        const midiNote = Math.round(12 * Math.log2(frequency / 440) + 69);
-                        const pitchClass = ((midiNote % 12) + 12) % 12;
-                        activePitchClasses.add(pitchClass);
+                // HPS (Harmonic Product Spectrum) de Orden 3
+                const HPS_ORDER = 3; 
+                const hpsLength = Math.floor(binCount / HPS_ORDER);
+                const hps = new Float32Array(hpsLength);
+                let maxHps = 0;
+
+                for(let i = 0; i < hpsLength; i++) {
+                    let product = linearData[i] * linearData[i * 2] * linearData[i * 3];
+                    hps[i] = product;
+                    if(product > maxHps) maxHps = product;
+                }
+
+                let activePitchClasses = new Set();
+                const ABSOLUTE_NOISE_FLOOR = Math.pow(Math.pow(10, -50 / 20), HPS_ORDER); 
+                const RELATIVE_THRESHOLD = 0.15; // 15% del pico armónico máximo actual
+
+                if (maxHps > ABSOLUTE_NOISE_FLOOR) {
+                    for (let i = 0; i < hps.length; i++) {
+                        if (hps[i] > (maxHps * RELATIVE_THRESHOLD)) {
+                            const frequency = i * (sampleRate / (binCount * 2));
+                            if (frequency < 65 || frequency > 2000) continue;
+                            const midiNote = Math.round(12 * Math.log2(frequency / 440) + 69);
+                            const pitchClass = ((midiNote % 12) + 12) % 12;
+                            activePitchClasses.add(pitchClass);
+                        }
                     }
                 }
+                
                 return Array.from(activePitchClasses).sort((a, b) => a - b);
             }
         }
 
         // ==========================================
-        // 6. PROYECTOR VISUAL (CANVAS)
+        // 6. PROYECTOR VISUAL (GEOMETRÍA TONNETZ)
         // ==========================================
         class VisualRenderer {
             constructor(canvasId, stateManager) {
@@ -295,11 +306,29 @@
                 this.render(this.stateManager.state);
             }
 
-            getCoords(index, centerX, centerY, radius) {
-                const angle = (index * Math.PI * 2) / 12 - (Math.PI / 2);
+            // Mapeo espacial: X = Quintas (7), Y = Terceras Mayores (4)
+            getCoords(index, centerX, centerY, scale) {
+                const tonnetzMap = {
+                    5:  {x: -1,   y: 0},     // F
+                    0:  {x: 0,    y: 0},     // C
+                    7:  {x: 1,    y: 0},     // G
+                    2:  {x: 2,    y: 0},     // D
+                    9:  {x: 3,    y: 0},     // A
+                    8:  {x: -0.5, y: -1},    // Ab
+                    3:  {x: 0.5,  y: -1},    // Eb
+                    10: {x: 1.5,  y: -1},    // Bb
+                    4:  {x: 0.5,  y: 1},     // E
+                    11: {x: 1.5,  y: 1},     // B
+                    6:  {x: 2.5,  y: 1},     // F#
+                    1:  {x: 3.5,  y: 1}      // Db
+                };
+                
+                const mapX = tonnetzMap[index].x - 1.2; // Centrado horizontal
+                const mapY = tonnetzMap[index].y;
+
                 return {
-                    x: centerX + Math.cos(angle) * radius,
-                    y: centerY + Math.sin(angle) * radius
+                    x: centerX + (mapX * scale),
+                    y: centerY - (mapY * scale * 0.866) // Ajuste hexagonal
                 };
             }
 
@@ -309,72 +338,88 @@
                 const { active_mask, color, suggestion } = state;
                 const centerX = this.canvas.width / 2;
                 const centerY = this.canvas.height / 2;
-                const radius = Math.min(centerX, centerY) * 0.6;
+                const scale = Math.min(this.canvas.width, this.canvas.height) * 0.25;
 
-                // 1. DIBUJAR RUTA SUGERIDA (PATHFINDING) EN FONDO
+                // 1. DIBUJAR MALLA BASE (Geometría Tonnetz Matemática)
+                this.ctx.strokeStyle = '#1a1a1c';
+                this.ctx.lineWidth = 2;
+                for (let i = 0; i < 12; i++) {
+                    const pos1 = this.getCoords(i, centerX, centerY, scale);
+                    // Dibujar aristas a los intervalos topológicos cercanos (Quinta, 3ra Mayor, 3ra Menor)
+                    [ (i+7)%12, (i+4)%12, (i+3)%12 ].forEach(target => {
+                        const pos2 = this.getCoords(target, centerX, centerY, scale);
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(pos1.x, pos1.y);
+                        this.ctx.lineTo(pos2.x, pos2.y);
+                        this.ctx.stroke();
+                    });
+                }
+
+                // 2. DIBUJAR RUTA SUGERIDA (PATHFINDING)
                 if (suggestion && suggestion.mask > 0) {
                     this.ctx.beginPath();
                     let first = true;
                     for (let i = 0; i < 12; i++) {
                         if ((suggestion.mask & (1 << i)) !== 0) {
-                            const pos = this.getCoords(i, centerX, centerY, radius);
+                            const pos = this.getCoords(i, centerX, centerY, scale);
                             if (first) { this.ctx.moveTo(pos.x, pos.y); first = false; } 
                             else { this.ctx.lineTo(pos.x, pos.y); }
                         }
                     }
                     this.ctx.closePath();
                     this.ctx.setLineDash([5, 10]);
-                    this.ctx.strokeStyle = `rgba(255, 255, 255, 0.3)`;
-                    this.ctx.lineWidth = 1;
+                    this.ctx.strokeStyle = `rgba(255, 255, 255, 0.4)`;
+                    this.ctx.lineWidth = 2;
                     this.ctx.stroke();
                     this.ctx.setLineDash([]);
                 }
 
-                // 2. DIBUJAR POLÍGONO DEL ACORDE ACTUAL
-                this.ctx.beginPath();
-                let firstNode = true;
-                for (let i = 0; i < 12; i++) {
-                    if ((active_mask & (1 << i)) !== 0) {
-                        const pos = this.getCoords(i, centerX, centerY, radius);
-                        if (firstNode) { this.ctx.moveTo(pos.x, pos.y); firstNode = false; } 
-                        else { this.ctx.lineTo(pos.x, pos.y); }
+                // 3. DIBUJAR POLÍGONO DEL ACORDE ACTUAL
+                if (active_mask > 0) {
+                    this.ctx.beginPath();
+                    let firstNode = true;
+                    for (let i = 0; i < 12; i++) {
+                        if ((active_mask & (1 << i)) !== 0) {
+                            const pos = this.getCoords(i, centerX, centerY, scale);
+                            if (firstNode) { this.ctx.moveTo(pos.x, pos.y); firstNode = false; } 
+                            else { this.ctx.lineTo(pos.x, pos.y); }
+                        }
                     }
+                    this.ctx.closePath();
+                    this.ctx.strokeStyle = `rgba(${color.r}, ${color.g}, ${color.b}, 0.9)`;
+                    this.ctx.lineWidth = 4;
+                    this.ctx.stroke();
+                    this.ctx.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, 0.2)`;
+                    this.ctx.fill();
                 }
-                this.ctx.closePath();
-                this.ctx.strokeStyle = `rgba(${color.r}, ${color.g}, ${color.b}, 0.8)`;
-                this.ctx.lineWidth = 3;
-                this.ctx.stroke();
-                this.ctx.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, 0.15)`;
-                this.ctx.fill();
 
-                // 3. DIBUJAR NODOS PERIMETRALES
+                // 4. DIBUJAR NODOS
                 for (let i = 0; i < 12; i++) {
-                    const pos = this.getCoords(i, centerX, centerY, radius);
+                    const pos = this.getCoords(i, centerX, centerY, scale);
                     const isActive = (active_mask & (1 << i)) !== 0;
                     const isSuggested = suggestion && ((suggestion.mask & (1 << i)) !== 0) && !isActive;
 
                     this.ctx.beginPath();
-                    this.ctx.arc(pos.x, pos.y, isActive ? 24 : (isSuggested ? 18 : 12), 0, Math.PI * 2);
+                    this.ctx.arc(pos.x, pos.y, isActive ? 24 : (isSuggested ? 16 : 10), 0, Math.PI * 2);
                     
                     if (isActive) {
                         this.ctx.fillStyle = `rgb(${color.r}, ${color.g}, ${color.b})`;
-                        this.ctx.shadowBlur = 20;
+                        this.ctx.shadowBlur = 25;
                         this.ctx.shadowColor = this.ctx.fillStyle;
                     } else if (isSuggested) {
-                        this.ctx.fillStyle = `rgba(255, 255, 255, 0.2)`;
+                        this.ctx.fillStyle = `rgba(255, 255, 255, 0.25)`;
                         this.ctx.shadowBlur = 10;
                         this.ctx.shadowColor = 'white';
                     } else {
-                        this.ctx.fillStyle = '#1a1a1c';
+                        this.ctx.fillStyle = '#111';
                         this.ctx.shadowBlur = 0;
                     }
                     this.ctx.fill();
                     this.ctx.lineWidth = isSuggested ? 2 : 1;
-                    this.ctx.strokeStyle = isSuggested ? 'rgba(255,255,255,0.5)' : '#333';
+                    this.ctx.strokeStyle = isSuggested ? 'rgba(255,255,255,0.6)' : '#333';
                     this.ctx.stroke();
 
-                    // Texto de la Nota
-                    this.ctx.fillStyle = isActive ? '#000' : (isSuggested ? '#fff' : '#555');
+                    this.ctx.fillStyle = isActive ? '#000' : (isSuggested ? '#fff' : '#444');
                     this.ctx.font = isActive ? 'bold 16px monospace' : '12px monospace';
                     this.ctx.textAlign = 'center';
                     this.ctx.textBaseline = 'middle';
@@ -385,7 +430,7 @@
         }
 
         // ==========================================
-        // 7. INICIALIZACIÓN DEL ENTORNO
+        // 7. INICIALIZACIÓN
         // ==========================================
         const stateManager = new StateManager(INITIAL_MATRIX);
         const renderer = new VisualRenderer('harmonyCanvas', stateManager);
@@ -398,8 +443,8 @@
         stateManager.subscribe((state) => {
             const sugText = state.suggestion ? `<span style="color: #fff">Ruta Sugerida: ${state.suggestion.name}</span>` : 'Ninguna';
             debugPanel.innerHTML = `
-                <strong style="color: #0f0;">MODULUS: ESTADO Z12</strong><br><br>
-                Nodos Activos: [${state.notes_array.join(', ')}]<br>
+                <strong style="color: #0f0;">MODULUS: RED TONNETZ</strong><br><br>
+                Nodos: [${state.notes_array.join(', ')}]<br>
                 Tensión: ${state.tension_level.toFixed(1)}<br>
                 Estado: <span style="color: rgb(${state.color.r},${state.color.g},${state.color.b})">${state.description}</span><br><br>
                 ${sugText}
@@ -407,27 +452,20 @@
         });
 
         startBtn.addEventListener('click', async () => {
-            startBtn.textContent = "Conectando...";
+            startBtn.textContent = "Conectando FFT...";
             startBtn.disabled = true;
             await audioSentry.initialize();
             overlay.style.display = 'none';
         });
 
-        // ==========================================
-        // 8. REGISTRO DEL SERVICE WORKER (PWA)
-        // ==========================================
+        // Registro de Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
-                .then(registration => {
-                    console.log('Modulus: ServiceWorker registrado con éxito.', registration.scope);
-                })
-                .catch(error => {
-                    console.error('Modulus: Fallo en registro de ServiceWorker.', error);
-                });
+                .then(registration => console.log('Modulus SW: Registrado', registration.scope))
+                .catch(error => console.error('Modulus SW: Fallo', error));
             });
         }
-
     </script>
 </body>
 </html>
