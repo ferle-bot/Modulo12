@@ -1,17 +1,27 @@
 {
+  "version": "2.0",
+  "data_model": "modulo12_taxonomia",
   "escalas": {
-    "Heptatónicas": {
-      "Mayor": { "intervalos": [0, 2, 4, 5, 7, 9, 11], "gravedad": "estable" },
-      "Menor Armónica": { "intervalos": [0, 2, 3, 5, 7, 8, 11], "gravedad": "tensa" }
+    "diatonicas": {
+      "mayor": { "mask": [0, 2, 4, 5, 7, 9, 11], "tension_factor": 0.1 },
+      "menor_nat": { "mask": [0, 2, 3, 5, 7, 8, 10], "tension_factor": 0.2 }
     },
-    "Pentatónicas": {
-      "Mayor": { "intervalos": [0, 2, 4, 7, 9], "gravedad": "abierta" }
+    "pentatonicas": {
+      "mayor": { "mask": [0, 2, 4, 7, 9], "tension_factor": 0.05 }
+    },
+    "exoticas": {
+      "hirajoshi": { "mask": [0, 2, 3, 7, 8], "tension_factor": 0.4 }
     }
   },
-  "armonicos": {
-    "Naturaleza": {
-      "Serie 1-8": { "intervalos": [0, 4, 7, 10], "frecuencias_relativas": [1, 2, 3, 4, 5, 6, 7, 8] }
+  "series_armonicas": {
+    "natural": {
+      "1_8": { "mask": [0, 4, 7, 10], "desc": "Serie fundamental 1-8" }
+    }
+  },
+  "motor_sugerencias": {
+    "reglas": {
+      "progresion_diatonica": { "probabilidad": 0.8, "salto_maximo": 3 },
+      "resolucion_tension": { "origen": "tensa", "destino": "estable" }
     }
   }
 }
-
