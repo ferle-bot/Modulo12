@@ -20,7 +20,6 @@
         }
         canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
         
-        /* Panel de depuración */
         #debug-panel {
             position: absolute; top: 20px; left: 20px;
             background: rgba(0, 0, 0, 0.85); padding: 15px;
@@ -28,7 +27,6 @@
             z-index: 10; min-width: 250px;
         }
         
-        /* Pantalla de inicio */
         #overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(5, 5, 8, 0.95); display: flex; justify-content: center;
@@ -48,7 +46,6 @@
             border-top: 1px solid #333; padding-top: 10px;
         }
 
-        /* Menú Hamburguesa y Sidebar */
         #menu-btn {
             position: absolute; top: 20px; right: 20px; z-index: 30;
             font-size: 32px; color: #fff; cursor: pointer;
@@ -108,7 +105,7 @@
         }
 
         // ==========================================
-        // 2. MOTOR LÓGICO Y MAPEO DE COLOR
+        // 2. MOTOR LÓGICO
         // ==========================================
         const HarmonyEngine = {
             createPitchClassSet: createMask,
@@ -118,7 +115,6 @@
                 return count;
             },
             evaluateTension: (notesArray) => {
-                // Colores basados estrictamente en la guía de diseño del visualizador
                 if (notesArray.length < 2) return { level: 0.0, color: {r: 0, g: 255, b: 0}, desc: "Reposo absoluto" };
                 let hasTritone = false, hasMinorSecond = false;
                 for (let i=0; i<notesArray.length; i++) {
@@ -128,9 +124,9 @@
                         if (interval === 1 || interval === 11) hasMinorSecond = true;
                     }
                 }
-                if (hasTritone) return { level: 1.0, color: {r: 255, g: 0, b: 0}, desc: "Máxima inestabilidad (Tritono)" }; [span_0](start_span)//[span_0](end_span)
-                if (hasMinorSecond) return { level: 0.7, color: {r: 255, g: 165, b: 0}, desc: "Tensión creciente" }; [span_1](start_span)//[span_1](end_span)
-                return { level: 0.3, color: {r: 0, g: 255, b: 255}, desc: "Estabilidad matizada" }; [span_2](start_span)//[span_2](end_span)
+                if (hasTritone) return { level: 1.0, color: {r: 255, g: 0, b: 0}, desc: "Máxima inestabilidad" };
+                if (hasMinorSecond) return { level: 0.7, color: {r: 255, g: 165, b: 0}, desc: "Tensión creciente" };
+                return { level: 0.3, color: {r: 0, g: 255, b: 255}, desc: "Estabilidad matizada" };
             },
             suggestNextPath: (currentMask) => {
                 if(currentMask === 0) return null;
@@ -187,38 +183,35 @@
         }
 
         // ==========================================
-        // 4. MÓDULO ACÚSTICO (ROBUSTO CONTRA FALLOS)
+        // 4. MÓDULO ACÚSTICO (CORREGIDO Y PRECISO)
         // ==========================================
         class AudioSentry {
             constructor(stateManager) {
                 this.stateManager = stateManager;
                 this.audioContext = null; this.analyser = null;
                 this.dataArray = null; this.isListening = false;
+                this.AMPLITUDE_THRESHOLD = -48; // Umbral óptimo de sensibilidad en dB
             }
 
             async initialize() {
                 try {
-                    // Validar soporte de API antes de pedir permisos
                     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                        alert("El navegador no soporta acceso al micrófono o requiere conexión HTTPS segura.");
+                        alert("El navegador requiere conexión HTTPS segura.");
                         return false;
                     }
 
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-                    
-                    // Inicialización segura del AudioContext
                     const AudioCtx = window.AudioContext || window.webkitAudioContext;
                     this.audioContext = new AudioCtx();
                     
-                    // Reanudar contexto si el navegador lo inicia suspendido
                     if (this.audioContext.state === 'suspended') {
                         await this.audioContext.resume();
                     }
 
                     const source = this.audioContext.createMediaStreamSource(stream);
                     this.analyser = this.audioContext.createAnalyser();
-                    this.analyser.fftSize = 4096;
-                    this.analyser.smoothingTimeConstant = 0.85;
+                    this.analyser.fftSize = 4096; // Alta resolución espectral
+                    this.analyser.smoothingTimeConstant = 0.5; // Menor inercia para refresco inmediato
                     source.connect(this.analyser);
                     
                     this.dataArray = new Float32Array(this.analyser.frequencyBinCount);
@@ -227,8 +220,8 @@
                     
                     return true;
                 } catch (error) { 
-                    console.error("AudioSentry Init Error:", error);
-                    alert("No se pudo acceder al micrófono. Verifica que los permisos estén habilitados en la configuración de Chrome."); 
+                    console.error("Error micrófono:", error);
+                    alert("Permiso denegado o hardware ocupado."); 
                     return false;
                 }
             }
@@ -260,28 +253,18 @@
             extractDetailedPitches() {
                 const sampleRate = this.audioContext.sampleRate;
                 const binCount = this.analyser.frequencyBinCount;
-                const linearData = new Float32Array(binCount);
-                for(let i=0; i<binCount; i++) linearData[i] = Math.pow(10, this.dataArray[i]/20);
-
-                const HPS_ORDER = 3; 
-                const hpsLength = Math.floor(binCount/HPS_ORDER);
-                const hps = new Float32Array(hpsLength);
-                let maxHps = 0;
-
-                for(let i=0; i<hpsLength; i++) {
-                    let product = linearData[i] * linearData[i*2] * linearData[i*3];
-                    hps[i] = product; if(product > maxHps) maxHps = product;
-                }
-
                 let detected = [];
-                const ABSOLUTE_NOISE_FLOOR = Math.pow(Math.pow(10, -45/20), HPS_ORDER); 
-                const RELATIVE_THRESHOLD = 0.15;
 
-                if (maxHps > ABSOLUTE_NOISE_FLOOR) {
-                    for (let i=0; i<hps.length; i++) {
-                        if (hps[i] > (maxHps * RELATIVE_THRESHOLD)) {
+                for (let i = 2; i < binCount - 2; i++) {
+                    const amplitude = this.dataArray[i];
+                    
+                    // Selección estricta de picos espectrales locales locales para evitar armónicos falsos
+                    if (amplitude > this.AMPLITUDE_THRESHOLD) {
+                        if (amplitude > this.dataArray[i-1] && amplitude > this.dataArray[i+1]) {
                             const frequency = i * (sampleRate / (binCount * 2));
-                            if (frequency < 20 || frequency > 4000) continue;
+                            
+                            // Filtrado estricto del rango musical fundamental (A1 a C7)
+                            if (frequency < 55 || frequency > 2100) continue;
                             
                             const midiNote = Math.round(12 * Math.log2(frequency / 440) + 69);
                             const pitchClass = ((midiNote % 12) + 12) % 12;
@@ -291,25 +274,28 @@
                                 pitch: pitchClass,
                                 octave: octave,
                                 midi: midiNote,
+                                amplitude: amplitude,
                                 name: `${noteNames[pitchClass]}${octave}`
                             });
                         }
                     }
                 }
                 
+                // Agrupar por clase de tono, conservando la octava con mayor energía (pico real)
                 let uniqueMap = new Map();
                 detected.forEach(d => {
-                    if(!uniqueMap.has(d.pitch) || uniqueMap.get(d.pitch).midi > d.midi) {
+                    if(!uniqueMap.has(d.pitch) || uniqueMap.get(d.pitch).amplitude < d.amplitude) {
                         uniqueMap.set(d.pitch, d);
                     }
                 });
                 
+                // Ordenar por frecuencia (El índice 0 se convierte en la raíz del Sistema Solar)
                 return Array.from(uniqueMap.values()).sort((a, b) => a.midi - b.midi);
             }
         }
 
         // ==========================================
-        // 5. PROYECTOR VISUAL (SISTEMA SOLAR)
+        // 5. PROYECTOR VISUAL
         // ==========================================
         class VisualRenderer {
             constructor(canvasId, stateManager) {
@@ -385,7 +371,7 @@
                     return;
                 }
 
-                // El Sol
+                // El Sol (Nota más grave)
                 const rootNode = notes_detail[0];
                 const rootPitch = rootNode.pitch;
                 this.drawNode(rootNode.name, centerX, centerY, 38, colorStr, true, 40, '#fff');
@@ -436,7 +422,7 @@
         }
 
         // ==========================================
-        // 6. ARRANQUE E INTERACCIONES DE UI
+        // 6. CONTROLADORES DE INTERFAZ
         // ==========================================
         const stateManager = new StateManager(INITIAL_MATRIX);
         const renderer = new VisualRenderer('harmonyCanvas', stateManager);
@@ -449,7 +435,6 @@
         const closeBtn = document.getElementById('close-btn');
         const sidebar = document.getElementById('sidebar');
 
-        // Control del Menú Hamburguesa
         menuBtn.addEventListener('click', () => sidebar.classList.add('active'));
         closeBtn.addEventListener('click', () => sidebar.classList.remove('active'));
 
@@ -462,9 +447,9 @@
             const detailNames = state.notes_detail.map(n => n.name).join(', ');
 
             debugPanel.innerHTML = `
-                <strong style="color: #0f0;">MODULO12: ACTIVO</strong><br><br>
-                Nodos: [${detailNames}]<br>
-                Tensión Física: ${state.tension_level.toFixed(1)}<br>
+                <strong style="color: #00ff00;">MODULO12: ACTIVO</strong><br><br>
+                Nodos: [${detailNames || 'Ninguno'}]<br>
+                Tensión: ${state.tension_level.toFixed(1)}<br>
                 Estado: <span style="color: rgb(${state.color.r},${state.color.g},${state.color.b})">${state.description}</span><br><br>
                 ${sugText}
                 <div class="history-track">
@@ -475,7 +460,6 @@
         });
 
         startBtn.addEventListener('click', async () => {
-            // Protección contra el congelamiento
             startBtn.textContent = "Conectando...";
             startBtn.disabled = true;
             
@@ -484,13 +468,11 @@
             if (initSuccess) {
                 overlay.style.display = 'none';
             } else {
-                // Liberar el botón si ocurrió un error silencioso o el usuario denegó permiso
                 startBtn.textContent = "Iniciar";
                 startBtn.disabled = false;
             }
         });
 
-        // Registro del Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js').catch(e => console.error(e));
