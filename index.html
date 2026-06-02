@@ -53,9 +53,11 @@
         .btn-clear { background-color: transparent; color: #ff3333; border: 1px solid #ff3333; }
         .btn-clear:hover { background-color: rgba(255,51,51,0.1); }
         
-        /* Botón de Historial Destacado */
         .btn-history { background-color: #1a1a2e; color: #00ffcc; border: 1px solid #00ffcc; font-size: 16px; font-weight: bold; margin-bottom: 25px;}
         .btn-history:hover { background-color: #00ffcc; color: #000; }
+
+        .btn-export { background-color: #222; color: #00ff00; border: 1px solid #00ff00; margin-top: 15px; }
+        .btn-export:hover { background-color: #00ff00; color: #000; }
 
         .history-track {
             color: #888; font-size: 11px; margin-top: 12px;
@@ -74,9 +76,7 @@
             box-shadow: -10px 0 30px rgba(0,0,0,0.8); box-sizing: border-box; overflow-y: auto;
         }
         #sidebar.active { right: 0; }
-        #close-btn {
-            font-size: 32px; cursor: pointer; text-align: right; margin-bottom: 10px; color: #666; line-height: 1;
-        }
+        #close-btn { font-size: 32px; cursor: pointer; text-align: right; margin-bottom: 10px; color: #666; line-height: 1; }
         #close-btn:hover { color: #fff; }
 
         .config-group { margin-top: 25px; border-top: 1px solid #222; padding-top: 15px; }
@@ -107,7 +107,7 @@
             box-shadow: 0 10px 50px rgba(0,0,0,0.9); box-sizing: border-box;
         }
         #session-content {
-            flex: 1; overflow-y: auto; font-size: 16px; line-height: 2.2; margin-top: 20px;
+            flex: 1; overflow-y: auto; font-size: 16px; line-height: 2.2; margin-top: 10px;
             border: 1px solid #222; padding: 20px; background: #050508; color: #ddd; font-family: monospace;
         }
         .session-item { border-bottom: 1px dashed #333; padding: 8px 0; display: flex; align-items: center; }
@@ -118,7 +118,6 @@
 <body>
 
     <div id="menu-btn">☰</div>
-    
     <div id="sidebar">
         <div id="close-btn">×</div>
         <h3 style="color: var(--accent); margin-top: 0; letter-spacing: 1px; font-size: 20px;">Modulo12</h3>
@@ -179,7 +178,10 @@
                 <h2 style="color: #00ffcc; margin: 0; font-family: monospace;">LECTOR DE SESIÓN</h2>
                 <button id="close-modal" style="background: none; border: none; color: #888; font-size: 30px; cursor: pointer;">×</button>
             </div>
-            <p style="color: #666; font-size: 13px; margin-top: 5px;">Matriz inmutable de eventos armónicos interceptados.</p>
+            <p style="color: #666; font-size: 13px; margin-top: 5px;">Matriz persistida de eventos interceptados.</p>
+            
+            <button id="export-json-btn" class="menu-action-btn btn-export">⇩ Exportar Matriz JSON (Para ModuloScore)</button>
+            
             <div id="session-content"></div>
         </div>
     </div>
@@ -216,7 +218,6 @@
             { name: `sus2`, mask: createMask([i, i+2, i+7]) }
         ]);
 
-        // Catálogo Integral de Escalas
         const SCALES_DEF = {
             "Cromática": [0,1,2,3,4,5,6,7,8,9,10,11],
             "Mayor": [0,2,4,5,7,9,11],
@@ -288,7 +289,7 @@
                     scale_root: 0, scale_type: "Cromática", scale_mask: 4095
                 };
                 
-                const saved = localStorage.getItem('modulus_state_v6');
+                const saved = localStorage.getItem('modulus_state_v7');
                 if (saved) {
                     const parsed = JSON.parse(saved);
                     this.state = { 
@@ -323,13 +324,13 @@
                         const hist = this.state.history;
                         if (hist.length === 0 || hist[hist.length - 1].mask !== this.state.active_mask) {
                             const timestamp = new Date().toLocaleTimeString('es-MX', { hour12: false, hour: '2-digit', minute: '2-digit', second:'2-digit' });
-                            hist.push({ mask: this.state.active_mask, name, time: timestamp, raw: this.state.notes_array });
-                            if (hist.length > 200) hist.shift(); // Historial ampliado para exportación
+                            hist.push({ mask: this.state.active_mask, name, time: timestamp, raw: this.state.notes_array, tension: this.state.tension_level });
+                            if (hist.length > 200) hist.shift();
                         }
                     }
                 }
                 
-                localStorage.setItem('modulus_state_v6', JSON.stringify({ 
+                localStorage.setItem('modulus_state_v7', JSON.stringify({ 
                     history: this.state.history, sens_offset: this.state.sens_offset,
                     view_mode: this.state.view_mode, scale_root: this.state.scale_root, scale_type: this.state.scale_type
                 }));
@@ -345,7 +346,7 @@
         }
 
         // ==========================================
-        // 3. MOTOR ACÚSTICO (HPS + RUIDO DINÁMICO)
+        // 3. MOTOR ACÚSTICO OPTIMIZADO (THROTTLING + PERCENTIL)
         // ==========================================
         class AudioEngine {
             constructor(stateManager) {
@@ -353,6 +354,8 @@
                 this.audioCtx = null; this.analyser = null;
                 this.dataArray = null; this.stream = null;
                 this.animationId = null; this.baseNoiseFloor = -60; 
+                this.lastAnalysisTime = 0;
+                this.ANALYSIS_FPS = 15; // Limitador de CPU para Main Thread
             }
 
             async startAndCalibrate() {
@@ -371,19 +374,26 @@
                     
                     this.stateManager.update({ status: 'calibrating' });
 
-                    let maxNoise = -Infinity;
+                    // Calibración robusta (Percentil 85 en lugar de Max)
+                    let noiseSamples = [];
                     const endTime = Date.now() + 2000;
                     
                     return new Promise((resolve) => {
                         const calibrateTick = () => {
                             this.analyser.getFloatFrequencyData(this.dataArray);
+                            let frameMax = -Infinity;
                             for(let i=0; i<this.dataArray.length; i++) {
-                                if (this.dataArray[i] > maxNoise && this.dataArray[i] < 0) maxNoise = this.dataArray[i];
+                                if (this.dataArray[i] > frameMax && this.dataArray[i] < 0) frameMax = this.dataArray[i];
                             }
+                            if (frameMax > -100) noiseSamples.push(frameMax);
+
                             if (Date.now() < endTime) {
                                 requestAnimationFrame(calibrateTick);
                             } else {
-                                this.baseNoiseFloor = Math.max(-80, Math.min(maxNoise + 10, -30));
+                                noiseSamples.sort((a, b) => a - b);
+                                const p85 = noiseSamples[Math.floor(noiseSamples.length * 0.85)] || -60;
+                                this.baseNoiseFloor = Math.max(-80, Math.min(p85 + 5, -30));
+                                
                                 this.stateManager.update({ status: 'active' });
                                 this.processFrame();
                                 resolve(true);
@@ -397,18 +407,24 @@
             processFrame() {
                 if (this.stateManager.state.status !== 'active') return;
                 
-                this.analyser.getFloatFrequencyData(this.dataArray);
-                const details = this.extractPitchesDynamic();
-                const rawPitches = details.map(d => d.pitch);
-                const mask = HarmonyEngine.createPitchClassSet(rawPitches);
-                const tension = HarmonyEngine.evaluateTension(rawPitches);
-                const path = HarmonyEngine.suggestPath(mask, this.stateManager.state.scale_mask);
+                const now = performance.now();
+                const frameInterval = 1000 / this.ANALYSIS_FPS;
 
-                this.stateManager.update({
-                    active_mask: mask, notes_array: rawPitches, notes_detail: details,
-                    tension_level: tension.level, color: tension.color, 
-                    description: tension.desc, suggestion: path
-                });
+                if (now - this.lastAnalysisTime >= frameInterval) {
+                    this.lastAnalysisTime = now;
+                    this.analyser.getFloatFrequencyData(this.dataArray);
+                    const details = this.extractPitchesDynamic();
+                    const rawPitches = details.map(d => d.pitch);
+                    const mask = HarmonyEngine.createPitchClassSet(rawPitches);
+                    const tension = HarmonyEngine.evaluateTension(rawPitches);
+                    const path = HarmonyEngine.suggestPath(mask, this.stateManager.state.scale_mask);
+
+                    this.stateManager.update({
+                        active_mask: mask, notes_array: rawPitches, notes_detail: details,
+                        tension_level: tension.level, color: tension.color, 
+                        description: tension.desc, suggestion: path
+                    });
+                }
 
                 this.animationId = requestAnimationFrame(() => this.processFrame());
             }
@@ -466,7 +482,7 @@
         }
 
         // ==========================================
-        // 4. MOTOR DE PROYECCIÓN MÚLTIPLE
+        // 4. MOTOR DE PROYECCIÓN VISUAL
         // ==========================================
         class Renderer {
             constructor(canvasId, stateManager) {
@@ -618,7 +634,8 @@
             scaleRoot: document.getElementById('scale-root'), scaleType: document.getElementById('scale-type'),
             viewMode: document.getElementById('view-mode'),
             historyBtn: document.getElementById('history-btn'), sessionModal: document.getElementById('session-modal'),
-            closeModal: document.getElementById('close-modal'), sessionContent: document.getElementById('session-content')
+            closeModal: document.getElementById('close-modal'), sessionContent: document.getElementById('session-content'),
+            exportBtn: document.getElementById('export-json-btn')
         };
 
         ui.sensSlider.value = stateManager.state.sens_offset; ui.sensVal.textContent = stateManager.state.sens_offset + ' dB';
@@ -659,7 +676,6 @@
 
         ui.clear.onclick = () => { stateManager.clearHistory(); ui.sidebar.classList.remove('active'); };
 
-        // Apertura Modal de Sesión
         ui.historyBtn.onclick = () => {
             ui.sidebar.classList.remove('active');
             ui.sessionModal.style.display = 'flex';
@@ -677,6 +693,29 @@
             }
         };
         ui.closeModal.onclick = () => ui.sessionModal.style.display = 'none';
+
+        // VECTOR 1: Exportador de Puente de Datos (JSON) para ModuloScore
+        ui.exportBtn.onclick = () => {
+            const historyData = stateManager.state.history;
+            if(historyData.length === 0) { alert("No hay datos en la sesión para exportar."); return; }
+            
+            const payload = JSON.stringify({
+                metadata: {
+                    app: "Modulo12",
+                    timestamp: new Date().toISOString(),
+                    scale_context: `${HarmonyEngine.getNoteName(stateManager.state.scale_root, stateManager.state.scale_root)} ${stateManager.state.scale_type}`
+                },
+                session_events: historyData
+            }, null, 2);
+
+            const blob = new Blob([payload], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `modulo12_sesion_${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        };
 
         stateManager.subscribe(s => {
             const hudHist = s.history.slice(-5).map(h => h.name).join(' ➔ ') || 'Memoria vacía';
