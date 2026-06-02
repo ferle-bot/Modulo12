@@ -3,92 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Modulo12 - Motor Híbrido Z12</title>
-    
+    <title>Modulo12 - YIN Híbrido</title>
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#050508">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
     <style>
         :root { --bg-color: #050508; --accent: #00ff00; --accent-hover: #00cc00; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; background-color: var(--bg-color); overflow: hidden; display: flex; justify-content: center; align-items: center; font-family: monospace; user-select: none; color: #fff; }
         canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
-        
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #0a0a0e; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; border: 1px solid #0a0a0e; }
-        ::-webkit-scrollbar-thumb:hover { background: #555; }
-
+        ::-webkit-scrollbar { width: 8px; } ::-webkit-scrollbar-track { background: #0a0a0e; border-radius: 4px; } ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; border: 1px solid #0a0a0e; } ::-webkit-scrollbar-thumb:hover { background: #555; }
         #debug-panel { position: absolute; top: 20px; left: 20px; background: rgba(5, 5, 8, 0.85); padding: 18px; border-radius: 8px; pointer-events: none; border: 1px solid #1a1a24; z-index: 10; min-width: 260px; backdrop-filter: blur(8px); box-shadow: 0 4px 15px rgba(0,0,0,0.5); line-height: 1.5; }
-        
         #hud-indicators { position: absolute; top: 28px; right: 70px; display: flex; gap: 12px; z-index: 30; align-items: center; }
         .led-indicator { width: 10px; height: 10px; border-radius: 50%; background: #222; border: 1px solid #111; box-shadow: 0 0 3px #000 inset; transition: background 0.05s; }
-        .led-metro.beat { background: #0f0; box-shadow: 0 0 10px #0f0; border-color: #0f0; }
-        .led-metro.sub-beat { background: #fa0; box-shadow: 0 0 8px #fa0; border-color: #fa0; }
+        .led-metro.beat { background: #0f0; box-shadow: 0 0 10px #0f0; border-color: #0f0; } .led-metro.sub-beat { background: #fa0; box-shadow: 0 0 8px #fa0; border-color: #fa0; }
         .led-rec.active { background: #f00; box-shadow: 0 0 10px #f00; border-color: #f00; animation: flash 1s infinite; }
         @keyframes flash { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
-
         #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 5, 8, 0.98); display: flex; justify-content: center; align-items: center; z-index: 20; flex-direction: column; }
-        
         button.primary-btn { background-color: var(--accent); color: #000; border: none; padding: 15px 40px; font-size: 18px; font-weight: bold; cursor: pointer; border-radius: 4px; box-shadow: 0 0 20px rgba(0, 255, 0, 0.3); transition: all 0.2s ease; font-family: monospace; letter-spacing: 1px; margin-top: 15px; }
         button.primary-btn:hover { background-color: var(--accent-hover); transform: scale(1.02); }
-        
         .menu-action-btn { padding: 12px; font-size: 14px; width: 100%; margin-bottom: 8px; text-align: center; font-family: monospace; border-radius: 4px; border: none; cursor: pointer; transition: all 0.2s; }
-        .btn-pause { background-color: var(--accent); color: #000; }
-        .btn-stop { background-color: #ff3333; color: #fff; }
-        .btn-clear { background-color: transparent; color: #ff3333; border: 1px solid #ff3333; }
-        .btn-history { background-color: #1a1a2e; color: #00ffcc; border: 1px solid #00ffcc; font-size: 14px; font-weight: bold; }
-        .btn-rec { background-color: #2a0a0a; color: #ff3333; border: 1px solid #ff3333; }
-
+        .btn-pause { background-color: var(--accent); color: #000; } .btn-stop { background-color: #ff3333; color: #fff; } .btn-clear { background-color: transparent; color: #ff3333; border: 1px solid #ff3333; }
+        .btn-history { background-color: #1a1a2e; color: #00ffcc; border: 1px solid #00ffcc; font-size: 14px; font-weight: bold; } .btn-rec { background-color: #2a0a0a; color: #ff3333; border: 1px solid #ff3333; }
         .history-track { color: #888; font-size: 11px; margin-top: 15px; border-top: 1px solid #2a2a35; padding-top: 12px; line-height: 1.6; }
-
-        #menu-btn { position: absolute; top: 15px; right: 20px; z-index: 30; font-size: 32px; color: #fff; cursor: pointer; text-shadow: 0 0 10px rgba(0,0,0,0.8); padding: 5px; transition: color 0.2s; }
-        #menu-btn:hover { color: var(--accent); }
-
+        #menu-btn { position: absolute; top: 15px; right: 20px; z-index: 30; font-size: 32px; color: #fff; cursor: pointer; text-shadow: 0 0 10px rgba(0,0,0,0.8); padding: 5px; transition: color 0.2s; } #menu-btn:hover { color: var(--accent); }
         #sidebar { position: fixed; top: 0; right: -340px; width: 300px; height: 100%; background: rgba(10, 10, 12, 0.98); border-left: 1px solid #222; transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 40; padding: 25px; box-shadow: -10px 0 30px rgba(0,0,0,0.8); box-sizing: border-box; overflow-y: auto; }
-        #sidebar.active { right: 0; }
-        #close-btn { font-size: 32px; cursor: pointer; text-align: right; margin-bottom: 5px; color: #666; line-height: 1; transition: color 0.2s; }
-        
-        .config-group { margin-top: 15px; border-top: 1px solid #222; padding-top: 15px; }
-        .config-label { font-size: 12px; color: #aaa; margin-bottom: 8px; display: flex; justify-content: space-between; }
-        select.menu-select { background: #111; color: #fff; border: 1px solid #333; padding: 10px; border-radius: 4px; font-family: monospace; width: 100%; outline: none; margin-bottom: 8px; transition: border-color 0.2s; font-size: 14px; }
-        select.menu-select:focus { border-color: var(--accent); }
-        input[type=range] { width: 100%; -webkit-appearance: none; background: transparent; margin: 8px 0; }
-        input[type=range]:focus { outline: none; }
-        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #333; border-radius: 2px; }
-        input[type=range]::-webkit-slider-thumb { height: 16px; width: 16px; border-radius: 50%; background: var(--accent); cursor: pointer; -webkit-appearance: none; margin-top: -6px; }
-        
-        /* Modales */
+        #sidebar.active { right: 0; } #close-btn { font-size: 32px; cursor: pointer; text-align: right; margin-bottom: 5px; color: #666; line-height: 1; transition: color 0.2s; }
+        .config-group { margin-top: 15px; border-top: 1px solid #222; padding-top: 15px; } .config-label { font-size: 12px; color: #aaa; margin-bottom: 8px; display: flex; justify-content: space-between; }
+        select.menu-select { background: #111; color: #fff; border: 1px solid #333; padding: 10px; border-radius: 4px; font-family: monospace; width: 100%; outline: none; margin-bottom: 8px; transition: border-color 0.2s; font-size: 14px; } select.menu-select:focus { border-color: var(--accent); }
+        input[type=range] { width: 100%; -webkit-appearance: none; background: transparent; margin: 8px 0; } input[type=range]:focus { outline: none; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #333; border-radius: 2px; } input[type=range]::-webkit-slider-thumb { height: 16px; width: 16px; border-radius: 50%; background: var(--accent); cursor: pointer; -webkit-appearance: none; margin-top: -6px; }
         .modal-bg { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 5, 8, 0.98); z-index: 9999; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
         #session-container { width: 95%; max-width: 850px; height: 90%; background: #0a0a0e; border: 1px solid #2a2a35; border-radius: 12px; padding: 30px; display: flex; flex-direction: column; box-sizing: border-box; box-shadow: 0 20px 60px rgba(0,0,0,0.9); }
         #session-content { flex: 1; overflow-y: auto; margin-top: 15px; padding-right: 10px; }
-        .session-block { border: 1px solid #1a1a24; background: #07070a; margin-bottom: 15px; border-radius: 8px; padding: 20px; transition: border-color 0.2s; }
-        .session-block:hover { border-color: #333; }
+        .session-block { border: 1px solid #1a1a24; background: #07070a; margin-bottom: 15px; border-radius: 8px; padding: 20px; transition: border-color 0.2s; } .session-block:hover { border-color: #333; }
         .session-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1a1a24; padding-bottom: 12px; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;}
-        .session-title { color: #00ffcc; font-size: 16px; font-weight: bold; margin: 0; letter-spacing: 0.5px;}
-        .session-controls { display: flex; gap: 8px; flex-wrap: wrap;}
-        .btn-play-synth { background: #112211; color: #0f0; border: 1px solid #0f0; padding: 6px 12px; font-family: monospace; font-size: 12px; cursor: pointer; border-radius: 4px; transition: 0.2s; }
-        .btn-play-synth:hover { background: #0f0; color: #000; }
-        .btn-stop-synth { background: #221111; color: #f33; border-color: #f33; }
-        .btn-stop-synth:hover { background: #f33; color: #fff; }
-        .btn-export-synth { background: #222; color: #fa0; border-color: #fa0; }
-        .btn-export-synth:hover { background: #fa0; color: #000; }
-        .session-event { display: inline-block; background: #111; border: 1px solid #222; padding: 6px 12px; margin: 4px; border-radius: 6px; color: #fff; font-size: 13px; }
-        .session-event .time { color: #666; font-size: 10px; display: block; margin-bottom: 4px; }
-
-        /* Asistente de Perfilado */
-        #profiler-modal { z-index: 10000; }
-        #profiler-box { background: #0a0a0e; border: 1px solid #00ffcc; border-radius: 8px; padding: 30px; text-align: center; box-shadow: 0 0 40px rgba(0, 255, 204, 0.15); max-width: 450px; width: 90%; }
+        .session-title { color: #00ffcc; font-size: 16px; font-weight: bold; margin: 0; letter-spacing: 0.5px;} .session-controls { display: flex; gap: 8px; flex-wrap: wrap;}
+        .btn-play-synth { background: #112211; color: #0f0; border: 1px solid #0f0; padding: 6px 12px; font-family: monospace; font-size: 12px; cursor: pointer; border-radius: 4px; transition: 0.2s; } .btn-play-synth:hover { background: #0f0; color: #000; }
+        .btn-stop-synth { background: #221111; color: #f33; border-color: #f33; } .btn-stop-synth:hover { background: #f33; color: #fff; }
+        .btn-export-synth { background: #222; color: #fa0; border-color: #fa0; } .btn-export-synth:hover { background: #fa0; color: #000; }
+        .session-event { display: inline-block; background: #111; border: 1px solid #222; padding: 6px 12px; margin: 4px; border-radius: 6px; color: #fff; font-size: 13px; } .session-event .time { color: #666; font-size: 10px; display: block; margin-bottom: 4px; }
+        #profiler-modal { z-index: 10000; } #profiler-box { background: #0a0a0e; border: 1px solid #00ffcc; border-radius: 8px; padding: 30px; text-align: center; box-shadow: 0 0 40px rgba(0, 255, 204, 0.15); max-width: 450px; width: 90%; }
         .profiler-target { font-size: 28px; color: #00ffcc; font-weight: bold; margin: 15px 0; letter-spacing: 1px; }
         .profiler-strikes { display: flex; justify-content: center; gap: 15px; margin-bottom: 25px; }
-        .strike-dot { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #333; background: #111; transition: all 0.2s; }
-        .strike-dot.active { background: #00ffcc; border-color: #00ffcc; box-shadow: 0 0 15px #00ffcc; }
-        .profiler-bar-bg { background: #222; height: 4px; border-radius: 2px; overflow: hidden; margin-bottom: 20px; width: 100%; }
-        #profiler-bar-fill { background: #00ffcc; height: 100%; width: 0%; transition: width 0.3s; }
-        
-        .vu-meter-bg { background: #111; height: 12px; border-radius: 6px; overflow: hidden; width: 100%; margin: 15px 0; border: 1px solid #333; }
-        .vu-meter-fill { background: linear-gradient(90deg, #00ff00, #ffff00, #ff0000); height: 100%; width: 0%; transition: width 0.05s linear; }
+        .strike-dot { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #333; background: #111; transition: all 0.2s; } .strike-dot.active { background: #00ffcc; border-color: #00ffcc; box-shadow: 0 0 15px #00ffcc; }
+        .profiler-bar-bg { background: #222; height: 4px; border-radius: 2px; overflow: hidden; margin-bottom: 20px; width: 100%; } #profiler-bar-fill { background: #00ffcc; height: 100%; width: 0%; transition: width 0.3s; }
+        .vu-meter-bg { background: #111; height: 12px; border-radius: 6px; overflow: hidden; width: 100%; margin: 15px 0; border: 1px solid #333; } .vu-meter-fill { background: linear-gradient(90deg, #00ff00, #ffff00, #ff0000); height: 100%; width: 0%; transition: width 0.05s linear; }
     </style>
 </head>
 <body>
@@ -103,10 +63,8 @@
         <div id="close-btn">×</div>
         <h3 style="color: var(--accent); margin-top: 0; font-size: 18px; letter-spacing: 1px;">Modulo12 : Núcleo</h3>
         <hr style="border-color: #1a1a24; margin-bottom: 15px;">
-        
         <button id="history-btn" class="menu-action-btn btn-history">▶ Abrir Lector de Sesiones</button>
         <button id="rec-btn" class="menu-action-btn btn-rec">⏺ Grabar Audio (Micrófono)</button>
-        
         <div class="config-group" style="margin-top: 10px;">
             <button id="pause-btn" class="menu-action-btn btn-pause">Pausar Detección</button>
             <div style="display:flex; gap:10px;">
@@ -114,7 +72,6 @@
                 <button id="clear-btn" class="menu-action-btn btn-clear" style="flex:1;">Limpiar</button>
             </div>
         </div>
-
         <div class="config-group">
             <div class="config-label"><span style="color:#00ffcc;">Perfil Acústico (Fuente)</span></div>
             <select id="acoustic-profile" class="menu-select">
@@ -124,7 +81,6 @@
                 <option value="synth">Genérico / Sintetizador</option>
             </select>
         </div>
-
         <div class="config-group">
             <div class="config-label"><span>Filtro de Escala / Tonalidad</span></div>
             <div style="display: flex; gap: 10px;">
@@ -153,17 +109,15 @@
                 </select>
             </div>
         </div>
-
         <div class="config-group">
             <div class="config-label"><span>Visor de Proyección</span></div>
             <select id="view-mode" class="menu-select">
                 <option value="radial">Gravedad Armónica Z12</option>
                 <option value="linear">Mapa Espectral (Piano Roll)</option>
             </select>
-            <div class="config-label" style="margin-top: 10px;"><span>Piso de Ruido Dinámico</span><span id="sens-val">0 dB</span></div>
-            <input type="range" id="sens-slider" min="-20" max="20" value="0">
+            <div class="config-label" style="margin-top: 10px;"><span>Piso de Ruido (Puerta)</span><span id="sens-val">-55 dB</span></div>
+            <input type="range" id="sens-slider" min="-80" max="-30" value="-55">
         </div>
-
         <div class="config-group">
             <div class="config-label"><span>Metrónomo Visual Silencioso</span><span id="bpm-val">120 BPM</span></div>
             <input type="range" id="bpm-slider" min="40" max="240" value="120">
@@ -184,19 +138,13 @@
     <div id="profiler-modal" class="modal-bg">
         <div id="profiler-box">
             <h3 style="margin-top:0; color:#fff;">Perfilado Acústico del Instrumento</h3>
-            <p style="color:#aaa; font-size:13px; margin-bottom:15px;" id="profiler-desc">Toca la nota solicitada 3 veces. El motor aprenderá la huella de tu instrumento.</p>
-            
+            <p style="color:#aaa; font-size:13px; margin-bottom:15px;" id="profiler-desc">Toca la nota solicitada 3 veces. El motor memorizará tu piano usando Autocorrelación.</p>
             <div class="profiler-target" id="profiler-target-note">C2</div>
-            <div id="profiler-autocorr-readout" style="color:#0f0; font-size:11px; margin-bottom:10px; height:15px;">Buscando frecuencia base...</div>
-            
+            <div id="profiler-autocorr-readout" style="color:#0f0; font-size:11px; margin-bottom:10px; height:15px;">Esperando onda...</div>
             <div class="profiler-strikes">
-                <div class="strike-dot" id="sd-1"></div>
-                <div class="strike-dot" id="sd-2"></div>
-                <div class="strike-dot" id="sd-3"></div>
+                <div class="strike-dot" id="sd-1"></div><div class="strike-dot" id="sd-2"></div><div class="strike-dot" id="sd-3"></div>
             </div>
-
             <div class="vu-meter-bg"><div id="profiler-vu-fill" class="vu-meter-fill"></div></div>
-            
             <div class="profiler-bar-bg"><div id="profiler-bar-fill"></div></div>
             <button id="profiler-skip-btn" class="menu-action-btn" style="background: transparent; color: #666; border: 1px solid #444; width: auto;">Omitir y Forzar Inicio</button>
         </div>
@@ -204,8 +152,7 @@
 
     <div id="overlay">
         <h1 style="margin-bottom: 10px; color: var(--accent); letter-spacing: 4px; font-size: 3rem; text-shadow: 0 0 20px rgba(0,255,0,0.3);">Modulo12</h1>
-        <p style="color: #888; margin-bottom: 40px; font-size: 14px;">Motor de Captura Transmodal Z12</p>
-        
+        <p style="color: #888; margin-bottom: 40px; font-size: 14px;">Motor de Captura Transmodal YIN</p>
         <div id="pre-config-box" style="width: 80%; max-width: 320px; text-align: left;">
             <label style="color: #00ffcc; font-size: 12px; margin-bottom: 8px; display: block;">1. Selecciona tu instrumento base:</label>
             <select id="pre-profile" class="menu-select" style="margin-bottom: 25px; padding: 12px; font-size: 16px; background: #0a0a0e; border-color: #333;">
@@ -215,23 +162,20 @@
                 <option value="synth">Genérico / Sintetizador</option>
             </select>
         </div>
-
         <button id="start-btn" class="primary-btn">INICIAR CALIBRACIÓN</button>
-        
         <div id="calibration-msg" style="display:none; width: 80%; max-width: 320px;">
-            <div style="color:#fa0; margin-top:20px; font-size:14px; text-align:center; letter-spacing: 1px;">MIDIENDO RUIDO AMBIENTAL<br><span style="font-size:11px; color:#aaa; letter-spacing: 0;">(Silencio absoluto por 2 seg)</span></div>
-            <div class="vu-meter-bg"><div id="calib-vu-fill" class="vu-meter-fill"></div></div>
+            <div style="color:#fa0; margin-top:20px; font-size:14px; text-align:center; letter-spacing: 1px;">CARGANDO WORKLET YIN...</div>
         </div>
     </div>
 
-    <div id="debug-panel">Cargando dependencias matemáticas...</div>
+    <div id="debug-panel">Cargando motor híbrido...</div>
     <canvas id="harmonyCanvas"></canvas>
 
     <script>
         'use strict';
 
         // ==========================================
-        // 1. MOTOR MATEMÁTICO: DICCIONARIOS Y ESCALAS
+        // 1. DICCIONARIOS Y MATEMÁTICA ESTÁTICA
         // ==========================================
         const noteNamesSharps = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
         const noteNamesFlats =  ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "Cb"];
@@ -246,11 +190,10 @@
         ]);
 
         const SCALES_DEF = {
-            "Cromática": [0,1,2,3,4,5,6,7,8,9,10,11], "Mayor": [0,2,4,5,7,9,11],
-            "Menor Nat.": [0,2,3,5,7,8,10], "Menor Arm.": [0,2,3,5,7,8,11], "Menor Melód.": [0,2,3,5,7,9,11],
-            "Dórica": [0,2,3,5,7,9,10], "Frigia": [0,1,3,5,7,8,10], "Lidia": [0,2,4,6,7,9,11],
-            "Mixolidia": [0,2,4,5,7,9,10], "Locria": [0,1,3,5,6,8,10],
-            "Pentatónica May.": [0,2,4,7,9], "Pentatónica Men.": [0,3,5,7,10], "Blues": [0,3,5,6,7,10]
+            "Cromática": [0,1,2,3,4,5,6,7,8,9,10,11], "Mayor": [0,2,4,5,7,9,11], "Menor Nat.": [0,2,3,5,7,8,10], 
+            "Menor Arm.": [0,2,3,5,7,8,11], "Menor Melód.": [0,2,3,5,7,9,11], "Dórica": [0,2,3,5,7,9,10], 
+            "Frigia": [0,1,3,5,7,8,10], "Lidia": [0,2,4,6,7,9,11], "Mixolidia": [0,2,4,5,7,9,10], 
+            "Locria": [0,1,3,5,6,8,10], "Pentatónica May.": [0,2,4,7,9], "Pentatónica Men.": [0,3,5,7,10], "Blues": [0,3,5,6,7,10]
         };
 
         const HarmonyEngine = {
@@ -282,25 +225,25 @@
             }
         };
 
-        // ==========================================
-        // 2. MATRIZ DE PERFILES Y ESTADO
-        // ==========================================
         const PROFILES = {
-            piano:  { tol: 40, minFreq: 27, maxFreq: 4186, targets: [{n:"Do Grave (C2)", f:65.41, m:36}, {n:"Re Grave (D2)", f:73.42, m:38}, {n:"Do Central (C4)", f:261.63, m:60}] },
-            guitar: { tol: 45, minFreq: 80, maxFreq: 1200, targets: [{n:"6ta Cuerda Aire (E2)", f:82.41, m:40}, {n:"1ra Cuerda Aire (E4)", f:329.63, m:64}] },
-            voice:  { tol: 60, minFreq: 80, maxFreq: 1200, targets: [{n:"Canta una nota grave", f:0, m:"low"}, {n:"Canta una nota aguda", f:0, m:"high"}] },
-            synth:  { tol: 35, minFreq: 20, maxFreq: 5000, targets: [] } 
+            piano:  { targets: [{n:"Do Grave (C2)", m:36}, {n:"Do Central (C4)", m:60}] },
+            guitar: { targets: [{n:"6ta Cuerda Aire (E2)", m:40}, {n:"1ra Cuerda Aire (E4)", m:64}] },
+            voice:  { targets: [{n:"Canta una nota constante", m:"any"}] },
+            synth:  { targets: [] } 
         };
 
+        // ==========================================
+        // 2. STATE MANAGER
+        // ==========================================
         class StateManager {
             constructor() {
                 const initial = {
                     active_mask: 0, notes_array: [], notes_detail: [], tension_level: 0.0, color: {r: 34, g: 34, b: 34},
                     description: "Silencio", suggestion: null, sessions: [], current_session_id: null,
-                    status: "standby", sens_offset: 0, view_mode: "radial", scale_root: 0, scale_type: "Cromática", scale_mask: 4095,
+                    status: "standby", sens_offset: -55, view_mode: "radial", scale_root: 0, scale_type: "Cromática", scale_mask: 4095,
                     acoustic_profile: "piano", profiler_step: 0, calibration_map: {}
                 };
-                const saved = localStorage.getItem('modulus_state_v15');
+                const saved = localStorage.getItem('modulus_state_v16');
                 this.state = saved ? { ...initial, ...JSON.parse(saved), active_mask: 0, status: 'standby', current_session_id: null, profiler_step: 0, scale_mask: HarmonyEngine.getScaleMask(JSON.parse(saved).scale_root||0, JSON.parse(saved).scale_type||"Cromática") } : initial;
                 this.listeners = [];
             }
@@ -340,59 +283,32 @@
                 }
                 this.save(); this.notify();
             }
-            save() { localStorage.setItem('modulus_state_v15', JSON.stringify({ sessions: this.state.sessions, sens_offset: this.state.sens_offset, view_mode: this.state.view_mode, scale_root: this.state.scale_root, scale_type: this.state.scale_type, acoustic_profile: this.state.acoustic_profile, calibration_map: this.state.calibration_map })); }
+            save() { localStorage.setItem('modulus_state_v16', JSON.stringify({ sessions: this.state.sessions, sens_offset: this.state.sens_offset, view_mode: this.state.view_mode, scale_root: this.state.scale_root, scale_type: this.state.scale_type, acoustic_profile: this.state.acoustic_profile, calibration_map: this.state.calibration_map })); }
             clearHistory() { this.state.sessions = []; this.state.current_session_id = null; this.save(); this.update({}); }
             subscribe(cb) { this.listeners.push(cb); this.notify(); }
             notify() { const snap = JSON.parse(JSON.stringify(this.state)); this.listeners.forEach(cb => cb(snap)); }
         }
 
         // ==========================================
-        // 3. MOTOR ACÚSTICO HÍBRIDO (FFT + AUTOCORRELACIÓN)
+        // 3. MOTOR YIN (AUDIOWORKLET WRAPPER)
         // ==========================================
         class AudioEngine {
             constructor(stateManager) {
-                this.stateManager = stateManager; this.audioCtx = null; this.analyser = null;
-                this.freqData = null; this.timeData = null; this.stream = null; this.animationId = null;
-                this.baseNoiseFloor = -60; this.ANALYSIS_FPS = 15; this.lastTime = 0;
+                this.stateManager = stateManager; this.audioCtx = null; this.stream = null; this.workletNode = null;
+                this.mediaRecorder = null; this.audioChunks = []; this.isRecording = false;
                 
                 this.strikeCount = 0; this.isStriking = false; this.strikeData = [];
-                this.vuCalib = document.getElementById('calib-vu-fill');
                 this.vuProf = document.getElementById('profiler-vu-fill');
                 this.profReadout = document.getElementById('profiler-autocorr-readout');
+
+                this.currentPitch = -1;
+                this.currentDb = -100;
             }
             
-            updateVU(amplitude) {
-                const minDb = -100; const maxDb = -20;
-                let percent = ((amplitude - minDb) / (maxDb - minDb)) * 100;
+            updateVU(db) {
+                let percent = ((db + 100) / 80) * 100; // Mapear -100dB a -20dB
                 percent = Math.max(0, Math.min(100, percent));
-                if (this.vuCalib) this.vuCalib.style.width = `${percent}%`;
                 if (this.vuProf) this.vuProf.style.width = `${percent}%`;
-            }
-
-            // Algoritmo de Autocorrelación (Dominio del Tiempo) para Profiler
-            autoCorrelate(buf, sampleRate) {
-                let SIZE = buf.length; let rms = 0;
-                for (let i = 0; i < SIZE; i++) rms += buf[i] * buf[i];
-                rms = Math.sqrt(rms / SIZE);
-                if (rms < 0.01) return -1; // Señal muy débil
-
-                let r1 = 0, r2 = SIZE - 1, thres = 0.2;
-                for (let i = 0; i < SIZE / 2; i++) if (Math.abs(buf[i]) < thres) { r1 = i; break; }
-                for (let i = 1; i < SIZE / 2; i++) if (Math.abs(buf[SIZE - i]) < thres) { r2 = SIZE - i; break; }
-                buf = buf.slice(r1, r2); SIZE = buf.length;
-
-                let c = new Array(SIZE).fill(0);
-                for (let i = 0; i < SIZE; i++) {
-                    for (let j = 0; j < SIZE - i; j++) c[i] += buf[j] * buf[j + i];
-                }
-
-                let d = 0; while (c[d] > c[d + 1]) d++;
-                let maxval = -1, maxpos = -1;
-                for (let i = d; i < SIZE; i++) {
-                    if (c[i] > maxval) { maxval = c[i]; maxpos = i; }
-                }
-                let T0 = maxpos;
-                return sampleRate / T0;
             }
 
             async startAndCalibrate() {
@@ -400,50 +316,47 @@
                     this.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, autoGainControl: false, noiseSuppression: false, channelCount: 1 } });
                     this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                     await this.audioCtx.resume();
-                    const source = this.audioCtx.createMediaStreamSource(this.stream);
-                    this.analyser = this.audioCtx.createAnalyser(); 
-                    this.analyser.fftSize = 8192; this.analyser.smoothingTimeConstant = 0.6;
-                    source.connect(this.analyser);
                     
-                    this.freqData = new Float32Array(this.analyser.frequencyBinCount);
-                    this.timeData = new Float32Array(this.analyser.fftSize); // Buffer para Autocorrelación
+                    // Cargar el procesador YIN
+                    await this.audioCtx.audioWorklet.addModule('pitchProcessor.js');
+                    const source = this.audioCtx.createMediaStreamSource(this.stream);
+                    this.workletNode = new AudioWorkletNode(this.audioCtx, 'pitch-processor');
+                    
+                    source.connect(this.workletNode);
+                    // No conectamos workletNode a destination para no escuchar retroalimentación
+                    
+                    this.workletNode.port.onmessage = (event) => {
+                        this.currentPitch = event.data.pitch;
+                        this.currentDb = event.data.db;
+                        this.updateVU(this.currentDb);
+                        
+                        if (this.stateManager.state.status === 'profiling') {
+                            this.handleProfilerMessage();
+                        } else if (this.stateManager.state.status === 'active') {
+                            this.handleActiveMessage();
+                        }
+                    };
                     
                     this.stateManager.update({ status: 'calibrating' });
-
-                    let noiseSamples = []; const endTime = Date.now() + 2000;
-                    return new Promise((resolve) => {
-                        const tick = () => {
-                            this.analyser.getFloatFrequencyData(this.freqData);
-                            let fMax = -Infinity; for(let i=0; i<this.freqData.length; i++) if(this.freqData[i] > fMax && this.freqData[i] < 0) fMax = this.freqData[i];
-                            this.updateVU(fMax); 
-                            
-                            if(fMax > -100) noiseSamples.push(fMax);
-                            
-                            if(Date.now() < endTime) requestAnimationFrame(tick);
-                            else {
-                                noiseSamples.sort((a,b)=>a-b);
-                                this.baseNoiseFloor = Math.max(-80, Math.min((noiseSamples[Math.floor(noiseSamples.length*0.85)]||-60) + 5, -30));
-                                
-                                const profileDef = PROFILES[this.stateManager.state.acoustic_profile];
-                                if (profileDef && profileDef.targets.length > 0) {
-                                    this.stateManager.update({ status: 'profiling', profiler_step: 0 });
-                                    document.getElementById('profiler-modal').style.display = 'flex';
-                                    this.strikeCount = 0; this.strikeData = []; this.updateStrikeUI();
-                                    this.runProfiler();
-                                } else {
-                                    this.finishCalibration();
-                                }
-                                resolve(true);
-                            }
-                        }; tick();
-                    });
-                } catch(e) { return false; }
+                    
+                    // Ir directo al profiler si el instrumento lo requiere
+                    const profileDef = PROFILES[this.stateManager.state.acoustic_profile];
+                    if (profileDef && profileDef.targets.length > 0) {
+                        this.stateManager.update({ status: 'profiling', profiler_step: 0 });
+                        document.getElementById('profiler-modal').style.display = 'flex';
+                        this.strikeCount = 0; this.strikeData = []; this.updateStrikeUI();
+                        // El bucle de eventos ahora lo maneja port.onmessage
+                    } else {
+                        this.finishCalibration();
+                    }
+                    return true;
+                } catch(e) { 
+                    alert("No se pudo iniciar el motor de audio o falta el archivo pitchProcessor.js");
+                    return false; 
+                }
             }
 
-            // PERFILADO CON APRENDIZAJE SUPERVISADO Y AUTOCORRELACIÓN
-            runProfiler() {
-                if (this.stateManager.state.status !== 'profiling') return;
-                
+            handleProfilerMessage() {
                 const profileDef = PROFILES[this.stateManager.state.acoustic_profile];
                 const step = this.stateManager.state.profiler_step;
                 
@@ -456,87 +369,73 @@
                 const target = profileDef.targets[step];
                 document.getElementById('profiler-target-note').textContent = target.n;
                 
-                // Extraer datos crudos (Ambos dominios)
-                this.analyser.getFloatFrequencyData(this.freqData);
-                this.analyser.getFloatTimeDomainData(this.timeData);
-                
-                // Volumen Espectral
-                let fMax = -Infinity;
-                for(let i=2; i<this.analyser.frequencyBinCount-2; i++) {
-                    if (this.freqData[i] > fMax) fMax = this.freqData[i];
-                }
-                this.updateVU(fMax);
-
+                // Umbral de Puerta de Ruido controlada por UI
+                const thresholdDb = this.stateManager.state.sens_offset;
                 let isHit = false;
-                const strikeThreshold = this.baseNoiseFloor + 12; 
+                let detectedMidi = null;
 
-                // Si hay sonido fuerte, usamos Autocorrelación para leer la fundamental física
-                if (fMax > strikeThreshold) {
-                    const acfFreq = this.autoCorrelate(this.timeData, this.audioCtx.sampleRate);
+                if (this.currentDb > thresholdDb && this.currentPitch > 20) {
+                    detectedMidi = Math.round(12 * Math.log2(this.currentPitch/440) + 69);
+                    this.profReadout.textContent = `YIN Freq: ${Math.round(this.currentPitch)}Hz (Midi: ${detectedMidi})`;
                     
-                    if (acfFreq > 20 && acfFreq < 4000) {
-                        const acfMidi = Math.round(12 * Math.log2(acfFreq/440) + 69);
-                        this.profReadout.textContent = `Pitch ACF: ${Math.round(acfFreq)}Hz (Midi: ${acfMidi})`;
-                        
-                        // Validar si el pitch del ACF se acerca al objetivo
-                        if (target.m === 'low') { isHit = acfMidi < 60; }
-                        else if (target.m === 'high') { isHit = acfMidi >= 60; }
-                        else {
-                            // Validar usando Pitch Class (Confiamos en la octava que detecte el usuario)
-                            const targetPitch = ((target.m % 12) + 12) % 12;
-                            const detectedPitch = ((acfMidi % 12) + 12) % 12;
-                            if (targetPitch === detectedPitch) isHit = true;
-                        }
+                    // El Supervisor (El usuario manda)
+                    // Si el YIN dice que es C2, o si el YIN se confunde pero el usuario golpea fuerte, asumimos que es el objetivo.
+                    if (target.m === 'any') {
+                        isHit = true;
                     } else {
-                        // Respaldo de FFT si ACF falla
-                        this.profReadout.textContent = `Buscando fundamental...`;
-                        isHit = true; // Forzamos el hit por volumen si la ACF es inestable, confiando en el usuario.
+                        const targetPitch = ((target.m % 12) + 12) % 12;
+                        const detectedPitchClass = ((detectedMidi % 12) + 12) % 12;
+                        
+                        // Si YIN coincide en clase de nota (Ej C2 o C3), es un hit de alta calidad
+                        if (targetPitch === detectedPitchClass) {
+                            isHit = true;
+                        } else {
+                            // Hit de baja calidad (por si YIN falla en acústicas muy sucias pero hay volumen)
+                            isHit = true; 
+                        }
                     }
                 } else {
-                    this.profReadout.textContent = `Esperando golpe...`;
+                    this.profReadout.textContent = `Esperando golpe sobre ${thresholdDb}dB...`;
                 }
 
-                // Registro del Strike (Se guarda el perfil del FFT defectuoso para usarlo después)
                 if (isHit && !this.isStriking) {
                     this.isStriking = true;
                     this.strikeCount++;
-                    
-                    // Extraer los 3 picos FFT más fuertes de este instante (La huella digital)
-                    let peaks = [];
-                    for(let i=2; i<this.analyser.frequencyBinCount-2; i++) {
-                        if(this.freqData[i] > strikeThreshold && this.freqData[i] > this.freqData[i-1] && this.freqData[i] > this.freqData[i+1]) {
-                            peaks.push({ amp: this.freqData[i], bin: i });
-                        }
-                    }
-                    peaks.sort((a,b) => b.amp - a.amp); // Ordenar por fuerza
-                    const topBins = peaks.slice(0,3).map(p => p.bin);
-                    
-                    this.strikeData.push(topBins);
+                    if(detectedMidi) this.strikeData.push(detectedMidi);
                     this.updateStrikeUI();
                     
                     if (this.strikeCount >= 3) {
                         const calibMap = this.stateManager.state.calibration_map;
-                        // Guardar la huella (se usará en iteraciones futuras para "corregir" el FFT)
-                        calibMap[target.m] = this.strikeData;
+                        // Guardar la verdad acústica del entorno
+                        calibMap[target.m] = {
+                            expectedMidi: target.m,
+                            detectedMidis: this.strikeData
+                        };
                         this.stateManager.update({ calibration_map: calibMap });
 
+                        // Deadzone larga antes de la próxima nota
+                        this.stateManager.update({ status: 'standby' }); // Pausa recepción
                         setTimeout(() => {
                             this.strikeCount = 0; this.strikeData = []; this.updateStrikeUI();
-                            this.stateManager.update({ profiler_step: step + 1 });
-                            this.runProfiler();
-                        }, 800);
+                            this.stateManager.update({ profiler_step: step + 1, status: 'profiling' });
+                        }, 1200);
                         return;
                     }
-                    setTimeout(() => { this.isStriking = false; }, 400); 
-                } else if (!isHit && fMax < this.baseNoiseFloor + 5) {
+                    
+                    // Deadzone entre golpes
+                    this.stateManager.update({ status: 'standby' }); 
+                    setTimeout(() => { 
+                        this.isStriking = false; 
+                        this.stateManager.update({ status: 'profiling' }); 
+                    }, 500); 
+
+                } else if (!isHit && this.currentDb < thresholdDb - 5) {
                     this.isStriking = false; 
                 }
 
                 const totalSteps = profileDef.targets.length * 3;
                 const currentProgress = (step * 3) + this.strikeCount;
                 document.getElementById('profiler-bar-fill').style.width = `${(currentProgress / totalSteps) * 100}%`;
-
-                requestAnimationFrame(() => this.runProfiler());
             }
 
             updateStrikeUI() {
@@ -555,114 +454,59 @@
             finishCalibration() {
                 this.stateManager.startNewSession();
                 this.stateManager.update({ status: 'active' }); 
-                this.processFrame();
             }
 
-            processFrame() {
-                if(this.stateManager.state.status !== 'active') return;
-                const now = performance.now();
-                if(now - this.lastTime >= 1000/this.ANALYSIS_FPS) {
-                    this.lastTime = now; 
-                    this.analyser.getFloatFrequencyData(this.freqData);
-                    const details = this.extractPitchesDynamic(); const rawPitches = details.map(d=>d.pitch);
-                    const mask = HarmonyEngine.createPitchClassSet(rawPitches);
-                    this.stateManager.update({ active_mask: mask, notes_array: rawPitches, notes_detail: details, tension_level: HarmonyEngine.evaluateTension(rawPitches).level, color: HarmonyEngine.evaluateTension(rawPitches).color, description: HarmonyEngine.evaluateTension(rawPitches).desc, suggestion: HarmonyEngine.suggestPath(mask, this.stateManager.state.scale_mask) });
-                }
-                this.animationId = requestAnimationFrame(() => this.processFrame());
-            }
-            
-            extractPitchesDynamic() {
-                const limit = this.baseNoiseFloor - this.stateManager.state.sens_offset;
-                const binCount = this.analyser.frequencyBinCount;
-                const sampleRate = this.audioCtx.sampleRate;
-                const scaleRoot = this.stateManager.state.scale_root; 
-                const profileDef = PROFILES[this.stateManager.state.acoustic_profile] || PROFILES.synth;
-                
-                let rawPeaks = [];
-
-                for(let i=2; i<binCount-2; i++) {
-                    const beta = this.freqData[i];
-                    if(beta > limit && beta > this.freqData[i-1] && beta > this.freqData[i+1]) {
-                        const alpha = this.freqData[i-1]; const gamma = this.freqData[i+1];
-                        let p = 0; const denom = alpha - 2 * beta + gamma;
-                        if (denom !== 0) p = 0.5 * (alpha - gamma) / denom;
-                        
-                        const freq = (i + p) * (sampleRate / (binCount * 2));
-                        if(freq < profileDef.minFreq || freq > profileDef.maxFreq) continue;
-                        
-                        const midiExact = 12 * Math.log2(freq/440) + 69;
-                        const midi = Math.round(midiExact);
-                        if (Math.abs(midiExact - midi) * 100 > profileDef.tol) continue;
-                        
-                        rawPeaks.push({ pitch: ((midi%12)+12)%12, octave: Math.floor(midi/12)-1, midi: midi, amp: beta, freq: freq, bin: i+p });
-                    }
-                }
-
-                let correctedPeaks = [];
-                const fundamentalTolDb = 15; 
-
-                // Lógica de corrección de octava (FFT Híbrido)
-                rawPeaks.forEach(peak => {
-                    let isHarmonic = false;
-                    let fundamentalFreq = peak.freq;
-
-                    if (this.stateManager.state.acoustic_profile === 'piano' || this.stateManager.state.acoustic_profile === 'guitar') {
-                        const expectedSub1Bin = Math.round(peak.bin / 2);
-                        const expectedSub2Bin = Math.round(peak.bin / 4);
-
-                        const checkWindow = (targetBin) => {
-                            if (targetBin < 2) return null;
-                            let maxA = -Infinity; let maxI = 0;
-                            for(let w = -2; w <= 2; w++) {
-                                const idx = targetBin + w;
-                                if (idx > 0 && idx < binCount && this.freqData[idx] > maxA) {
-                                    maxA = this.freqData[idx]; maxI = idx;
-                                }
-                            }
-                            if (maxA > limit && maxA > (peak.amp - fundamentalTolDb)) {
-                                return { amp: maxA, freq: maxI * (sampleRate / (binCount * 2)) };
-                            }
-                            return null;
-                        };
-
-                        const sub2Data = checkWindow(expectedSub2Bin);
-                        if (sub2Data && sub2Data.freq >= profileDef.minFreq) {
-                            fundamentalFreq = sub2Data.freq; isHarmonic = true;
-                        } else {
-                            const sub1Data = checkWindow(expectedSub1Bin);
-                            if (sub1Data && sub1Data.freq >= profileDef.minFreq) {
-                                fundamentalFreq = sub1Data.freq; isHarmonic = true;
-                            }
-                        }
-                    }
-
-                    const fMidiExact = 12 * Math.log2(fundamentalFreq/440) + 69;
-                    const fMidi = Math.round(fMidiExact);
-                    const p = ((fMidi%12)+12)%12;
-                    const oct = Math.floor(fMidi/12)-1;
+            handleActiveMessage() {
+                // Modo Escucha Libre
+                if (this.currentPitch > 20 && this.currentDb > this.stateManager.state.sens_offset) {
+                    const midi = Math.round(12 * Math.log2(this.currentPitch/440) + 69);
+                    const pitchClass = ((midi % 12) + 12) % 12;
+                    const oct = Math.floor(midi / 12) - 1;
+                    const scaleRoot = this.stateManager.state.scale_root;
                     
-                    correctedPeaks.push({ pitch: p, octave: oct, midi: fMidi, amp: peak.amp, freq: fundamentalFreq });
-                });
-
-                const map = new Map(); 
-                for(const d of correctedPeaks) {
-                    d.name = `${HarmonyEngine.getNoteName(d.pitch, scaleRoot)}${d.octave}`;
-                    if(!map.has(d.pitch) || map.get(d.pitch).amp < d.amp) map.set(d.pitch, d);
+                    const details = [{
+                        pitch: pitchClass,
+                        octave: oct,
+                        midi: midi,
+                        amp: this.currentDb, // Usamos dB como proxy de amplitud
+                        name: `${HarmonyEngine.getNoteName(pitchClass, scaleRoot)}${oct}`
+                    }];
+                    
+                    const rawPitches = [pitchClass]; // Worklet monofónico actualmente, ideal para melodías o bajos fundamentales
+                    const mask = HarmonyEngine.createPitchClassSet(rawPitches);
+                    
+                    this.stateManager.update({ 
+                        active_mask: mask, 
+                        notes_array: rawPitches, 
+                        notes_detail: details, 
+                        tension_level: HarmonyEngine.evaluateTension(rawPitches).level, 
+                        color: HarmonyEngine.evaluateTension(rawPitches).color, 
+                        description: HarmonyEngine.evaluateTension(rawPitches).desc, 
+                        suggestion: HarmonyEngine.suggestPath(mask, this.stateManager.state.scale_mask) 
+                    });
+                } else {
+                    // Silencio
+                    if (this.stateManager.state.active_mask !== 0) {
+                        this.stateManager.update({ active_mask: 0, notes_detail: [] });
+                    }
                 }
-                return Array.from(map.values()).sort((a,b)=>a.midi-b.midi);
             }
             
             async setPause(p) {
                 if(!this.audioCtx) return;
-                if(p) { await this.audioCtx.suspend(); if(this.animationId) cancelAnimationFrame(this.animationId); this.stateManager.update({status:'paused'}); }
-                else { await this.audioCtx.resume(); this.stateManager.update({status:'active'}); this.processFrame(); }
+                if(p) { await this.audioCtx.suspend(); this.stateManager.update({status:'paused'}); }
+                else { await this.audioCtx.resume(); this.stateManager.update({status:'active'}); }
             }
             stop() {
-                if(this.animationId) cancelAnimationFrame(this.animationId);
+                if(this.isRecording) this.toggleRecord(document.getElementById('rec-light'), document.getElementById('rec-btn'));
+                if(this.workletNode) this.workletNode.disconnect();
                 if(this.stream) this.stream.getTracks().forEach(t=>t.stop());
                 if(this.audioCtx) this.audioCtx.close();
                 this.stateManager.endCurrentSession();
                 this.stateManager.update({status:'standby', active_mask:0, notes_detail:[], tension_level:0, suggestion:null});
+            }
+            toggleRecord(ledEl, btnEl) {
+                // Recorder se mantiene nativo a la señal cruda
             }
         }
 
@@ -812,7 +656,7 @@
         const ui = {
             panel: document.getElementById('debug-panel'), overlay: document.getElementById('overlay'), start: document.getElementById('start-btn'), menu: document.getElementById('menu-btn'),
             closeMenu: document.getElementById('close-btn'), sidebar: document.getElementById('sidebar'), pause: document.getElementById('pause-btn'), stop: document.getElementById('stop-btn'),
-            clear: document.getElementById('clear-btn'), calibMsg: document.getElementById('calibration-msg'), sensSlider: document.getElementById('sens-slider'), sensVal: document.getElementById('sens-val'),
+            clear: document.getElementById('clear-btn'), sensSlider: document.getElementById('sens-slider'), sensVal: document.getElementById('sens-val'),
             scaleRoot: document.getElementById('scale-root'), scaleType: document.getElementById('scale-type'), viewMode: document.getElementById('view-mode'), acousticProfile: document.getElementById('acoustic-profile'),
             preProfile: document.getElementById('pre-profile'), preConfigBox: document.getElementById('pre-config-box'), historyBtn: document.getElementById('history-btn'), sessionModal: document.getElementById('session-modal'), closeModal: document.getElementById('close-modal'), sessionContent: document.getElementById('session-content'),
             metroBtn: document.getElementById('metro-btn'), bpmSlider: document.getElementById('bpm-slider'), bpmVal: document.getElementById('bpm-val'),
@@ -823,7 +667,7 @@
         ui.scaleRoot.value = stateManager.state.scale_root; ui.scaleType.value = stateManager.state.scale_type; ui.viewMode.value = stateManager.state.view_mode;
         ui.acousticProfile.value = stateManager.state.acoustic_profile; ui.preProfile.value = stateManager.state.acoustic_profile;
 
-        ui.sensSlider.oninput = (e) => { const v = parseInt(e.target.value); ui.sensVal.textContent = (v>0?'+':'')+v+' dB'; stateManager.update({ sens_offset: v }); };
+        ui.sensSlider.oninput = (e) => { const v = parseInt(e.target.value); ui.sensVal.textContent = v + ' dB'; stateManager.update({ sens_offset: v }); };
         ui.bpmSlider.oninput = (e) => { ui.bpmVal.textContent = e.target.value + ' BPM'; visualMetro.setBPM(e.target.value); };
         const updateConf = () => stateManager.update({ scale_root: parseInt(ui.scaleRoot.value), scale_type: ui.scaleType.value, view_mode: ui.viewMode.value, acoustic_profile: ui.acousticProfile.value });
         ui.scaleRoot.onchange = updateConf; ui.scaleType.onchange = updateConf; ui.viewMode.onchange = updateConf; ui.acousticProfile.onchange = updateConf;
@@ -831,7 +675,7 @@
         ui.menu.onclick = () => ui.sidebar.classList.add('active'); ui.closeMenu.onclick = () => ui.sidebar.classList.remove('active');
 
         ui.pause.onclick = async () => { const isP = stateManager.state.status === 'paused'; await audioEngine.setPause(!isP); ui.pause.textContent = isP ? "Pausar Detección" : "Reanudar Escucha"; ui.pause.style.backgroundColor = isP ? "var(--accent)" : "#ffaa00"; ui.sidebar.classList.remove('active'); };
-        ui.stop.onclick = () => { audioEngine.stop(); ui.pause.textContent = "Pausar Detección"; ui.pause.style.backgroundColor = "var(--accent)"; ui.sidebar.classList.remove('active'); ui.overlay.style.display = 'flex'; ui.preConfigBox.style.display = 'block'; ui.calibMsg.style.display = 'none'; };
+        ui.stop.onclick = () => { audioEngine.stop(); ui.pause.textContent = "Pausar Detección"; ui.pause.style.backgroundColor = "var(--accent)"; ui.sidebar.classList.remove('active'); ui.overlay.style.display = 'flex'; ui.preConfigBox.style.display = 'block'; };
         ui.clear.onclick = () => { stateManager.clearHistory(); ui.sidebar.classList.remove('active'); };
         
         ui.metroBtn.onclick = () => { visualMetro.toggle(ui.metroBtn); ui.sidebar.classList.remove('active'); };
@@ -901,15 +745,13 @@
 
             ui.start.style.display = 'none'; 
             ui.preConfigBox.style.display = 'none'; 
-            ui.calibMsg.style.display = 'block';
             
             if (await audioEngine.startAndCalibrate()) {
                 ui.overlay.style.display = 'none';
+            } else {
+                ui.start.style.display = 'block'; 
+                ui.preConfigBox.style.display = 'block';
             }
-            
-            ui.start.style.display = 'block'; 
-            ui.preConfigBox.style.display = 'block';
-            ui.calibMsg.style.display = 'none';
         };
 
         if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
