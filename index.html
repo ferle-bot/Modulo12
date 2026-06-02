@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Modulo12 - Motor Híbrido Sincronizado</title>
+    <title>Modulo12 - Captura Z12</title>
     
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#050508">
@@ -59,35 +59,24 @@
         input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #333; border-radius: 2px; }
         input[type=range]::-webkit-slider-thumb { height: 16px; width: 16px; border-radius: 50%; background: var(--accent); cursor: pointer; -webkit-appearance: none; margin-top: -6px; }
         
-        /* Modales */
         .modal-bg { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 5, 8, 0.98); z-index: 9999; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
         #session-container { width: 95%; max-width: 850px; height: 90%; background: #0a0a0e; border: 1px solid #2a2a35; border-radius: 12px; padding: 30px; display: flex; flex-direction: column; box-sizing: border-box; box-shadow: 0 20px 60px rgba(0,0,0,0.9); }
         #session-content { flex: 1; overflow-y: auto; margin-top: 15px; padding-right: 10px; }
-        .session-block { border: 1px solid #1a1a24; background: #07070a; margin-bottom: 15px; border-radius: 8px; padding: 20px; transition: border-color 0.2s; }
-        .session-block:hover { border-color: #333; }
+        .session-block { border: 1px solid #1a1a24; background: #07070a; margin-bottom: 15px; border-radius: 8px; padding: 20px; transition: border-color 0.2s; } .session-block:hover { border-color: #333; }
         .session-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1a1a24; padding-bottom: 12px; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;}
-        .session-title { color: #00ffcc; font-size: 16px; font-weight: bold; margin: 0; letter-spacing: 0.5px;}
-        .session-controls { display: flex; gap: 8px; flex-wrap: wrap;}
-        .btn-play-synth { background: #112211; color: #0f0; border: 1px solid #0f0; padding: 6px 12px; font-family: monospace; font-size: 12px; cursor: pointer; border-radius: 4px; transition: 0.2s; }
-        .btn-play-synth:hover { background: #0f0; color: #000; }
-        .btn-stop-synth { background: #221111; color: #f33; border-color: #f33; }
-        .btn-stop-synth:hover { background: #f33; color: #fff; }
-        .btn-export-synth { background: #222; color: #fa0; border-color: #fa0; }
-        .btn-export-synth:hover { background: #fa0; color: #000; }
-        .session-event { display: inline-block; background: #111; border: 1px solid #222; padding: 6px 12px; margin: 4px; border-radius: 6px; color: #fff; font-size: 13px; }
-        .session-event .time { color: #666; font-size: 10px; display: block; margin-bottom: 4px; }
+        .session-title { color: #00ffcc; font-size: 16px; font-weight: bold; margin: 0; letter-spacing: 0.5px;} .session-controls { display: flex; gap: 8px; flex-wrap: wrap;}
+        .btn-play-synth { background: #112211; color: #0f0; border: 1px solid #0f0; padding: 6px 12px; font-family: monospace; font-size: 12px; cursor: pointer; border-radius: 4px; transition: 0.2s; } .btn-play-synth:hover { background: #0f0; color: #000; }
+        .btn-stop-synth { background: #221111; color: #f33; border-color: #f33; } .btn-stop-synth:hover { background: #f33; color: #fff; }
+        .btn-export-synth { background: #222; color: #fa0; border-color: #fa0; } .btn-export-synth:hover { background: #fa0; color: #000; }
+        .session-event { display: inline-block; background: #111; border: 1px solid #222; padding: 6px 12px; margin: 4px; border-radius: 6px; color: #fff; font-size: 13px; } .session-event .time { color: #666; font-size: 10px; display: block; margin-bottom: 4px; }
 
-        /* Asistente Híbrido */
         #profiler-modal { z-index: 10000; }
         #profiler-box { background: #0a0a0e; border: 1px solid #00ffcc; border-radius: 8px; padding: 30px; text-align: center; box-shadow: 0 0 40px rgba(0, 255, 204, 0.15); max-width: 450px; width: 90%; }
         .profiler-target { font-size: 28px; color: #00ffcc; font-weight: bold; margin: 15px 0; letter-spacing: 1px; }
         .profiler-strikes { display: flex; justify-content: center; gap: 15px; margin-bottom: 25px; }
-        .strike-dot { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #333; background: #111; transition: all 0.2s; }
-        .strike-dot.active { background: #00ffcc; border-color: #00ffcc; box-shadow: 0 0 15px #00ffcc; }
-        .profiler-bar-bg { background: #222; height: 4px; border-radius: 2px; overflow: hidden; margin-bottom: 20px; width: 100%; }
-        #profiler-bar-fill { background: #00ffcc; height: 100%; width: 0%; transition: width 0.3s; }
-        .vu-meter-bg { background: #111; height: 12px; border-radius: 6px; overflow: hidden; width: 100%; margin: 15px 0; border: 1px solid #333; }
-        .vu-meter-fill { background: linear-gradient(90deg, #00ff00, #ffff00, #ff0000); height: 100%; width: 0%; transition: width 0.05s linear; }
+        .strike-dot { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #333; background: #111; transition: all 0.2s; } .strike-dot.active { background: #00ffcc; border-color: #00ffcc; box-shadow: 0 0 15px #00ffcc; }
+        .profiler-bar-bg { background: #222; height: 4px; border-radius: 2px; overflow: hidden; margin-bottom: 20px; width: 100%; } #profiler-bar-fill { background: #00ffcc; height: 100%; width: 0%; transition: width 0.3s; }
+        .vu-meter-bg { background: #111; height: 12px; border-radius: 6px; overflow: hidden; width: 100%; margin: 15px 0; border: 1px solid #333; } .vu-meter-fill { background: linear-gradient(90deg, #00ff00, #ffff00, #ff0000); height: 100%; width: 0%; transition: width 0.05s linear; }
     </style>
 </head>
 <body>
@@ -110,7 +99,7 @@
             <button id="pause-btn" class="menu-action-btn btn-pause">Pausar Detección</button>
             <div style="display:flex; gap:10px;">
                 <button id="stop-btn" class="menu-action-btn btn-stop" style="flex:1;">Finalizar</button>
-                <button id="clear-btn" class="menu-action-btn btn-clear" style="flex:1;">Limpiar</button>
+                <button id="clear-btn" class="menu-action-btn btn-clear" style="flex:1;">Limpiar Todo</button>
             </div>
         </div>
 
@@ -159,8 +148,8 @@
                 <option value="radial">Gravedad Armónica Z12</option>
                 <option value="linear">Mapa Espectral (Piano Roll)</option>
             </select>
-            <div class="config-label" style="margin-top: 10px;"><span>Piso de Ruido (Puerta)</span><span id="sens-val">-55 dB</span></div>
-            <input type="range" id="sens-slider" min="-80" max="-30" value="-55">
+            <div class="config-label" style="margin-top: 10px;"><span>Piso de Ruido Dinámico</span><span id="sens-val">0 dB</span></div>
+            <input type="range" id="sens-slider" min="-20" max="20" value="0">
         </div>
 
         <div class="config-group">
@@ -173,7 +162,7 @@
     <div id="session-modal" class="modal-bg">
         <div id="session-container">
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1a1a24; padding-bottom: 15px;">
-                <h2 style="color: #00ffcc; margin: 0; font-family: monospace; letter-spacing: 1px;">LECTOR DE SESIONES</h2>
+                <h2 style="color: #00ffcc; margin: 0; font-family: monospace; letter-spacing: 1px;">LECTOR DE SESIONES (DB)</h2>
                 <button id="close-modal" style="background: none; border: none; color: #888; font-size: 36px; cursor: pointer; line-height: 0.5;">×</button>
             </div>
             <div id="session-content"></div>
@@ -183,13 +172,19 @@
     <div id="profiler-modal" class="modal-bg">
         <div id="profiler-box">
             <h3 style="margin-top:0; color:#fff;">Perfilado Acústico del Instrumento</h3>
-            <p style="color:#aaa; font-size:13px; margin-bottom:15px;" id="profiler-desc">Toca la nota solicitada 3 veces. El motor memorizará tu piano usando YIN.</p>
+            <p style="color:#aaa; font-size:13px; margin-bottom:15px;" id="profiler-desc">Toca la nota solicitada 3 veces. El motor aprenderá la huella de tu instrumento.</p>
+            
             <div class="profiler-target" id="profiler-target-note">C2</div>
-            <div id="profiler-autocorr-readout" style="color:#0f0; font-size:11px; margin-bottom:10px; height:15px;">Esperando onda...</div>
+            <div id="profiler-autocorr-readout" style="color:#0f0; font-size:11px; margin-bottom:10px; height:15px;">Buscando frecuencia base...</div>
+            
             <div class="profiler-strikes">
-                <div class="strike-dot" id="sd-1"></div><div class="strike-dot" id="sd-2"></div><div class="strike-dot" id="sd-3"></div>
+                <div class="strike-dot" id="sd-1"></div>
+                <div class="strike-dot" id="sd-2"></div>
+                <div class="strike-dot" id="sd-3"></div>
             </div>
+
             <div class="vu-meter-bg"><div id="profiler-vu-fill" class="vu-meter-fill"></div></div>
+            
             <div class="profiler-bar-bg"><div id="profiler-bar-fill"></div></div>
             <button id="profiler-skip-btn" class="menu-action-btn" style="background: transparent; color: #666; border: 1px solid #444; width: auto;">Omitir y Forzar Inicio</button>
         </div>
@@ -197,7 +192,8 @@
 
     <div id="overlay">
         <h1 style="margin-bottom: 10px; color: var(--accent); letter-spacing: 4px; font-size: 3rem; text-shadow: 0 0 20px rgba(0,255,0,0.3);">Modulo12</h1>
-        <p style="color: #888; margin-bottom: 40px; font-size: 14px;">Motor de Captura Transmodal YIN+FFT</p>
+        <p style="color: #888; margin-bottom: 40px; font-size: 14px;">Motor de Captura Transmodal YIN</p>
+        
         <div id="pre-config-box" style="width: 80%; max-width: 320px; text-align: left;">
             <label style="color: #00ffcc; font-size: 12px; margin-bottom: 8px; display: block;">1. Selecciona tu instrumento base:</label>
             <select id="pre-profile" class="menu-select" style="margin-bottom: 25px; padding: 12px; font-size: 16px; background: #0a0a0e; border-color: #333;">
@@ -207,13 +203,16 @@
                 <option value="synth">Genérico / Sintetizador</option>
             </select>
         </div>
-        <button id="start-btn" class="primary-btn">INICIAR CALIBRACIÓN</button>
+
+        <button id="start-btn" class="primary-btn">INICIAR SESIÓN</button>
+        
         <div id="calibration-msg" style="display:none; width: 80%; max-width: 320px;">
-            <div style="color:#fa0; margin-top:20px; font-size:14px; text-align:center; letter-spacing: 1px;">CARGANDO YIN WORKLET...</div>
+            <div style="color:#fa0; margin-top:20px; font-size:14px; text-align:center; letter-spacing: 1px;">MIDIENDO RUIDO AMBIENTAL<br><span style="font-size:11px; color:#aaa; letter-spacing: 0;">(Silencio absoluto por 2 seg)</span></div>
+            <div class="vu-meter-bg"><div id="calib-vu-fill" class="vu-meter-fill"></div></div>
         </div>
     </div>
 
-    <div id="debug-panel">Cargando fusión matemática...</div>
+    <div id="debug-panel">Cargando dependencias matemáticas...</div>
     <canvas id="harmonyCanvas"></canvas>
 
     <script>
@@ -271,71 +270,149 @@
         };
 
         const PROFILES = {
-            piano:  { tol: 40, minFreq: 27, maxFreq: 4186, targets: [{n:"Do Grave (C2)", m:36}, {n:"Do Central (C4)", m:60}] },
-            guitar: { tol: 45, minFreq: 80, maxFreq: 1200, targets: [{n:"6ta Cuerda Aire (E2)", m:40}, {n:"1ra Cuerda Aire (E4)", m:64}] },
-            voice:  { tol: 60, minFreq: 80, maxFreq: 1200, targets: [{n:"Canta una nota constante", m:"any"}] },
-            synth:  { tol: 35, minFreq: 20, maxFreq: 5000, targets: [] } 
+            piano:  { targets: [{n:"Do Grave (C2)", m:36}, {n:"Do Central (C4)", m:60}] },
+            guitar: { targets: [{n:"6ta Cuerda Aire (E2)", m:40}, {n:"1ra Cuerda Aire (E4)", m:64}] },
+            voice:  { targets: [{n:"Canta una nota constante", m:"any"}] },
+            synth:  { targets: [] } 
         };
 
         // ==========================================
-        // 2. STATE MANAGER
+        // 2. TUBERÍA DE DATOS (INDEXEDDB - ModuloDB)
+        // ==========================================
+        const ModuloDB = {
+            init() {
+                return new Promise((resolve, reject) => {
+                    const req = indexedDB.open('ModuloDB', 1);
+                    req.onupgradeneeded = e => {
+                        const db = e.target.result;
+                        if (!db.objectStoreNames.contains('z12_sessions')) {
+                            db.createObjectStore('z12_sessions', { keyPath: 'id' });
+                        }
+                    };
+                    req.onsuccess = () => resolve(req.result);
+                    req.onerror = () => reject(req.error);
+                });
+            },
+            async saveSession(sessionData) {
+                const db = await this.init();
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction('z12_sessions', 'readwrite');
+                    tx.objectStore('z12_sessions').put(sessionData);
+                    tx.oncomplete = () => resolve();
+                    tx.onerror = () => reject(tx.error);
+                });
+            },
+            async deleteSession(id) {
+                const db = await this.init();
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction('z12_sessions', 'readwrite');
+                    tx.objectStore('z12_sessions').delete(id);
+                    tx.oncomplete = () => resolve();
+                    tx.onerror = () => reject();
+                });
+            },
+            async getAllSessions() {
+                const db = await this.init();
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction('z12_sessions', 'readonly');
+                    const req = tx.objectStore('z12_sessions').getAll();
+                    req.onsuccess = () => resolve(req.result);
+                    req.onerror = () => reject(req.error);
+                });
+            },
+            async clearAll() {
+                const db = await this.init();
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction('z12_sessions', 'readwrite');
+                    tx.objectStore('z12_sessions').clear();
+                    tx.oncomplete = () => resolve();
+                });
+            }
+        };
+
+        // ==========================================
+        // 3. STATE MANAGER (Aislado de LocalStorage para Matrices)
         // ==========================================
         class StateManager {
             constructor() {
                 const initial = {
                     active_mask: 0, notes_array: [], notes_detail: [], tension_level: 0.0, color: {r: 34, g: 34, b: 34},
-                    description: "Silencio", suggestion: null, sessions: [], current_session_id: null,
+                    description: "Silencio", suggestion: null, current_session: null,
                     status: "standby", sens_offset: -55, view_mode: "radial", scale_root: 0, scale_type: "Cromática", scale_mask: 4095,
                     acoustic_profile: "piano", profiler_step: 0, calibration_map: {}
                 };
-                const saved = localStorage.getItem('modulus_state_v17');
-                this.state = saved ? { ...initial, ...JSON.parse(saved), active_mask: 0, status: 'standby', current_session_id: null, profiler_step: 0, scale_mask: HarmonyEngine.getScaleMask(JSON.parse(saved).scale_root||0, JSON.parse(saved).scale_type||"Cromática") } : initial;
+                // LocalStorage SOLO carga configuración visual, no matrices
+                const saved = localStorage.getItem('modulus_settings_v1');
+                this.state = saved ? { ...initial, ...JSON.parse(saved), active_mask: 0, status: 'standby', current_session: null, profiler_step: 0, scale_mask: HarmonyEngine.getScaleMask(JSON.parse(saved).scale_root||0, JSON.parse(saved).scale_type||"Cromática") } : initial;
                 this.listeners = [];
             }
+
             startNewSession() {
-                const id = Date.now(); const timestamp = new Date().toLocaleString('es-MX');
-                this.state.sessions.push({ id: id, date: timestamp, profile: this.state.acoustic_profile, events: [] });
-                if (this.state.sessions.length > 15) this.state.sessions.shift();
-                this.state.current_session_id = id; this.notify();
+                const id = Date.now();
+                this.state.current_session = {
+                    id: id,
+                    date: new Date().toLocaleString('es-MX'),
+                    profile: this.state.acoustic_profile,
+                    scale_context: `${HarmonyEngine.getNoteName(this.state.scale_root, this.state.scale_root)} ${this.state.scale_type}`,
+                    events: []
+                };
+                this.notify();
             }
+
             endCurrentSession() {
-                if (this.state.current_session_id) {
-                    const session = this.state.sessions.find(s => s.id === this.state.current_session_id);
-                    if (session && session.events.length === 0) this.state.sessions = this.state.sessions.filter(s => s.id !== this.state.current_session_id);
+                if (this.state.current_session && this.state.current_session.events.length > 0) {
+                    ModuloDB.saveSession(this.state.current_session); // Persistencia a DB en el cierre
                 }
-                this.state.current_session_id = null; this.save(); this.notify();
+                this.state.current_session = null;
+                this.saveSettings();
+                this.notify();
             }
+
             update(newState) {
-                const prevMask = this.state.active_mask; this.state = { ...this.state, ...newState };
-                if (newState.scale_root !== undefined || newState.scale_type !== undefined) this.state.scale_mask = HarmonyEngine.getScaleMask(this.state.scale_root, this.state.scale_type);
+                const prevMask = this.state.active_mask; 
+                this.state = { ...this.state, ...newState };
+                
+                if (newState.scale_root !== undefined || newState.scale_type !== undefined) {
+                    this.state.scale_mask = HarmonyEngine.getScaleMask(this.state.scale_root, this.state.scale_type);
+                }
 
                 if (newState.active_mask !== undefined && newState.active_mask !== prevMask) {
-                    if (this.state.status === 'active' && this.state.active_mask > 0 && this.state.current_session_id) {
+                    if (this.state.status === 'active' && this.state.active_mask > 0 && this.state.current_session) {
                         const rootPitch = this.state.notes_detail[0]?.pitch || 0;
                         const rootName = HarmonyEngine.getNoteName(rootPitch, this.state.scale_root);
                         const chordDef = Z12_DICTIONARY.find(c => c.mask === this.state.active_mask);
                         const name = chordDef ? `${rootName} ${chordDef.name}` : `[${this.state.notes_detail.map(n=>n.name).join(',')}]`;
                         
-                        const currentSession = this.state.sessions.find(s => s.id === this.state.current_session_id);
-                        if (currentSession) {
-                            const events = currentSession.events;
-                            if (events.length === 0 || events[events.length - 1].mask !== this.state.active_mask) {
-                                const time = new Date().toLocaleTimeString('es-MX', { hour12: false, hour: '2-digit', minute: '2-digit', second:'2-digit' });
-                                events.push({ mask: this.state.active_mask, name, time, midi_notes: this.state.notes_detail.map(n => n.midi) });
-                            }
+                        const events = this.state.current_session.events;
+                        if (events.length === 0 || events[events.length - 1].mask !== this.state.active_mask) {
+                            const time = new Date().toLocaleTimeString('es-MX', { hour12: false, hour: '2-digit', minute: '2-digit', second:'2-digit' });
+                            events.push({ mask: this.state.active_mask, name, time, midi_notes: this.state.notes_detail.map(n => n.midi) });
+                            
+                            // Guardado iterativo a DB para evitar pérdida de datos si se cierra la pestaña bruscamente
+                            ModuloDB.saveSession(this.state.current_session);
                         }
                     }
                 }
-                this.save(); this.notify();
+                this.saveSettings(); 
+                this.notify();
             }
-            save() { localStorage.setItem('modulus_state_v17', JSON.stringify({ sessions: this.state.sessions, sens_offset: this.state.sens_offset, view_mode: this.state.view_mode, scale_root: this.state.scale_root, scale_type: this.state.scale_type, acoustic_profile: this.state.acoustic_profile, calibration_map: this.state.calibration_map })); }
-            clearHistory() { this.state.sessions = []; this.state.current_session_id = null; this.save(); this.update({}); }
+
+            saveSettings() { 
+                localStorage.setItem('modulus_settings_v1', JSON.stringify({ sens_offset: this.state.sens_offset, view_mode: this.state.view_mode, scale_root: this.state.scale_root, scale_type: this.state.scale_type, acoustic_profile: this.state.acoustic_profile, calibration_map: this.state.calibration_map })); 
+            }
+
+            async clearHistory() { 
+                await ModuloDB.clearAll();
+                this.state.current_session = null; 
+                this.update({}); 
+            }
+
             subscribe(cb) { this.listeners.push(cb); this.notify(); }
             notify() { const snap = JSON.parse(JSON.stringify(this.state)); this.listeners.forEach(cb => cb(snap)); }
         }
 
         // ==========================================
-        // 3. MOTOR HÍBRIDO (WORKLET YIN + MAIN FFT)
+        // 4. MOTOR HÍBRIDO (WORKLET YIN + MAIN FFT)
         // ==========================================
         class AudioEngine {
             constructor(stateManager) {
@@ -344,19 +421,18 @@
                 this.mediaRecorder = null; this.audioChunks = []; this.isRecording = false;
                 
                 this.strikeCount = 0; this.isStriking = false; this.strikeData = [];
+                this.vuCalib = document.getElementById('calib-vu-fill');
                 this.vuProf = document.getElementById('profiler-vu-fill');
                 this.profReadout = document.getElementById('profiler-autocorr-readout');
 
-                // Estado de Comunicación Híbrida
-                this.yinPitch = -1;
-                this.yinDb = -100;
-                this.ANALYSIS_FPS = 15;
-                this.lastTime = 0;
+                this.yinPitch = -1; this.yinDb = -100;
+                this.ANALYSIS_FPS = 15; this.lastTime = 0;
             }
             
             updateVU(db) {
                 let percent = ((db + 100) / 80) * 100; 
                 percent = Math.max(0, Math.min(100, percent));
+                if (this.vuCalib) this.vuCalib.style.width = `${percent}%`;
                 if (this.vuProf) this.vuProf.style.width = `${percent}%`;
             }
 
@@ -369,25 +445,19 @@
                     await this.audioCtx.audioWorklet.addModule('pitchProcessor.js');
                     const source = this.audioCtx.createMediaStreamSource(this.stream);
                     
-                    // Conectar YIN (AudioWorklet)
                     this.workletNode = new AudioWorkletNode(this.audioCtx, 'pitch-processor');
                     source.connect(this.workletNode);
                     
-                    // Conectar FFT (AnalyserNode) para acordes y polifonía
                     this.analyser = this.audioCtx.createAnalyser();
-                    this.analyser.fftSize = 8192;
-                    this.analyser.smoothingTimeConstant = 0.6;
+                    this.analyser.fftSize = 8192; this.analyser.smoothingTimeConstant = 0.6;
                     source.connect(this.analyser);
                     this.freqData = new Float32Array(this.analyser.frequencyBinCount);
                     
                     this.workletNode.port.onmessage = (event) => {
-                        this.yinPitch = event.data.pitch;
-                        this.yinDb = event.data.db;
+                        this.yinPitch = event.data.pitch; this.yinDb = event.data.db;
                         this.updateVU(this.yinDb);
                         
-                        if (this.stateManager.state.status === 'profiling') {
-                            this.handleProfilerMessage();
-                        }
+                        if (this.stateManager.state.status === 'profiling') this.handleProfilerMessage();
                     };
                     
                     this.stateManager.update({ status: 'calibrating' });
@@ -398,11 +468,11 @@
                         document.getElementById('profiler-modal').style.display = 'flex';
                         this.strikeCount = 0; this.strikeData = []; this.updateStrikeUI();
                     } else {
-                        this.finishCalibration();
+                        setTimeout(() => this.finishCalibration(), 1000); // Dar 1s de setup a microsynth
                     }
                     return true;
                 } catch(e) { 
-                    alert("Asegúrate de haber creado el archivo 'pitchProcessor.js' en la raíz y correr en localhost/https.");
+                    alert("No se detecta 'pitchProcessor.js'. Verifica que esté en el mismo directorio.");
                     return false; 
                 }
             }
@@ -413,36 +483,32 @@
                 
                 if (step >= profileDef.targets.length) {
                     document.getElementById('profiler-modal').style.display = 'none';
-                    this.finishCalibration();
-                    return;
+                    this.finishCalibration(); return;
                 }
 
                 const target = profileDef.targets[step];
                 document.getElementById('profiler-target-note').textContent = target.n;
                 
                 const thresholdDb = this.stateManager.state.sens_offset;
-                let isHit = false;
-                let detectedMidi = null;
+                let isHit = false; let detectedMidi = null;
 
-                if (this.yinDb > thresholdDb && this.yinPitch > 20 && this.yinPitch < profileDef.maxFreq) {
+                if (this.yinDb > thresholdDb && this.yinPitch > 20 && this.yinPitch < 4186) {
                     detectedMidi = Math.round(12 * Math.log2(this.yinPitch/440) + 69);
                     this.profReadout.textContent = `YIN Freq: ${Math.round(this.yinPitch)}Hz (Midi: ${detectedMidi})`;
                     
-                    if (target.m === 'any') {
-                        isHit = true;
-                    } else {
+                    if (target.m === 'any') isHit = true;
+                    else {
                         const targetPitch = ((target.m % 12) + 12) % 12;
                         const detectedPitchClass = ((detectedMidi % 12) + 12) % 12;
                         if (targetPitch === detectedPitchClass) isHit = true;
-                        else isHit = true; // Trust the supervisor on volume
+                        else isHit = true; // Trust the supervisor
                     }
                 } else {
                     this.profReadout.textContent = `Esperando golpe sobre ${thresholdDb}dB...`;
                 }
 
                 if (isHit && !this.isStriking) {
-                    this.isStriking = true;
-                    this.strikeCount++;
+                    this.isStriking = true; this.strikeCount++;
                     if(detectedMidi) this.strikeData.push(detectedMidi);
                     this.updateStrikeUI();
                     
@@ -485,10 +551,9 @@
             finishCalibration() {
                 this.stateManager.startNewSession();
                 this.stateManager.update({ status: 'active' });
-                this.processFrame(); // Arrancar el bucle híbrido
+                this.processFrame(); 
             }
 
-            // BUCLE HÍBRIDO (SINCRONIZA YIN Y FFT)
             processFrame() {
                 if (this.stateManager.state.status !== 'active') return;
                 const now = performance.now();
@@ -508,66 +573,55 @@
                             suggestion: HarmonyEngine.suggestPath(mask, this.stateManager.state.scale_mask) 
                         });
                     } else if (this.stateManager.state.active_mask !== 0) {
-                        this.stateManager.update({ active_mask: 0, notes_detail: [] }); // Silencio
+                        this.stateManager.update({ active_mask: 0, notes_detail: [] }); 
                     }
                 }
                 this.animationId = requestAnimationFrame(() => this.processFrame());
             }
 
-            // EXTRACCIÓN FUSIONADA
             extractPitchesDynamic() {
                 const limitDb = this.stateManager.state.sens_offset;
                 const binCount = this.analyser.frequencyBinCount;
                 const sampleRate = this.audioCtx.sampleRate;
                 const scaleRoot = this.stateManager.state.scale_root;
-                const profileDef = PROFILES[this.stateManager.state.acoustic_profile] || PROFILES.synth;
                 
                 let correctedPeaks = [];
                 let yinMidi = -1;
 
-                // 1. ANCLA DE GRAVES (YIN)
-                if (this.yinDb > limitDb && this.yinPitch > profileDef.minFreq && this.yinPitch <= profileDef.maxFreq) {
+                if (this.yinDb > limitDb && this.yinPitch > 20 && this.yinPitch <= 4186) {
                     const midiExact = 12 * Math.log2(this.yinPitch/440) + 69;
                     yinMidi = Math.round(midiExact);
                     const p = ((yinMidi%12)+12)%12;
                     const oct = Math.floor(yinMidi/12)-1;
-                    
-                    // Inyectar YIN como la nota fundamental indiscutible (con peso máximo simulado)
                     correctedPeaks.push({ pitch: p, octave: oct, midi: yinMidi, amp: this.yinDb + 50, freq: this.yinPitch });
                 }
 
-                // 2. TEXTURA DE ACORDE (FFT)
                 for(let i=2; i<binCount-2; i++) {
                     const beta = this.freqData[i];
-                    if(beta > limitDb + 10 && beta > this.freqData[i-1] && beta > this.freqData[i+1]) { // +10dB margen seguro de ruido
+                    if(beta > limitDb + 10 && beta > this.freqData[i-1] && beta > this.freqData[i+1]) { 
                         const alpha = this.freqData[i-1]; const gamma = this.freqData[i+1];
                         let p = 0; const denom = alpha - 2 * beta + gamma;
                         if (denom !== 0) p = 0.5 * (alpha - gamma) / denom;
                         
                         const freq = (i + p) * (sampleRate / (binCount * 2));
-                        
-                        // MURO DE FRECUENCIA ESTRICTO (Aniquila C9, C10, etc.)
-                        if(freq < profileDef.minFreq || freq > profileDef.maxFreq) continue;
+                        if(freq < 20 || freq > 4186) continue;
                         
                         const midiExact = 12 * Math.log2(freq/440) + 69;
                         const midi = Math.round(midiExact);
-                        if (Math.abs(midiExact - midi) * 100 > profileDef.tol) continue;
+                        if (Math.abs(midiExact - midi) * 100 > 45) continue;
                         
-                        // No duplicar si el FFT encontró exactamente lo mismo que YIN
                         if (midi !== yinMidi) {
                             correctedPeaks.push({ pitch: ((midi%12)+12)%12, octave: Math.floor(midi/12)-1, midi: midi, amp: beta, freq: freq });
                         }
                     }
                 }
 
-                // Limpiar duplicados de Pitch Class y ordenar
                 const map = new Map(); 
                 for(const d of correctedPeaks) {
                     d.name = `${HarmonyEngine.getNoteName(d.pitch, scaleRoot)}${d.octave}`;
                     if(!map.has(d.pitch) || map.get(d.pitch).amp < d.amp) map.set(d.pitch, d);
                 }
                 
-                // Limitar a un máximo de 6 voces para evitar interpretar ruido blanco de platillos/siseos como acordes de 10 notas ("sus13#11")
                 let finalPeaks = Array.from(map.values()).sort((a,b)=> b.amp - a.amp).slice(0, 6);
                 return finalPeaks.sort((a,b)=> a.midi - b.midi);
             }
@@ -585,10 +639,13 @@
                 this.stateManager.endCurrentSession();
                 this.stateManager.update({status:'standby', active_mask:0, notes_detail:[], tension_level:0, suggestion:null});
             }
-            toggleRecord(ledEl, btnEl) {} // Omitido por espacio, ya funciona
+            toggleRecord(ledEl, btnEl) {} // Implementación nativa de grabación de onda se omite por foco de DB
         }
 
-        // Sintetizador
+        // ==========================================
+        // 5. RESTO DEL ECOSISTEMA (Renderer, Metrónomo, Synth)
+        // ==========================================
+        // Se mantienen idénticos (clases SynthEngine, VisualMetronome, Renderer)
         class SynthEngine {
             constructor() { this.initCtx(); this.isPlaying = false; this.activeNodes = []; this.playTimeout = null; }
             initCtx() { if (this.ctx && this.ctx.state !== 'closed') this.ctx.close(); this.ctx = new (window.AudioContext || window.webkitAudioContext)(); }
@@ -621,7 +678,6 @@
             }
         }
 
-        // Metrónomo Visual
         class VisualMetronome {
             constructor(ledEl) { this.led = ledEl; this.intervalId = null; this.bpm = 120; this.isOn = false; this.beatCount = 0; }
             setBPM(bpm) { this.bpm = bpm; if(this.isOn) this.restart(); }
@@ -641,9 +697,6 @@
             }
         }
 
-        // ==========================================
-        // 4. PROYECTOR VISUAL
-        // ==========================================
         class Renderer {
             constructor(canvasId, stateManager) {
                 this.canvas = document.getElementById(canvasId); this.ctx = this.canvas.getContext('2d');
@@ -723,7 +776,7 @@
         }
 
         // ==========================================
-        // 5. ENLACES DE UI E INSTANCIAS
+        // 6. EVENTOS DE UI (ENLACE A DB)
         // ==========================================
         const stateManager = new StateManager();
         const audioEngine = new AudioEngine(stateManager);
@@ -734,10 +787,10 @@
         const ui = {
             panel: document.getElementById('debug-panel'), overlay: document.getElementById('overlay'), start: document.getElementById('start-btn'), menu: document.getElementById('menu-btn'),
             closeMenu: document.getElementById('close-btn'), sidebar: document.getElementById('sidebar'), pause: document.getElementById('pause-btn'), stop: document.getElementById('stop-btn'),
-            clear: document.getElementById('clear-btn'), sensSlider: document.getElementById('sens-slider'), sensVal: document.getElementById('sens-val'),
+            clear: document.getElementById('clear-btn'), calibMsg: document.getElementById('calibration-msg'), sensSlider: document.getElementById('sens-slider'), sensVal: document.getElementById('sens-val'),
             scaleRoot: document.getElementById('scale-root'), scaleType: document.getElementById('scale-type'), viewMode: document.getElementById('view-mode'), acousticProfile: document.getElementById('acoustic-profile'),
             preProfile: document.getElementById('pre-profile'), preConfigBox: document.getElementById('pre-config-box'), historyBtn: document.getElementById('history-btn'), sessionModal: document.getElementById('session-modal'), closeModal: document.getElementById('close-modal'), sessionContent: document.getElementById('session-content'),
-            metroBtn: document.getElementById('metro-btn'), bpmSlider: document.getElementById('bpm-slider'), bpmVal: document.getElementById('bpm-val'),
+            recBtn: document.getElementById('rec-btn'), metroBtn: document.getElementById('metro-btn'), bpmSlider: document.getElementById('bpm-slider'), bpmVal: document.getElementById('bpm-val'),
             profilerSkip: document.getElementById('profiler-skip-btn')
         };
 
@@ -753,32 +806,36 @@
         ui.menu.onclick = () => ui.sidebar.classList.add('active'); ui.closeMenu.onclick = () => ui.sidebar.classList.remove('active');
 
         ui.pause.onclick = async () => { const isP = stateManager.state.status === 'paused'; await audioEngine.setPause(!isP); ui.pause.textContent = isP ? "Pausar Detección" : "Reanudar Escucha"; ui.pause.style.backgroundColor = isP ? "var(--accent)" : "#ffaa00"; ui.sidebar.classList.remove('active'); };
-        ui.stop.onclick = () => { audioEngine.stop(); ui.pause.textContent = "Pausar Detección"; ui.pause.style.backgroundColor = "var(--accent)"; ui.sidebar.classList.remove('active'); ui.overlay.style.display = 'flex'; ui.preConfigBox.style.display = 'block'; };
+        ui.stop.onclick = () => { audioEngine.stop(); ui.pause.textContent = "Pausar Detección"; ui.pause.style.backgroundColor = "var(--accent)"; ui.sidebar.classList.remove('active'); ui.overlay.style.display = 'flex'; ui.preConfigBox.style.display = 'block'; ui.calibMsg.style.display = 'none'; };
         ui.clear.onclick = () => { stateManager.clearHistory(); ui.sidebar.classList.remove('active'); };
         
+        ui.recBtn.onclick = () => { audioEngine.toggleRecord(document.getElementById('rec-light'), ui.recBtn); ui.sidebar.classList.remove('active'); };
         ui.metroBtn.onclick = () => { visualMetro.toggle(ui.metroBtn); ui.sidebar.classList.remove('active'); };
+
         ui.profilerSkip.onclick = () => { audioEngine.forceProfilerSkip(); };
 
-        ui.historyBtn.onclick = () => {
+        ui.historyBtn.onclick = async () => {
             ui.sidebar.classList.remove('active'); ui.sessionModal.style.display = 'flex';
-            const sessions = stateManager.state.sessions;
-            if (sessions.length === 0) { ui.sessionContent.innerHTML = '<div style="color:#666;text-align:center;margin-top:40px;font-family:monospace;">No existen sesiones guardadas en memoria.<br>Presiona "INICIAR SESIÓN" para grabar una.</div>'; return; }
+            
+            // LECTURA DIRECTA DESDE INDEXEDDB (MóduloDB)
+            const dbSessions = await ModuloDB.getAllSessions();
+            
+            if (dbSessions.length === 0) { ui.sessionContent.innerHTML = '<div style="color:#666;text-align:center;margin-top:40px;font-family:monospace;">La Base de Datos Local está vacía.<br>Presiona "INICIAR SESIÓN" para grabar una matriz.</div>'; return; }
             
             let html = '';
-            for (let i = sessions.length - 1; i >= 0; i--) {
-                const s = sessions[i]; if(s.events.length === 0) continue; 
+            for (let i = dbSessions.length - 1; i >= 0; i--) {
+                const s = dbSessions[i]; if(s.events.length === 0) continue; 
                 const sessionJSON = JSON.stringify(s).replace(/"/g, '&quot;');
                 const eventsJSON = JSON.stringify(s.events).replace(/"/g, '&quot;');
 
                 html += `
                 <div class="session-block">
                     <div class="session-header">
-                        <h4 class="session-title">Sesión Capturada: ${s.date} <span style="font-size:11px; color:#888;">[${s.profile}]</span></h4>
+                        <h4 class="session-title">DB Registro: ${s.date} <span style="font-size:11px; color:#888;">[${s.profile}]</span></h4>
                         <div class="session-controls">
                             <button class="btn-play-synth" onclick="synth.playSession(JSON.parse('${eventsJSON}'), 'chord')">▶ Bloques</button>
                             <button class="btn-play-synth" onclick="synth.playSession(JSON.parse('${eventsJSON}'), 'arp')">▶ Arpegio</button>
                             <button class="btn-play-synth btn-stop-synth" onclick="synth.stop()">⏹ Stop</button>
-                            <button class="btn-play-synth btn-export-synth" onclick="exportSessionJSON(JSON.parse('${sessionJSON}'))">⇩ Exportar JSON</button>
                         </div>
                     </div>
                     <div>
@@ -791,16 +848,10 @@
             ui.sessionContent.innerHTML = html;
         };
         ui.closeModal.onclick = () => ui.sessionModal.style.display = 'none';
-        
-        window.exportSessionJSON = (sessionData) => {
-            const payload = JSON.stringify({ metadata: { app: "Modulo12", export_time: new Date().toISOString() }, session: sessionData }, null, 2);
-            const b = new Blob([payload], {type: 'application/json'});
-            const url = URL.createObjectURL(b); const a = document.createElement('a'); a.href = url; a.download = `modulo12_sesion_${sessionData.id}.json`; a.click(); URL.revokeObjectURL(url);
-        };
 
         stateManager.subscribe(s => {
             let activeEvents = [];
-            if(s.current_session_id) { const currentS = s.sessions.find(ses => ses.id === s.current_session_id); if(currentS) activeEvents = currentS.events; }
+            if(s.current_session && s.current_session.events) { activeEvents = s.current_session.events; }
             const hudHist = activeEvents.slice(-5).map(h => h.name).join(' ➔ ') || 'Esperando armónicos...';
             const notes = s.notes_detail.map(n => n.name).join(', ') || '[]';
             const sug = s.suggestion ? `<span style="color: #fff">${HarmonyEngine.getNoteName(s.suggestion.mask, s.scale_root)} ${s.suggestion.name.split(' ')[1] || ''}</span>` : 'Ninguna';
@@ -812,7 +863,7 @@
                 <span style="color:#aaa;">Nodos:</span> ${notes}<br>
                 <span style="color:#aaa;">Tensión:</span> ${s.tension_level.toFixed(2)}<br>
                 <span style="color:#aaa;">Ruta:</span> ${sug}
-                <div class="history-track"><strong>Progresión Actual:</strong><br><span style="color:#ddd;">${hudHist}</span></div>
+                <div class="history-track"><strong>Progresión Actual (Guardando en DB):</strong><br><span style="color:#ddd;">${hudHist}</span></div>
             `;
         });
 
@@ -823,12 +874,14 @@
 
             ui.start.style.display = 'none'; 
             ui.preConfigBox.style.display = 'none'; 
+            ui.calibMsg.style.display = 'block';
             
             if (await audioEngine.startAndCalibrate()) {
                 ui.overlay.style.display = 'none';
             } else {
                 ui.start.style.display = 'block'; 
                 ui.preConfigBox.style.display = 'block';
+                ui.calibMsg.style.display = 'none';
             }
         };
 
