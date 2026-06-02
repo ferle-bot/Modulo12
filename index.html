@@ -66,7 +66,6 @@
         .session-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1a1a24; padding-bottom: 12px; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;}
         .session-title { color: var(--accent); font-size: 16px; font-weight: bold; margin: 0; letter-spacing: 0.5px;} .session-controls { display: flex; gap: 8px; flex-wrap: wrap;}
         
-        /* Asistente */
         #profiler-modal { z-index: 10000; }
         #profiler-box { background: #0a0a0e; border: 1px solid var(--accent); border-radius: 8px; padding: 30px; text-align: center; box-shadow: 0 0 40px rgba(0, 255, 204, 0.15); max-width: 450px; width: 90%; }
         .profiler-target { font-size: 28px; color: var(--accent); font-weight: bold; margin: 15px 0; letter-spacing: 1px; }
@@ -262,30 +261,51 @@
                 return { level: 0.3, color: {r: 0, g: 200, b: 255}, desc: "Estable" };
             },
             suggestPath: (currentMask, scaleMask, libraryJSON) => {
-                if(currentMask === 0) return null;
-                let best = null, maxShared = 0; const isChr = scaleMask === 4095; 
+                // Validación de seguridad: Sin sonido o sin biblioteca, no hay ruta.
+                if (currentMask === 0 || !libraryJSON || !libraryJSON.diccionario_acordes) return null;
                 
-                if (libraryJSON && libraryJSON.diccionario_acordes) {
-                    for (const chordName in libraryJSON.diccionario_acordes) {
-                        const chordData = libraryJSON.diccionario_acordes[chordName];
-                        for(let r=0; r<12; r++) {
-                            const baseMask = HarmonyEngine.createPitchClassSet(chordData.mask);
-                            const transposedMask = HarmonyEngine.rotateMask(baseMask, r);
-                            if(transposedMask === currentMask) continue;
-                            if (!isChr && (transposedMask & scaleMask) !== transposedMask) continue;
-                            
-                            let shared = 0;
-                            let inter = currentMask & transposedMask;
-                            while(inter > 0) { shared += inter & 1; inter >>= 1; }
-                            
-                            if(shared > maxShared) { 
-                                maxShared = shared; 
-                                best = { name: chordName, mask: transposedMask, root: r }; 
-                            }
+                let bestNode = null;
+                let minDistance = Infinity; 
+                let lowestTension = Infinity;
+                
+                const isChromatic = scaleMask === 4095;
+                
+                // 1. Escaneo del Catálogo: Iteramos sobre el diccionario funcional
+                for (const chordName in libraryJSON.diccionario_acordes) {
+                    const chordData = libraryJSON.diccionario_acordes[chordName];
+                    const baseMask = HarmonyEngine.createPitchClassSet(chordData.mask);
+                    
+                    // 2. Transposición a las 12 raíces posibles
+                    for (let r = 0; r < 12; r++) {
+                        const transposedMask = HarmonyEngine.rotateMask(baseMask, r);
+                        
+                        // Regla A: El destino no puede ser idéntico al origen
+                        if (transposedMask === currentMask) continue;
+                        
+                        // Regla B (Filtro de Escala): Si el modo es estricto, el acorde debe encajar en el Mandala
+                        if (!isChromatic && !HarmonyEngine.isSubset(transposedMask, scaleMask)) continue;
+                        
+                        // 3. Ecuación de Parsimonia: Distancia de Hamming (Bitwise XOR)
+                        const distance = HarmonyEngine.getHammingDistance(currentMask, transposedMask);
+                        
+                        // 4. Resolución de Empates: Priorizar estabilidad
+                        // Si dos acordes requieren el mismo movimiento de dedos, el motor elegirá
+                        // el que tenga menor factor de tensión en la base de datos (resolución).
+                        if (distance < minDistance || (distance === minDistance && chordData.tension < lowestTension)) {
+                            minDistance = distance;
+                            lowestTension = chordData.tension;
+                            bestNode = { 
+                                name: chordName, 
+                                mask: transposedMask, 
+                                root: r, 
+                                distance: distance 
+                            };
                         }
                     }
                 }
-                return maxShared > 0 ? best : null;
+                
+                // Retorna el nodo óptimo para que el Renderer encienda la órbita de sugerencia
+                return bestNode;
             }
         };
 
@@ -365,7 +385,6 @@
                         const rootPitch = this.state.notes_detail[0]?.pitch || 0;
                         const rootName = HarmonyEngine.getNoteName(rootPitch, this.state.scale_root);
                         
-                        // Determinación del nombre basándose en el diccionario
                         let name = `[${this.state.notes_detail.map(n=>n.name).join(',')}]`;
                         if (Z12_LIBRARY && Z12_LIBRARY.diccionario_acordes) {
                             for (const chordName in Z12_LIBRARY.diccionario_acordes) {
@@ -634,7 +653,7 @@
                 
                 const isChromatic = scale_mask === 4095;
 
-                // Alerta Visual de Ruptura Armónica
+                // Alerta Visual de Ruptura Armónica (Fondo Rojo)
                 if (tension_level > 0.6) {
                     const glow = this.ctx.createRadialGradient(cx, cy, 0, cx, cy, dim);
                     glow.addColorStop(0, 'rgba(255, 51, 0, 0.15)');
@@ -645,17 +664,18 @@
 
                 if (view_mode === 'linear') { this.drawLinearMap(state); return; }
 
-                // Plantilla Estática Mandala
+                // Plantilla Estática Mandala (Fondo - Órbita 3)
                 if (!isChromatic) this.drawMandalaSkeleton(cx, cy, r3, scale_mask, scale_root);
 
                 if (active_mask === 0 || notes_detail.length === 0) return;
 
-                // Centro: Nota Raíz
+                // Centro: Nota Raíz Detectada
                 const rootNote = notes_detail[0];
                 let centerColor = 'var(--accent)'; 
-                if (!isChromatic && (scale_mask & (1 << rootNote.pitch)) === 0) centerColor = 'var(--alert)';
+                if (!isChromatic && (scale_mask & (1 << rootNote.pitch)) === 0) centerColor = 'var(--alert)'; // Error / Fuera de escala
                 this.drawNode(rootNote.name, cx, cy, 40, centerColor, true, 30, '#fff');
 
+                // Clasificar Órbitas Dinámicas
                 const planets = [], moons = [];
                 for(let i=0; i<12; i++) {
                     if (i === rootNote.pitch) continue;
@@ -667,61 +687,25 @@
                     }
                 }
 
-                // Órbita 2: Sugerencias (Pathfinding)
-                            suggestPath: (currentMask, scaleMask, libraryJSON) => {
-                // Validación de seguridad: Sin sonido o sin biblioteca, no hay ruta.
-                if (currentMask === 0 || !libraryJSON || !libraryJSON.diccionario_acordes) return null;
-                
-                let bestNode = null;
-                let minDistance = Infinity; 
-                let lowestTension = Infinity;
-                
-                const isChromatic = scaleMask === 4095;
-                
-                // 1. Escaneo del Catálogo: Iteramos sobre el diccionario funcional
-                for (const chordName in libraryJSON.diccionario_acordes) {
-                    const chordData = libraryJSON.diccionario_acordes[chordName];
-                    const baseMask = HarmonyEngine.createPitchClassSet(chordData.mask);
+                // Órbita 2: Lunas de Sugerencia (Pathfinding Predictivo)
+                moons.forEach(n => {
+                    const angle = (n.pitch * Math.PI*2)/12 - Math.PI/2;
+                    const nx = cx + Math.cos(angle)*r2, ny = cy + Math.sin(angle)*r2;
                     
-                    // 2. Transposición a las 12 raíces posibles
-                    for (let r = 0; r < 12; r++) {
-                        const transposedMask = HarmonyEngine.rotateMask(baseMask, r);
-                        
-                        // Regla A: El destino no puede ser idéntico al origen
-                        if (transposedMask === currentMask) continue;
-                        
-                        // Regla B (Filtro de Escala): Si el modo es estricto, el acorde debe encajar en el Mandala
-                        if (!isChromatic && !HarmonyEngine.isSubset(transposedMask, scaleMask)) continue;
-                        
-                        // 3. Ecuación de Parsimonia: Distancia de Hamming (Bitwise XOR)
-                        const distance = HarmonyEngine.getHammingDistance(currentMask, transposedMask);
-                        
-                        // 4. Resolución de Empates: Priorizar estabilidad
-                        // Si dos acordes requieren el mismo movimiento de dedos, el motor elegirá
-                        // el que tenga menor factor de tensión en la base de datos (resolución).
-                        if (distance < minDistance || (distance === minDistance && chordData.tension < lowestTension)) {
-                            minDistance = distance;
-                            lowestTension = chordData.tension;
-                            bestNode = { 
-                                name: chordName, 
-                                mask: transposedMask, 
-                                root: r, 
-                                distance: distance 
-                            };
-                        }
-                    }
-                }
-                
-                // Retorna el nodo óptimo para que el Renderer encienda la órbita de sugerencia
-                return bestNode;
-            }
+                    this.ctx.beginPath(); this.ctx.moveTo(cx, cy); this.ctx.lineTo(nx, ny); 
+                    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'; this.ctx.setLineDash([4, 6]);
+                    this.ctx.lineWidth = 1; this.ctx.stroke(); this.ctx.setLineDash([]);
+                    this.drawNode(n.name, nx, ny, 18, 'transparent', false, 5, 'rgba(255, 255, 255, 0.5)', 0.8);
+                });
 
-                // Órbita 1: Planetas Activos
+                // Órbita 1: Planetas Activos (Música Ejecutada Real)
                 planets.forEach(n => {
                     const angle = (n.pitch * Math.PI*2)/12 - Math.PI/2;
                     const nx = cx + Math.cos(angle)*r1, ny = cy + Math.sin(angle)*r1;
+                    
                     let nodeColor = 'var(--accent)'; 
                     if (!isChromatic && (scale_mask & (1 << n.pitch)) === 0) nodeColor = 'var(--alert)'; 
+
                     this.ctx.beginPath(); this.ctx.moveTo(cx, cy); this.ctx.lineTo(nx, ny); 
                     this.ctx.strokeStyle = nodeColor; this.ctx.globalAlpha = 0.5;
                     this.ctx.lineWidth = 2; this.ctx.stroke(); this.ctx.globalAlpha = 1;
