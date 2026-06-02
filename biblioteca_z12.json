@@ -1,27 +1,75 @@
 {
-  "version": "2.0",
-  "data_model": "modulo12_taxonomia",
+  "metadata": {
+    "version": "1.0",
+    "tipo": "Catalogo Transmodal Z12",
+    "descripcion": "Librería estática de teoría musical para motores deductivos."
+  },
   "escalas": {
     "diatonicas": {
-      "mayor": { "mask": [0, 2, 4, 5, 7, 9, 11], "tension_factor": 0.1 },
-      "menor_nat": { "mask": [0, 2, 3, 5, 7, 8, 10], "tension_factor": 0.2 }
+      "Mayor": { 
+        "mask": [0, 2, 4, 5, 7, 9, 11], 
+        "gravedad_base": 0.0,
+        "nodos_reposo": [0, 4, 7],
+        "nodos_tension": [5, 11]
+      },
+      "Menor Natural": { 
+        "mask": [0, 2, 3, 5, 7, 8, 10], 
+        "gravedad_base": 0.2,
+        "nodos_reposo": [0, 3, 7],
+        "nodos_tension": [2, 8]
+      },
+      "Menor Armónica": { 
+        "mask": [0, 2, 3, 5, 7, 8, 11], 
+        "gravedad_base": 0.6,
+        "nodos_reposo": [0, 3, 7],
+        "nodos_tension": [8, 11] 
+      },
+      "Menor Melódica": { 
+        "mask": [0, 2, 3, 5, 7, 9, 11], 
+        "gravedad_base": 0.4,
+        "nodos_reposo": [0, 3, 7],
+        "nodos_tension": [9, 11] 
+      }
+    },
+    "modos_gregorianos": {
+      "Dórica": { "mask": [0, 2, 3, 5, 7, 9, 10], "gravedad_base": 0.3 },
+      "Frigia": { "mask": [0, 1, 3, 5, 7, 8, 10], "gravedad_base": 0.7 },
+      "Lidia": { "mask": [0, 2, 4, 6, 7, 9, 11], "gravedad_base": 0.5 },
+      "Mixolidia": { "mask": [0, 2, 4, 5, 7, 9, 10], "gravedad_base": 0.4 },
+      "Locria": { "mask": [0, 1, 3, 5, 6, 8, 10], "gravedad_base": 0.9 }
     },
     "pentatonicas": {
-      "mayor": { "mask": [0, 2, 4, 7, 9], "tension_factor": 0.05 }
+      "Pentatónica Mayor": { "mask": [0, 2, 4, 7, 9], "gravedad_base": 0.1 },
+      "Pentatónica Menor": { "mask": [0, 3, 5, 7, 10], "gravedad_base": 0.1 },
+      "Blues": { "mask": [0, 3, 5, 6, 7, 10], "gravedad_base": 0.5 }
     },
-    "exoticas": {
-      "hirajoshi": { "mask": [0, 2, 3, 7, 8], "tension_factor": 0.4 }
+    "simetricas_exoticas": {
+      "Cromática": { "mask": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], "gravedad_base": 1.0 },
+      "Tonos Enteros": { "mask": [0, 2, 4, 6, 8, 10], "gravedad_base": 0.8 },
+      "Disminuida (T-ST)": { "mask": [0, 2, 3, 5, 6, 8, 9, 11], "gravedad_base": 0.85 },
+      "Hirajoshi": { "mask": [0, 2, 3, 7, 8], "gravedad_base": 0.6 }
     }
   },
-  "series_armonicas": {
-    "natural": {
-      "1_8": { "mask": [0, 4, 7, 10], "desc": "Serie fundamental 1-8" }
+  "armonicos_fisicos": {
+    "Serie Armonica (Niv 1: Arm 1-8)": {
+      "mask": [0, 4, 7, 10],
+      "ratios_ideales": [1, 2, 3, 4, 5, 6, 7, 8]
+    },
+    "Serie Armonica (Niv 2: Arm 1-16)": {
+      "mask": [0, 2, 4, 6, 7, 9, 10, 11],
+      "ratios_ideales": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
     }
   },
-  "motor_sugerencias": {
-    "reglas": {
-      "progresion_diatonica": { "probabilidad": 0.8, "salto_maximo": 3 },
-      "resolucion_tension": { "origen": "tensa", "destino": "estable" }
-    }
+  "diccionario_acordes": {
+    "May": { "mask": [0, 4, 7], "tension": 0.0 },
+    "min": { "mask": [0, 3, 7], "tension": 0.1 },
+    "dim": { "mask": [0, 3, 6], "tension": 0.8 },
+    "aug": { "mask": [0, 4, 8], "tension": 0.7 },
+    "Maj7": { "mask": [0, 4, 7, 11], "tension": 0.3 },
+    "min7": { "mask": [0, 3, 7, 10], "tension": 0.2 },
+    "7": { "mask": [0, 4, 7, 10], "tension": 0.5 },
+    "dim7": { "mask": [0, 3, 6, 9], "tension": 0.9 },
+    "sus4": { "mask": [0, 5, 7], "tension": 0.4 },
+    "sus2": { "mask": [0, 2, 7], "tension": 0.4 }
   }
 }
