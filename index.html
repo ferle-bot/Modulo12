@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Modulo12 - Motor de Composición Z12 (Bitwise)</title>
+    <title>Modulo12 - Inference Engine Z12</title>
     
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#050508">
@@ -78,18 +78,17 @@
 <body>
 
     <div id="hud-indicators">
-        <div id="metro-light" class="led-indicator led-metro" title="Metrónomo Visual"></div>
-        <div id="rec-light" class="led-indicator led-rec" title="Grabación de Audio Activa"></div>
+        <div id="metro-light" class="led-indicator led-metro" title="Visual Metronome"></div>
+        <div id="rec-light" class="led-indicator led-rec" title="Audio Recording"></div>
     </div>
 
     <div id="menu-btn">☰</div>
     <div id="sidebar">
         <div id="close-btn">×</div>
-        <h3 style="color: var(--accent); margin-top: 0; font-size: 18px; letter-spacing: 1px;">Modulo12 : Núcleo</h3>
+        <h3 style="color: var(--accent); margin-top: 0; font-size: 18px; letter-spacing: 1px;">Modulo12 : Core</h3>
         <hr style="border-color: #1a1a24; margin-bottom: 15px;">
         
         <button id="history-btn" class="menu-action-btn btn-history">▶ Abrir Lector de Sesiones (DB)</button>
-        <button id="rec-btn" class="menu-action-btn btn-rec">⏺ Grabar Audio (Micrófono)</button>
         
         <div class="config-group" style="margin-top: 10px;">
             <button id="pause-btn" class="menu-action-btn btn-pause">Pausar Detección</button>
@@ -135,12 +134,6 @@
             <div class="config-label" style="margin-top: 10px;"><span>Piso de Ruido (Puerta)</span><span id="sens-val">-55 dB</span></div>
             <input type="range" id="sens-slider" min="-80" max="-30" value="-55">
         </div>
-
-        <div class="config-group">
-            <div class="config-label"><span>Metrónomo Visual Silencioso</span><span id="bpm-val">120 BPM</span></div>
-            <input type="range" id="bpm-slider" min="40" max="240" value="120">
-            <button id="metro-btn" class="menu-action-btn" style="background:#222; color:var(--accent); border:1px solid var(--accent); margin-top:5px;">Activar Metrónomo</button>
-        </div>
     </div>
 
     <div id="session-modal" class="modal-bg">
@@ -170,7 +163,7 @@
 
     <div id="overlay">
         <h1 style="margin-bottom: 10px; color: var(--accent); letter-spacing: 4px; font-size: 3rem; text-shadow: 0 0 20px rgba(0,255,204,0.3);">Modulo12</h1>
-        <p style="color: #888; margin-bottom: 40px; font-size: 14px;">Motor Transmodal Predictivo</p>
+        <p style="color: #888; margin-bottom: 40px; font-size: 14px;">Inference & Composition Engine</p>
         
         <div id="pre-config-box" style="width: 80%; max-width: 320px; text-align: left;">
             <label style="color: var(--accent); font-size: 12px; margin-bottom: 8px; display: block;">1. Selecciona instrumento de la sesión:</label>
@@ -190,14 +183,14 @@
         </div>
     </div>
 
-    <div id="debug-panel">Cargando módulos predictivos...</div>
+    <div id="debug-panel">Loading Core Modules...</div>
     <canvas id="harmonyCanvas"></canvas>
 
     <script>
         'use strict';
 
         // ==========================================
-        // 1. BIBLIOTECA MAESTRA Y MOTOR MATEMÁTICO BITWISE
+        // 1. CORE MATH ENGINE & JSON LIBRARY
         // ==========================================
         let Z12_LIBRARY = { escalas: { "Cromática": { mask: [0,1,2,3,4,5,6,7,8,9,10,11] } }, armonicos_fisicos: {} };
 
@@ -284,28 +277,64 @@
                         if (distance < minDistance || (distance === minDistance && chordData.tension < lowestTension)) {
                             minDistance = distance;
                             lowestTension = chordData.tension;
-                            bestNode = { 
-                                name: chordName, 
-                                mask: transposedMask, 
-                                root: r, 
-                                distance: distance 
-                            };
+                            bestNode = { name: chordName, mask: transposedMask, root: r, distance: distance };
                         }
                     }
                 }
                 return bestNode;
+            },
+            // PHASE 3: PROBABILISTIC INFERENCE ENGINE
+            inferScale: (accumulatedMask, libraryJSON) => {
+                if (!libraryJSON || !libraryJSON.escalas || accumulatedMask === 0) return null;
+                
+                let bestMatch = null;
+                let highestScore = 0;
+
+                const categories = [libraryJSON.escalas.diatonicas, libraryJSON.escalas.menor_armonica_y_modos, libraryJSON.escalas.menor_melodica_y_modos, libraryJSON.escalas.bebop, libraryJSON.escalas.simetricas_exoticas];
+
+                for (const cat of categories) {
+                    if (!cat) continue;
+                    for (const scaleName in cat) {
+                        const baseArray = cat[scaleName].mask;
+                        const baseMask = HarmonyEngine.createPitchClassSet(baseArray);
+                        
+                        // Test against all 12 roots
+                        for (let r = 0; r < 12; r++) {
+                            const transposedScale = HarmonyEngine.rotateMask(baseMask, r);
+                            
+                            // Bitwise AND to find matching notes
+                            let intersection = accumulatedMask & transposedScale;
+                            let matchCount = 0;
+                            while (intersection > 0) { matchCount += intersection & 1; intersection >>= 1; }
+                            
+                            // Count total bits in the scale to compute ratio
+                            let scaleBits = 0;
+                            let temp = transposedScale;
+                            while(temp > 0) { scaleBits += temp & 1; temp >>= 1; }
+
+                            const score = matchCount / scaleBits; // Match percentage
+
+                            // 80% Threshold for confident deduction
+                            if (score > highestScore && score >= 0.8) {
+                                highestScore = score;
+                                bestMatch = { root: r, type: scaleName, score: score, mask: transposedScale };
+                            }
+                        }
+                    }
+                }
+                return bestMatch;
             }
         };
 
         const PROFILES = {
-            piano:  { targets: [{n:"Do Grave (C2)", m:36}, {n:"Do Central (C4)", m:60}] },
-            guitar: { targets: [{n:"6ta Cuerda Aire (E2)", m:40}, {n:"1ra Cuerda Aire (E4)", m:64}] },
-            voice:  { targets: [{n:"Canta una nota constante", m:"any"}] },
+            piano:  { targets: [{n:"C2", m:36}, {n:"C4", m:60}] },
+            guitar: { targets: [{n:"E2", m:40}, {n:"E4", m:64}] },
+            voice:  { targets: [{n:"Constant Note", m:"any"}] },
             synth:  { targets: [] } 
         };
 
         // ==========================================
-        // 2. TUBERÍA DE DATOS Y STATE MANAGER
+        // 2. DATA PIPELINE & STATE MANAGER
         // ==========================================
         const ModuloDB = {
             init() {
@@ -342,10 +371,11 @@
                     active_mask: 0, notes_array: [], notes_detail: [], tension_level: 0.0, color: {r: 34, g: 34, b: 34},
                     description: "Silencio", suggestion: null, current_session: null,
                     status: "standby", sens_offset: -55, view_mode: "radial", scale_root: 0, scale_type: "Cromática", scale_mask: 4095,
-                    acoustic_profile: "piano", profiler_step: 0, calibration_map: {}
+                    acoustic_profile: "piano", profiler_step: 0, calibration_map: {},
+                    inferenceBuffer: [], inferredScale: null // Sliding window for Phase 3
                 };
-                const saved = localStorage.getItem('modulus_settings_v5');
-                this.state = saved ? { ...initial, ...JSON.parse(saved), active_mask: 0, status: 'standby', current_session: null, profiler_step: 0 } : initial;
+                const saved = localStorage.getItem('modulus_settings_v6');
+                this.state = saved ? { ...initial, ...JSON.parse(saved), active_mask: 0, status: 'standby', current_session: null, profiler_step: 0, inferenceBuffer: [], inferredScale: null } : initial;
                 this.state.scale_mask = HarmonyEngine.getScaleMask(this.state.scale_root, this.state.scale_type, Z12_LIBRARY);
                 this.listeners = [];
             }
@@ -356,6 +386,7 @@
                     scale_context: `${HarmonyEngine.getNoteName(this.state.scale_root, this.state.scale_root)} ${this.state.scale_type}`,
                     events: []
                 };
+                this.state.inferenceBuffer = [];
                 this.notify();
             }
             endCurrentSession() {
@@ -364,12 +395,34 @@
             }
             update(newState) {
                 const prevMask = this.state.active_mask; this.state = { ...this.state, ...newState };
+                
                 if (newState.scale_root !== undefined || newState.scale_type !== undefined) {
                     this.state.scale_mask = HarmonyEngine.getScaleMask(this.state.scale_root, this.state.scale_type, Z12_LIBRARY);
+                    this.state.inferenceBuffer = []; // Reset inference when user explicitly changes scale
+                    this.state.inferredScale = null;
                 }
 
                 if (newState.active_mask !== undefined && newState.active_mask !== prevMask) {
                     if (this.state.status === 'active' && this.state.active_mask > 0 && this.state.current_session) {
+                        
+                        // Phase 3: Push to Inference Buffer
+                        this.state.notes_array.forEach(pitch => {
+                            if (!this.state.inferenceBuffer.includes(pitch)) {
+                                this.state.inferenceBuffer.push(pitch);
+                                if (this.state.inferenceBuffer.length > 10) this.state.inferenceBuffer.shift(); // Max 10 recent unique notes
+                            }
+                        });
+
+                        // Run Probabilistic Deduction if in Chromatic mode
+                        if (this.state.scale_type === "Cromática" || this.state.scale_type === "Cromática (Sin Guía)") {
+                            const bufferMask = HarmonyEngine.createPitchClassSet(this.state.inferenceBuffer);
+                            const deduction = HarmonyEngine.inferScale(bufferMask, Z12_LIBRARY);
+                            if (deduction) {
+                                this.state.inferredScale = deduction;
+                                // We DO NOT overwrite user's setting, we just store the inferred scale for the UI to suggest
+                            }
+                        }
+
                         const rootPitch = this.state.notes_detail[0]?.pitch || 0;
                         const rootName = HarmonyEngine.getNoteName(rootPitch, this.state.scale_root);
                         
@@ -396,14 +449,14 @@
                 }
                 this.saveSettings(); this.notify();
             }
-            saveSettings() { localStorage.setItem('modulus_settings_v5', JSON.stringify({ sens_offset: this.state.sens_offset, view_mode: this.state.view_mode, scale_root: this.state.scale_root, scale_type: this.state.scale_type, acoustic_profile: this.state.acoustic_profile, calibration_map: this.state.calibration_map })); }
-            async clearHistory() { await ModuloDB.clearAll(); this.state.current_session = null; this.update({}); }
+            saveSettings() { localStorage.setItem('modulus_settings_v6', JSON.stringify({ sens_offset: this.state.sens_offset, view_mode: this.state.view_mode, scale_root: this.state.scale_root, scale_type: this.state.scale_type, acoustic_profile: this.state.acoustic_profile, calibration_map: this.state.calibration_map })); }
+            async clearHistory() { await ModuloDB.clearAll(); this.state.current_session = null; this.state.inferenceBuffer = []; this.update({}); }
             subscribe(cb) { this.listeners.push(cb); this.notify(); }
             notify() { const snap = JSON.parse(JSON.stringify(this.state)); this.listeners.forEach(cb => cb(snap)); }
         }
 
         // ==========================================
-        // 3. MOTOR HÍBRIDO AUDIO (YIN + FFT)
+        // 3. AUDIO HYBRID ENGINE (YIN + FFT)
         // ==========================================
         class AudioEngine {
             constructor(stateManager) {
@@ -518,11 +571,16 @@
                     if (details.length > 0) {
                         const rawPitches = details.map(d=>d.pitch);
                         const mask = HarmonyEngine.createPitchClassSet(rawPitches);
+                        
+                        // Suggest using the inferred scale if available and user is in Chromatic Mode
+                        const activeScaleMask = (this.stateManager.state.inferredScale && this.stateManager.state.scale_type === "Cromática") ? 
+                            this.stateManager.state.inferredScale.mask : this.stateManager.state.scale_mask;
+
                         this.stateManager.update({ 
                             active_mask: mask, notes_array: rawPitches, notes_detail: details, 
                             tension_level: HarmonyEngine.evaluateTension(rawPitches, Z12_LIBRARY).level, 
                             color: HarmonyEngine.evaluateTension(rawPitches, Z12_LIBRARY).color,
-                            suggestion: HarmonyEngine.suggestPath(mask, this.stateManager.state.scale_mask, Z12_LIBRARY) 
+                            suggestion: HarmonyEngine.suggestPath(mask, activeScaleMask, Z12_LIBRARY) 
                         });
                     } else if (this.stateManager.state.active_mask !== 0) {
                         this.stateManager.update({ active_mask: 0, notes_detail: [] }); 
@@ -578,12 +636,12 @@
                 if(this.stream) this.stream.getTracks().forEach(t=>t.stop());
                 if(this.audioCtx) this.audioCtx.close();
                 this.stateManager.endCurrentSession();
-                this.stateManager.update({status:'standby', active_mask:0, notes_detail:[], tension_level:0, suggestion:null});
+                this.stateManager.update({status:'standby', active_mask:0, notes_detail:[], tension_level:0, suggestion:null, inferenceBuffer: [], inferredScale: null});
             }
         }
 
         // ==========================================
-        // 4. RENDERIZADOR (EL MANDALA VISUAL + SUGERENCIAS)
+        // 4. RENDERER (VISUAL MANDALA & SUGGESTIONS)
         // ==========================================
         class Renderer {
             constructor(canvasId, stateManager) {
@@ -607,7 +665,7 @@
                 this.ctx.globalAlpha = 1; 
             }
 
-            drawMandalaSkeleton(cx, cy, radius, scaleMask, scaleRoot) {
+            drawMandalaSkeleton(cx, cy, radius, scaleMask, scaleRoot, isInferred = false) {
                 const scaleNodes = [];
                 for(let i=0; i<12; i++) {
                     if ((scaleMask & (1 << i)) !== 0) {
@@ -621,27 +679,32 @@
                     this.ctx.moveTo(scaleNodes[0].x, scaleNodes[0].y);
                     for(let i=1; i<scaleNodes.length; i++) this.ctx.lineTo(scaleNodes[i].x, scaleNodes[i].y);
                     this.ctx.closePath();
-                    this.ctx.strokeStyle = 'rgba(0, 255, 204, 0.15)'; this.ctx.lineWidth = 1; this.ctx.stroke();
+                    // Inferred scales are drawn with a slightly different color to distinguish from manual guides
+                    this.ctx.strokeStyle = isInferred ? 'rgba(255, 204, 0, 0.15)' : 'rgba(0, 255, 204, 0.15)'; 
+                    this.ctx.lineWidth = 1; this.ctx.stroke();
                 }
 
                 for(let i=0; i<12; i++) {
                     const angle = (i * Math.PI*2)/12 - Math.PI/2;
                     const nx = cx + Math.cos(angle)*radius; const ny = cy + Math.sin(angle)*radius;
                     const name = HarmonyEngine.getNoteName(i, scaleRoot);
-                    if ((scaleMask & (1 << i)) !== 0) this.drawNode(name, nx, ny, 14, 'transparent', false, 0, 'rgba(0, 255, 204, 0.3)', 1);
-                    else this.drawNode(name, nx, ny, 14, 'transparent', false, 0, 'rgba(255, 255, 255, 0.05)', 0.5);
+                    if ((scaleMask & (1 << i)) !== 0) {
+                        this.drawNode(name, nx, ny, 14, 'transparent', false, 0, isInferred ? 'rgba(255, 204, 0, 0.3)' : 'rgba(0, 255, 204, 0.3)', 1);
+                    } else {
+                        this.drawNode(name, nx, ny, 14, 'transparent', false, 0, 'rgba(255, 255, 255, 0.05)', 0.5);
+                    }
                 }
             }
 
             draw(state) {
                 const w = window.innerWidth, h = window.innerHeight; this.ctx.clearRect(0, 0, w, h);
-                const { active_mask, notes_detail, scale_mask, scale_root, tension_level, suggestion, view_mode } = state;
+                const { active_mask, notes_detail, scale_mask, scale_root, tension_level, suggestion, view_mode, inferredScale } = state;
                 const cx = w / 2, cy = h / 2, dim = Math.min(w, h);
                 const r1 = dim * 0.20, r2 = dim * 0.30, r3 = dim * 0.42; 
                 
                 const isChromatic = scale_mask === 4095;
 
-                // Alerta Visual de Ruptura Armónica (Fondo Rojo)
+                // Visual Tension Alert
                 if (tension_level > 0.6) {
                     const glow = this.ctx.createRadialGradient(cx, cy, 0, cx, cy, dim);
                     glow.addColorStop(0, 'rgba(255, 51, 0, 0.15)');
@@ -652,22 +715,36 @@
 
                 if (view_mode === 'linear') { this.drawLinearMap(state); return; }
 
-                // Plantilla Estática Mandala (Fondo - Órbita 3)
-                if (!isChromatic) this.drawMandalaSkeleton(cx, cy, r3, scale_mask, scale_root);
+                // Static Mandala Background
+                if (!isChromatic) {
+                    this.drawMandalaSkeleton(cx, cy, r3, scale_mask, scale_root, false);
+                } else if (inferredScale) {
+                    // Phase 3: Draw inferred mandala dynamically
+                    this.drawMandalaSkeleton(cx, cy, r3, inferredScale.mask, inferredScale.root, true);
+                }
 
                 if (active_mask === 0 || notes_detail.length === 0) return;
 
-                // Centro: Nota Raíz Detectada
+                // Center Root Note
                 const rootNote = notes_detail[0];
                 let centerColor = 'var(--accent)'; 
-                if (!isChromatic && (scale_mask & (1 << rootNote.pitch)) === 0) centerColor = 'var(--alert)'; // Error / Fuera de escala
+                
+                // Tension coloring logic adapts if we are using an inferred scale
+                const activeReferenceMask = (!isChromatic) ? scale_mask : (inferredScale ? inferredScale.mask : 4095);
+                
+                if (activeReferenceMask !== 4095 && (activeReferenceMask & (1 << rootNote.pitch)) === 0) {
+                    centerColor = 'var(--alert)'; 
+                }
                 this.drawNode(rootNote.name, cx, cy, 40, centerColor, true, 30, '#fff');
 
-                // Clasificar Órbitas Dinámicas
                 const planets = [], moons = [];
                 for(let i=0; i<12; i++) {
                     if (i === rootNote.pitch) continue;
-                    const sName = HarmonyEngine.getNoteName(i, scale_root);
+                    
+                    // Display name based on the root of the active scale (manual or inferred)
+                    const refRoot = (!isChromatic) ? scale_root : (inferredScale ? inferredScale.root : 0);
+                    const sName = HarmonyEngine.getNoteName(i, refRoot);
+                    
                     if ((active_mask & (1<<i))) {
                         planets.push(notes_detail.find(n=>n.pitch===i) || {pitch:i, name:sName});
                     } else if (suggestion && (suggestion.mask & (1<<i))) {
@@ -675,24 +752,23 @@
                     }
                 }
 
-                // Órbita 2: Lunas de Sugerencia (Pathfinding Predictivo)
+                // Orbit 2: Suggestions (Pathfinding)
                 moons.forEach(n => {
                     const angle = (n.pitch * Math.PI*2)/12 - Math.PI/2;
                     const nx = cx + Math.cos(angle)*r2, ny = cy + Math.sin(angle)*r2;
-                    
                     this.ctx.beginPath(); this.ctx.moveTo(cx, cy); this.ctx.lineTo(nx, ny); 
                     this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'; this.ctx.setLineDash([4, 6]);
                     this.ctx.lineWidth = 1; this.ctx.stroke(); this.ctx.setLineDash([]);
                     this.drawNode(n.name, nx, ny, 18, 'transparent', false, 5, 'rgba(255, 255, 255, 0.5)', 0.8);
                 });
 
-                // Órbita 1: Planetas Activos (Música Ejecutada Real)
+                // Orbit 1: Active Planets
                 planets.forEach(n => {
                     const angle = (n.pitch * Math.PI*2)/12 - Math.PI/2;
                     const nx = cx + Math.cos(angle)*r1, ny = cy + Math.sin(angle)*r1;
                     
                     let nodeColor = 'var(--accent)'; 
-                    if (!isChromatic && (scale_mask & (1 << n.pitch)) === 0) nodeColor = 'var(--alert)'; 
+                    if (activeReferenceMask !== 4095 && (activeReferenceMask & (1 << n.pitch)) === 0) nodeColor = 'var(--alert)'; 
 
                     this.ctx.beginPath(); this.ctx.moveTo(cx, cy); this.ctx.lineTo(nx, ny); 
                     this.ctx.strokeStyle = nodeColor; this.ctx.globalAlpha = 0.5;
@@ -717,7 +793,7 @@
         }
 
         // ==========================================
-        // 5. INICIALIZACIÓN ASÍNCRONA Y UI (V3 DINÁMICO)
+        // 5. ASYNC INIT & UI BINDING
         // ==========================================
         (async function initApp() {
             document.getElementById('debug-panel').textContent = "Descargando Biblioteca Z12...";
@@ -780,15 +856,26 @@
             ui.profilerSkip.onclick = () => { audioEngine.forceProfilerSkip(); };
 
             stateManager.subscribe(s => {
-                const sug = s.suggestion ? `<span style="color: #fff">${HarmonyEngine.getNoteName(s.suggestion.root, s.scale_root)} ${s.suggestion.name}</span>` : 'Ninguna';
+                let sugText = 'Ninguna';
+                if (s.suggestion) {
+                    const refRoot = (s.scale_type !== "Cromática" && s.scale_type !== "Cromática (Sin Guía)") ? s.scale_root : (s.inferredScale ? s.inferredScale.root : 0);
+                    sugText = `<span style="color: #fff">${HarmonyEngine.getNoteName(s.suggestion.root, refRoot)} ${s.suggestion.name}</span>`;
+                }
+
                 const tensionState = s.tension_level > 0.6 ? `<span style="color:var(--alert); font-weight:bold;">¡Ruptura Armónica! (${s.tension_level.toFixed(2)})</span>` : `<span style="color:var(--accent);">Estable (${s.tension_level.toFixed(2)})</span>`;
                 let statColor = '#888'; if(s.status==='active') statColor='var(--accent)'; if(s.status==='paused') statColor='#fa0'; if(s.status==='calibrating') statColor='#f0f'; if(s.status==='profiling') statColor='#0ff';
 
+                // Display Inferred Scale if in Chromatic Mode
+                let guideText = `${HarmonyEngine.getNoteName(s.scale_root, s.scale_root)} ${s.scale_type}`;
+                if (s.inferredScale && (s.scale_type === "Cromática" || s.scale_type === "Cromática (Sin Guía)")) {
+                    guideText = `<span style="color:#fa0;">Deducción Auto: ${HarmonyEngine.getNoteName(s.inferredScale.root, s.inferredScale.root)} ${s.inferredScale.type} (${(s.inferredScale.score*100).toFixed(0)}%)</span>`;
+                }
+
                 ui.panel.innerHTML = `
                     <div style="color:${statColor}; font-weight:bold; font-size:14px; margin-bottom:10px; letter-spacing:1px;">ESTADO: ${s.status.toUpperCase()}</div>
-                    <span style="color:#aaa;">Guía Activa:</span> ${HarmonyEngine.getNoteName(s.scale_root, s.scale_root)} ${s.scale_type}<br>
+                    <span style="color:#aaa;">Guía Activa:</span> ${guideText}<br>
                     <span style="color:#aaa;">Estado Armónico:</span> ${tensionState}<br>
-                    <span style="color:#aaa;">Sugerencia (Pathfinding):</span> ${sug}<br>
+                    <span style="color:#aaa;">Sugerencia (Pathfinding):</span> ${sugText}<br>
                 `;
             });
 
