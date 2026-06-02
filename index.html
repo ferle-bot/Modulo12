@@ -71,35 +71,24 @@
         }
         #sidebar.active { right: 0; }
         #close-btn {
-            font-size: 32px; cursor: pointer; text-align: right; 
-            margin-bottom: 20px; color: #666; line-height: 1;
+            font-size: 32px; cursor: pointer; text-align: right; margin-bottom: 20px; color: #666; line-height: 1;
         }
         #close-btn:hover { color: #fff; }
 
-        /* Controles de Configuración */
         .config-group { margin-top: 25px; border-top: 1px solid #222; padding-top: 15px; }
         .config-label { font-size: 12px; color: #aaa; margin-bottom: 10px; display: flex; justify-content: space-between; }
         
         select.menu-select {
             background: #111; color: #fff; border: 1px solid #333; padding: 8px; 
-            border-radius: 4px; font-family: monospace; width: 100%; outline: none;
+            border-radius: 4px; font-family: monospace; width: 100%; outline: none; margin-bottom: 10px;
         }
         
         input[type=range] { width: 100%; -webkit-appearance: none; background: transparent; margin: 10px 0; }
         input[type=range]:focus { outline: none; }
-        input[type=range]::-webkit-slider-runnable-track {
-            width: 100%; height: 4px; cursor: pointer; background: #333; border-radius: 2px;
-        }
-        input[type=range]::-webkit-slider-thumb {
-            height: 16px; width: 16px; border-radius: 50%; background: var(--accent);
-            cursor: pointer; -webkit-appearance: none; margin-top: -6px;
-        }
-
-        /* Calibrador de UI */
-        #calibration-msg {
-            display: none; color: #ffaa00; margin-top: 20px; font-size: 14px; text-align: center;
-            animation: pulse 1s infinite alternate;
-        }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #333; border-radius: 2px; }
+        input[type=range]::-webkit-slider-thumb { height: 16px; width: 16px; border-radius: 50%; background: var(--accent); cursor: pointer; -webkit-appearance: none; margin-top: -6px; }
+        
+        #calibration-msg { display: none; color: #ffaa00; margin-top: 20px; font-size: 14px; text-align: center; animation: pulse 1s infinite alternate; }
         @keyframes pulse { from { opacity: 0.5; } to { opacity: 1; } }
     </style>
 </head>
@@ -116,38 +105,36 @@
         <button id="clear-btn" class="menu-action-btn btn-clear">Purgar Memoria</button>
         
         <div class="config-group">
-            <div class="config-label"><span>Filtro de Escala Diatónica</span></div>
-            <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <div class="config-label"><span>Selector de Proyección (Visor)</span></div>
+            <select id="view-mode" class="menu-select">
+                <option value="radial">Gravedad Armónica (Sistema Solar)</option>
+                <option value="linear">Mapa de Notas (Espectro Lineal)</option>
+            </select>
+        </div>
+
+        <div class="config-group">
+            <div class="config-label"><span>Filtro y Ortografía (Enarmonía)</span></div>
+            <div style="display: flex; gap: 10px;">
                 <select id="scale-root" class="menu-select" style="flex: 1;">
-                    <option value="0">C</option><option value="1">Db</option>
-                    <option value="2">D</option><option value="3">Eb</option>
+                    <option value="0">C</option><option value="1">C#/Db</option>
+                    <option value="2">D</option><option value="3">D#/Eb</option>
                     <option value="4">E</option><option value="5">F</option>
-                    <option value="6">F#</option><option value="7">G</option>
-                    <option value="8">Ab</option><option value="9">A</option>
-                    <option value="10">Bb</option><option value="11">B</option>
+                    <option value="6">F#/Gb</option><option value="7">G</option>
+                    <option value="8">G#/Ab</option><option value="9">A</option>
+                    <option value="10">A#/Bb</option><option value="11">B</option>
                 </select>
                 <select id="scale-type" class="menu-select" style="flex: 2;">
                     <option value="Cromática">Off (Cromática)</option>
                     <option value="Mayor">Mayor</option>
                     <option value="Menor Nat.">Menor Natural</option>
                     <option value="Menor Arm.">Menor Armónica</option>
-                    <option value="Dórica">Dórica</option>
-                    <option value="Frigia">Frigia</option>
-                    <option value="Lidia">Lidia</option>
-                    <option value="Mixolidia">Mixolidia</option>
                 </select>
             </div>
         </div>
 
         <div class="config-group">
-            <div class="config-label">
-                <span>Sensibilidad (Offset)</span>
-                <span id="sens-val">0 dB</span>
-            </div>
+            <div class="config-label"><span>Sensibilidad de Piso de Ruido</span><span id="sens-val">0 dB</span></div>
             <input type="range" id="sens-slider" min="-20" max="20" value="0">
-            <div style="color: #555; font-size: 10px; line-height: 1.4; margin-top: 8px;">
-                Ajuste fino sobre la calibración automática inicial. (-) Filtra lluvia/ruido. (+) Capta susurros.
-            </div>
         </div>
     </div>
 
@@ -164,44 +151,48 @@
         'use strict';
 
         // ==========================================
-        // 1. MOTOR MATEMÁTICO: DICCIONARIO Y ESCALAS
+        // 1. MOTOR MATEMÁTICO Y ORTOGRAFÍA ENARMÓNICA
         // ==========================================
-        const noteNames = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
+        const noteNamesSharps = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+        const noteNamesFlats =  ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "Cb"];
+        
+        // Raíces que gramaticalmente usan bemoles en la notación musical estándar
+        const flatRoots = [1, 3, 5, 8, 10]; // Db, Eb, F, Ab, Bb
+        
         const createMask = (notes) => notes.reduce((m, n) => m | (1 << (n % 12)), 0);
         
         const Z12_DICTIONARY = Array.from({length: 12}).flatMap((_, i) => [
-            { name: `${noteNames[i]} May`, mask: createMask([i, i+4, i+7]) },
-            { name: `${noteNames[i]} min`, mask: createMask([i, i+3, i+7]) },
-            { name: `${noteNames[i]}Maj7`, mask: createMask([i, i+4, i+7, i+11]) },
-            { name: `${noteNames[i]}min7`, mask: createMask([i, i+3, i+7, i+10]) },
-            { name: `${noteNames[i]}7`, mask: createMask([i, i+4, i+7, i+10]) },
-            { name: `${noteNames[i]}dim7`, mask: createMask([i, i+3, i+6, i+9]) }
+            { name: `May`, mask: createMask([i, i+4, i+7]) },
+            { name: `min`, mask: createMask([i, i+3, i+7]) },
+            { name: `Maj7`, mask: createMask([i, i+4, i+7, i+11]) },
+            { name: `min7`, mask: createMask([i, i+3, i+7, i+10]) },
+            { name: `7`, mask: createMask([i, i+4, i+7, i+10]) },
+            { name: `dim7`, mask: createMask([i, i+3, i+6, i+9]) }
         ]);
 
         const SCALES_DEF = {
             "Cromática": [0,1,2,3,4,5,6,7,8,9,10,11],
             "Mayor": [0,2,4,5,7,9,11],
             "Menor Nat.": [0,2,3,5,7,8,10],
-            "Menor Arm.": [0,2,3,5,7,8,11],
-            "Dórica": [0,2,3,5,7,9,10],
-            "Frigia": [0,1,3,5,7,8,10],
-            "Lidia": [0,2,4,6,7,9,11],
-            "Mixolidia": [0,2,4,5,7,9,10]
+            "Menor Arm.": [0,2,3,5,7,8,11]
         };
 
         const HarmonyEngine = {
             createPitchClassSet: createMask,
+            
+            // Selector Enarmónico Dinámico (Prepara los datos para la futura Partitura)
+            getNoteName: (pitch, scaleRoot) => {
+                const useFlats = flatRoots.includes(scaleRoot) || (scaleRoot === 0 && pitch === 10); // Lógica básica de armadura
+                return useFlats ? noteNamesFlats[pitch] : noteNamesSharps[pitch];
+            },
+
             getScaleMask: (root, type) => {
                 const intervals = SCALES_DEF[type] || SCALES_DEF["Cromática"];
                 return createMask(intervals.map(i => (i + root) % 12));
             },
-            calculateParsimony: (maskA, maskB) => {
-                let count = 0;
-                for (let intersection = maskA & maskB; intersection > 0; intersection >>= 1) count += intersection & 1;
-                return count;
-            },
+            
             evaluateTension: (notes) => {
-                if (notes.length < 2) return { level: 0.0, color: {r: 0, g: 255, b: 0}, desc: "Reposo absoluto" };
+                if (notes.length < 2) return { level: 0.0, color: {r: 0, g: 255, b: 0}, desc: "Reposo" };
                 let hasTritone = false, hasMinorSecond = false;
                 for (let i = 0; i < notes.length; i++) {
                     for (let j = i + 1; j < notes.length; j++) {
@@ -210,23 +201,23 @@
                         if (interval === 1 || interval === 11) hasMinorSecond = true;
                     }
                 }
-                if (hasTritone) return { level: 1.0, color: {r: 255, g: 0, b: 0}, desc: "Máxima inestabilidad (Tritono)" };
-                if (hasMinorSecond) return { level: 0.7, color: {r: 255, g: 165, b: 0}, desc: "Tensión armónica" };
+                if (hasTritone) return { level: 1.0, color: {r: 255, g: 0, b: 0}, desc: "Inestabilidad" };
+                if (hasMinorSecond) return { level: 0.7, color: {r: 255, g: 165, b: 0}, desc: "Tensión" };
                 return { level: 0.3, color: {r: 0, g: 200, b: 255}, desc: "Estabilidad matizada" };
             },
-            // Vector 2: Pathfinding Diatónico
+
             suggestPath: (currentMask, scaleMask) => {
                 if(currentMask === 0) return null;
                 let best = null, maxShared = 0;
-                const isChromatic = scaleMask === 4095; // 4095 = 12 bits activos
+                const isChromatic = scaleMask === 4095; 
 
                 for(const chord of Z12_DICTIONARY) {
                     if(chord.mask === currentMask) continue; 
-                    
-                    // Si hay escala activa, descartar acordes que salgan de la tonalidad
                     if (!isChromatic && (chord.mask & scaleMask) !== chord.mask) continue;
 
-                    let shared = HarmonyEngine.calculateParsimony(currentMask, chord.mask);
+                    let shared = 0;
+                    for (let intersection = currentMask & chord.mask; intersection > 0; intersection >>= 1) shared += intersection & 1;
+                    
                     if(shared > maxShared) { maxShared = shared; best = chord; }
                 }
                 return maxShared > 0 ? best : null;
@@ -234,7 +225,7 @@
         };
 
         // ==========================================
-        // 2. GESTIÓN DE ESTADO (MEMORIA Y ESCALAS)
+        // 2. MATRIZ DE ESTADO PERSISTENTE
         // ==========================================
         class StateManager {
             constructor() {
@@ -242,16 +233,17 @@
                     active_mask: 0, notes_array: [], notes_detail: [], 
                     tension_level: 0.0, color: {r: 34, g: 34, b: 34},
                     description: "Silencio", suggestion: null, history: [],
-                    status: "standby", sens_offset: 0,
+                    status: "standby", sens_offset: 0, view_mode: "radial",
                     scale_root: 0, scale_type: "Cromática", scale_mask: 4095
                 };
                 
-                const saved = localStorage.getItem('modulus_state_v3');
+                const saved = localStorage.getItem('modulus_state_v4');
                 if (saved) {
                     const parsed = JSON.parse(saved);
                     this.state = { 
                         ...initial, history: parsed.history || [], 
                         sens_offset: parsed.sens_offset || 0,
+                        view_mode: parsed.view_mode || "radial",
                         scale_root: parsed.scale_root || 0,
                         scale_type: parsed.scale_type || "Cromática",
                         scale_mask: HarmonyEngine.getScaleMask(parsed.scale_root || 0, parsed.scale_type || "Cromática")
@@ -266,15 +258,17 @@
                 const prevMask = this.state.active_mask;
                 this.state = { ...this.state, ...newState };
 
-                // Recalcular máscara de escala si cambian los parámetros
                 if (newState.scale_root !== undefined || newState.scale_type !== undefined) {
                     this.state.scale_mask = HarmonyEngine.getScaleMask(this.state.scale_root, this.state.scale_type);
                 }
 
                 if (newState.active_mask !== undefined && newState.active_mask !== prevMask) {
                     if (this.state.status === 'active' && this.state.active_mask > 0) {
+                        const rootPitch = this.state.notes_detail[0]?.pitch || 0;
+                        const rootName = HarmonyEngine.getNoteName(rootPitch, this.state.scale_root);
+                        
                         const chordDef = Z12_DICTIONARY.find(c => c.mask === this.state.active_mask);
-                        const name = chordDef ? chordDef.name : `[${this.state.notes_detail.map(n=>n.name).join(',')}]`;
+                        const name = chordDef ? `${rootName} ${chordDef.name}` : `[${this.state.notes_detail.map(n=>n.name).join(',')}]`;
                         
                         const hist = this.state.history;
                         if (hist.length === 0 || hist[hist.length - 1].mask !== this.state.active_mask) {
@@ -284,16 +278,15 @@
                     }
                 }
                 
-                localStorage.setItem('modulus_state_v3', JSON.stringify({ 
+                localStorage.setItem('modulus_state_v4', JSON.stringify({ 
                     history: this.state.history, sens_offset: this.state.sens_offset,
-                    scale_root: this.state.scale_root, scale_type: this.state.scale_type
+                    view_mode: this.state.view_mode, scale_root: this.state.scale_root, scale_type: this.state.scale_type
                 }));
                 this.notify();
             }
 
             clearHistory() {
-                this.state.history = [];
-                this.update({});
+                this.state.history = []; this.update({});
             }
 
             subscribe(cb) { this.listeners.push(cb); this.notify(); }
@@ -304,15 +297,14 @@
         }
 
         // ==========================================
-        // 3. MÓDULO ACÚSTICO: AUTO-CALIBRACIÓN VECTOR 3
+        // 3. MOTOR ACÚSTICO (HPS + RUIDO DINÁMICO)
         // ==========================================
         class AudioEngine {
             constructor(stateManager) {
                 this.stateManager = stateManager;
                 this.audioCtx = null; this.analyser = null;
                 this.dataArray = null; this.stream = null;
-                this.animationId = null;
-                this.baseNoiseFloor = -60; // Valor seguro predeterminado
+                this.animationId = null; this.baseNoiseFloor = -60; 
             }
 
             async startAndCalibrate() {
@@ -331,7 +323,6 @@
                     
                     this.stateManager.update({ status: 'calibrating' });
 
-                    // Fase de Calibración Matemática de 2 segundos
                     let maxNoise = -Infinity;
                     const endTime = Date.now() + 2000;
                     
@@ -344,7 +335,6 @@
                             if (Date.now() < endTime) {
                                 requestAnimationFrame(calibrateTick);
                             } else {
-                                // Establecer piso de ruido limitando extremos (entre -80 y -30)
                                 this.baseNoiseFloor = Math.max(-80, Math.min(maxNoise + 10, -30));
                                 this.stateManager.update({ status: 'active' });
                                 this.processFrame();
@@ -353,9 +343,7 @@
                         };
                         calibrateTick();
                     });
-                } catch (err) {
-                    console.error(err); alert("No se pudo acceder al hardware de audio crudo."); return false;
-                }
+                } catch (err) { alert("Error de hardware."); return false; }
             }
 
             processFrame() {
@@ -365,10 +353,7 @@
                 const details = this.extractPitchesDynamic();
                 const rawPitches = details.map(d => d.pitch);
                 const mask = HarmonyEngine.createPitchClassSet(rawPitches);
-                
                 const tension = HarmonyEngine.evaluateTension(rawPitches);
-                
-                // Vector 2: Pathfinding con conocimiento de escala
                 const path = HarmonyEngine.suggestPath(mask, this.stateManager.state.scale_mask);
 
                 this.stateManager.update({
@@ -383,10 +368,9 @@
             extractPitchesDynamic() {
                 const binCount = this.analyser.frequencyBinCount;
                 const sampleRate = this.audioCtx.sampleRate;
-                
-                // Aplicar compensación del usuario al piso de ruido calculado
                 const offset = this.stateManager.state.sens_offset; 
                 const currentNoiseFloor = this.baseNoiseFloor - offset;
+                const scaleRoot = this.stateManager.state.scale_root; // Para Enarmonía
 
                 let detected = [];
 
@@ -399,17 +383,15 @@
                         const midi = Math.round(12 * Math.log2(freq / 440) + 69);
                         const pitch = ((midi % 12) + 12) % 12;
                         const oct = Math.floor(midi / 12) - 1;
+                        const spellName = HarmonyEngine.getNoteName(pitch, scaleRoot);
                         
-                        detected.push({ pitch, octave: oct, midi, amp, name: `${noteNames[pitch]}${oct}` });
+                        detected.push({ pitch, octave: oct, midi, amp, name: `${spellName}${oct}` });
                     }
                 }
 
                 const map = new Map();
                 for (const d of detected) {
-                    // Mantener el armónico con mayor amplitud para la misma nota
-                    if (!map.has(d.pitch) || map.get(d.pitch).amp < d.amp) {
-                        map.set(d.pitch, d);
-                    }
+                    if (!map.has(d.pitch) || map.get(d.pitch).amp < d.amp) map.set(d.pitch, d);
                 }
                 return Array.from(map.values()).sort((a, b) => a.midi - b.midi);
             }
@@ -431,15 +413,12 @@
                 if (this.animationId) cancelAnimationFrame(this.animationId);
                 if (this.stream) this.stream.getTracks().forEach(t => t.stop());
                 if (this.audioCtx) this.audioCtx.close();
-                this.stateManager.update({ 
-                    status: 'standby', active_mask: 0, notes_array: [], notes_detail: [],
-                    tension_level: 0, color: {r:34,g:34,b:34}, description: "Hardware desconectado", suggestion: null
-                });
+                this.stateManager.update({ status: 'standby', active_mask: 0, notes_detail: [], tension_level: 0, suggestion: null });
             }
         }
 
         // ==========================================
-        // 4. PROYECTOR VISUAL (FILTRADO DIATÓNICO)
+        // 4. MOTOR DE PROYECCIÓN MÚLTIPLE (SOLAR / LINEAL)
         // ==========================================
         class Renderer {
             constructor(canvasId, stateManager) {
@@ -452,10 +431,8 @@
 
             resize(state) {
                 const dpr = window.devicePixelRatio || 1;
-                this.canvas.width = window.innerWidth * dpr;
-                this.canvas.height = window.innerHeight * dpr;
-                this.canvas.style.width = `${window.innerWidth}px`;
-                this.canvas.style.height = `${window.innerHeight}px`;
+                this.canvas.width = window.innerWidth * dpr; this.canvas.height = window.innerHeight * dpr;
+                this.canvas.style.width = `${window.innerWidth}px`; this.canvas.style.height = `${window.innerHeight}px`;
                 this.ctx.scale(dpr, dpr);
                 this.draw(state);
             }
@@ -469,17 +446,23 @@
                 this.ctx.font = `bold ${size * 0.55}px monospace`; 
                 this.ctx.textAlign = 'center'; this.ctx.textBaseline = 'middle';
                 this.ctx.shadowBlur = 0; this.ctx.fillText(n, x, y);
-                this.ctx.globalAlpha = 1; // Reset
+                this.ctx.globalAlpha = 1; 
             }
 
             draw(state) {
+                if (state.view_mode === 'linear') {
+                    this.drawLinearMap(state);
+                } else {
+                    this.drawRadialSystem(state);
+                }
+            }
+
+            drawRadialSystem(state) {
                 const w = window.innerWidth, h = window.innerHeight;
                 this.ctx.clearRect(0, 0, w, h);
-                
-                const { active_mask, notes_detail, color, suggestion, scale_mask } = state;
+                const { active_mask, notes_detail, color, suggestion, scale_mask, scale_root } = state;
                 const cx = w / 2, cy = h / 2;
                 const dim = Math.min(w, h);
-                
                 const r1 = dim * 0.18, r2 = dim * 0.32, r3 = dim * 0.42;
 
                 const drawRing = (r, dash, op) => {
@@ -496,10 +479,9 @@
                 if (active_mask === 0 || notes_detail.length === 0) {
                     for(let i=0; i<12; i++) {
                         const a = (i * Math.PI*2)/12 - Math.PI/2;
-                        // Vector 1: Filtrado visual en silencio absoluto
-                        const isDiatonic = (scale_mask & (1 << i)) !== 0;
-                        const alpha = isDiatonic ? 1 : 0.1; 
-                        this.drawNode(noteNames[i], cx+Math.cos(a)*r3, cy+Math.sin(a)*r3, 14, '#0a0a0c', false, 0, '#222', alpha);
+                        const alpha = (scale_mask & (1 << i)) !== 0 ? 1 : 0.1; 
+                        const name = HarmonyEngine.getNoteName(i, scale_root);
+                        this.drawNode(name, cx+Math.cos(a)*r3, cy+Math.sin(a)*r3, 14, '#0a0a0c', false, 0, '#222', alpha);
                     }
                     return;
                 }
@@ -510,13 +492,14 @@
                 const planets = [], moons = [], space = [];
                 for(let i=0; i<12; i++) {
                     if (i === root.pitch) continue;
+                    const spellName = HarmonyEngine.getNoteName(i, scale_root);
                     if ((active_mask & (1<<i))) {
                         const d = notes_detail.find(n => n.pitch === i);
-                        planets.push(d ? d : {pitch: i, name: noteNames[i]});
+                        planets.push(d ? d : {pitch: i, name: spellName});
                     } else if (suggestion && (suggestion.mask & (1<<i))) {
-                        moons.push({pitch: i, name: noteNames[i]});
+                        moons.push({pitch: i, name: spellName});
                     } else {
-                        space.push({pitch: i, name: noteNames[i]});
+                        space.push({pitch: i, name: spellName});
                     }
                 }
 
@@ -530,18 +513,52 @@
                             this.ctx.strokeStyle = `rgba(${color.r},${color.g},${color.b},0.4)`; 
                             this.ctx.lineWidth = 2; this.ctx.stroke();
                         }
-                        // Filtrado Diatónico visual para espacio exterior
-                        let alpha = 1;
-                        if (checkScale) {
-                            alpha = (scale_mask & (1 << n.pitch)) !== 0 ? 1 : 0.05;
-                        }
+                        let alpha = checkScale ? ((scale_mask & (1 << n.pitch)) !== 0 ? 1 : 0.05) : 1;
                         this.drawNode(n.name, nx, ny, size, col, dark, blur, stroke, alpha);
                     });
                 };
 
                 dist(planets, r1, 26, rgb, true, 15, '#fff', true, false);
                 dist(moons, r2, 18, 'rgba(255,255,255,0.1)', false, 0, '#666', false, false);
-                dist(space, r3, 12, '#0a0a0c', false, 0, '#222', false, true); // Aplica checkScale a Órbita 3
+                dist(space, r3, 12, '#0a0a0c', false, 0, '#222', false, true);
+            }
+
+            // Nuevo Visor Estructural de Partitura (Linear Map)
+            drawLinearMap(state) {
+                const w = window.innerWidth, h = window.innerHeight;
+                this.ctx.clearRect(0, 0, w, h);
+                const { active_mask, notes_detail, color, scale_root } = state;
+                
+                const rgb = `rgb(${color.r},${color.g},${color.b})`;
+                const octaves = [2, 3, 4, 5, 6];
+                const keyWidth = w / 14;
+                const rowHeight = h / (octaves.length + 2);
+                
+                this.ctx.fillStyle = '#222';
+                this.ctx.font = '10px monospace';
+                this.ctx.textAlign = 'right';
+                
+                octaves.forEach((oct, i) => {
+                    const y = h - (i * rowHeight) - rowHeight*1.5;
+                    this.ctx.fillText(`Oct ${oct}`, 40, y + 4);
+                    this.ctx.beginPath(); this.ctx.moveTo(50, y); this.ctx.lineTo(w, y);
+                    this.ctx.strokeStyle = '#222'; this.ctx.lineWidth = 1; this.ctx.stroke();
+                });
+
+                if (active_mask > 0) {
+                    notes_detail.forEach(note => {
+                        if(note.octave >= 2 && note.octave <= 6) {
+                            const x = 70 + (note.pitch * keyWidth);
+                            const y = h - ((note.octave - 2) * rowHeight) - rowHeight*1.5;
+                            this.drawNode(note.name, x, y, 20, rgb, true, 15, '#fff');
+                            
+                            // Linea vertical de guía
+                            this.ctx.beginPath(); this.ctx.moveTo(x, y + 20); this.ctx.lineTo(x, h);
+                            this.ctx.strokeStyle = `rgba(${color.r},${color.g},${color.b},0.2)`; 
+                            this.ctx.lineWidth = 2; this.ctx.stroke();
+                        }
+                    });
+                }
             }
         }
 
@@ -559,14 +576,16 @@
             pause: document.getElementById('pause-btn'), stop: document.getElementById('stop-btn'),
             clear: document.getElementById('clear-btn'), calibMsg: document.getElementById('calibration-msg'),
             sensSlider: document.getElementById('sens-slider'), sensVal: document.getElementById('sens-val'),
-            scaleRoot: document.getElementById('scale-root'), scaleType: document.getElementById('scale-type')
+            scaleRoot: document.getElementById('scale-root'), scaleType: document.getElementById('scale-type'),
+            viewMode: document.getElementById('view-mode')
         };
 
-        // Enlazar Configuración
+        // Binding UI
         ui.sensSlider.value = stateManager.state.sens_offset;
         ui.sensVal.textContent = stateManager.state.sens_offset + ' dB';
         ui.scaleRoot.value = stateManager.state.scale_root;
         ui.scaleType.value = stateManager.state.scale_type;
+        ui.viewMode.value = stateManager.state.view_mode;
 
         ui.sensSlider.addEventListener('input', (e) => {
             const val = parseInt(e.target.value);
@@ -574,15 +593,16 @@
             stateManager.update({ sens_offset: val });
         });
 
-        const updateScale = () => {
+        const updateConfig = () => {
             stateManager.update({ 
-                scale_root: parseInt(ui.scaleRoot.value), scale_type: ui.scaleType.value 
+                scale_root: parseInt(ui.scaleRoot.value), scale_type: ui.scaleType.value,
+                view_mode: ui.viewMode.value
             });
         };
-        ui.scaleRoot.addEventListener('change', updateScale);
-        ui.scaleType.addEventListener('change', updateScale);
+        ui.scaleRoot.addEventListener('change', updateConfig);
+        ui.scaleType.addEventListener('change', updateConfig);
+        ui.viewMode.addEventListener('change', updateConfig);
 
-        // Enlazar Botones
         ui.menu.onclick = () => ui.sidebar.classList.add('active');
         ui.close.onclick = () => ui.sidebar.classList.remove('active');
 
@@ -602,15 +622,12 @@
             ui.calibMsg.style.display = 'none';
         };
 
-        ui.clear.onclick = () => {
-            stateManager.clearHistory();
-            ui.sidebar.classList.remove('active');
-        };
+        ui.clear.onclick = () => { stateManager.clearHistory(); ui.sidebar.classList.remove('active'); };
 
         stateManager.subscribe(s => {
             const hist = s.history.length ? s.history.map(h => h.name).join(' ➔ ') : 'Memoria vacía';
             const notes = s.notes_detail.map(n => n.name).join(', ') || '[]';
-            const sug = s.suggestion ? `<span style="color: #fff">${s.suggestion.name}</span>` : 'Ninguna';
+            const sug = s.suggestion ? `<span style="color: #fff">${HarmonyEngine.getNoteName(s.suggestion.mask, s.scale_root)} ${s.suggestion.name.split(' ')[1] || ''}</span>` : 'Ninguna';
             let statColor = '#888';
             if (s.status === 'active') statColor = '#0f0';
             if (s.status === 'paused') statColor = '#fa0';
@@ -620,10 +637,10 @@
                 <div style="color: ${statColor}; font-weight: bold; font-size: 14px; margin-bottom: 10px;">
                     ESTADO: ${s.status.toUpperCase()}
                 </div>
-                Escala Activa: ${noteNames[s.scale_root]} ${s.scale_type}<br>
-                Nodos Activos: ${notes}<br>
+                Escala: ${HarmonyEngine.getNoteName(s.scale_root, s.scale_root)} ${s.scale_type}<br>
+                Nodos: ${notes}<br>
                 Tensión: ${s.tension_level.toFixed(2)}<br>
-                Pathfinding: ${sug}
+                Ruta: ${sug}
                 <div class="history-track">
                     <strong>Matriz Histórica:</strong><br>${hist}
                 </div>
@@ -631,20 +648,12 @@
         });
 
         ui.start.onclick = async () => {
-            ui.start.style.display = 'none';
-            ui.calibMsg.style.display = 'block';
-            
-            if (await audioEngine.startAndCalibrate()) {
-                ui.overlay.style.display = 'none';
-            }
-            
-            ui.start.style.display = 'block';
-            ui.calibMsg.style.display = 'none';
+            ui.start.style.display = 'none'; ui.calibMsg.style.display = 'block';
+            if (await audioEngine.startAndCalibrate()) ui.overlay.style.display = 'none';
+            ui.start.style.display = 'block'; ui.calibMsg.style.display = 'none';
         };
 
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
-        }
+        if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
     </script>
 </body>
 </html>
