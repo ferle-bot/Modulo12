@@ -1,0 +1,17 @@
+{
+  "escalas": {
+    "Heptatónicas": {
+      "Mayor": { "intervalos": [0, 2, 4, 5, 7, 9, 11], "gravedad": "estable" },
+      "Menor Armónica": { "intervalos": [0, 2, 3, 5, 7, 8, 11], "gravedad": "tensa" }
+    },
+    "Pentatónicas": {
+      "Mayor": { "intervalos": [0, 2, 4, 7, 9], "gravedad": "abierta" }
+    }
+  },
+  "armonicos": {
+    "Naturaleza": {
+      "Serie 1-8": { "intervalos": [0, 4, 7, 10], "frecuencias_relativas": [1, 2, 3, 4, 5, 6, 7, 8] }
+    }
+  }
+}
+
