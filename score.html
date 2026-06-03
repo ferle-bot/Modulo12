@@ -9,73 +9,106 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/abcjs@6.2.2/abcjs-audio.css">
 
     <style>
-        :root { --bg-color: #050508; --accent: #00ffcc; --panel: #0a0a0e; }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background-color: var(--bg-color); color: #fff; font-family: monospace; overflow-x: hidden; }
+        :root { --bg-color: #041a24; --accent: #00ffcc; --accent-hover: #00e6b8; --panel: #0a0a0e; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background-color: var(--bg-color); color: #fff; font-family: monospace; overflow-x: hidden; display: flex; flex-direction: column; }
         
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #0a0a0e; border-radius: 4px; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; border: 1px solid #0a0a0e; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
         
-        #header { background: rgba(10, 10, 15, 0.95); border-bottom: 1px solid #222; padding: 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; backdrop-filter: blur(10px); }
-        .title { color: var(--accent); margin: 0; letter-spacing: 2px; font-size: 24px; display: flex; align-items: center; gap: 15px;}
+        #header { background: rgba(4, 26, 36, 0.95); border-bottom: 1px solid #1a3a4a; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; backdrop-filter: blur(10px); }
+        .title { color: var(--accent); margin: 0; letter-spacing: 2px; font-size: 20px; display: flex; align-items: center; gap: 15px;}
         
-        #live-status { font-size: 12px; padding: 4px 8px; border-radius: 4px; background: #222; color: #888; border: 1px solid #333; letter-spacing: 0; }
-        #live-status.active { background: #330000; color: #ff3300; border-color: #ff3300; animation: pulse 2s infinite; }
+        #live-status { font-size: 11px; padding: 4px 8px; border-radius: 4px; background: #222; color: #888; border: 1px solid #333; letter-spacing: 0; }
+        #live-status.active { background: #330000; color: #ff3333; border-color: #ff3333; animation: pulse 2s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
-        .upload-btn { background-color: #111; color: var(--accent); border: 1px solid var(--accent); padding: 10px 20px; font-size: 14px; font-weight: bold; cursor: pointer; border-radius: 4px; font-family: monospace; transition: all 0.2s; }
-        .upload-btn:hover { background-color: var(--accent); color: #000; }
-        input[type="file"] { display: none; }
+        .action-btn { background-color: transparent; color: #fff; border: 1px solid #444; padding: 8px 16px; font-size: 13px; cursor: pointer; border-radius: 4px; font-family: monospace; transition: all 0.2s; display: flex; align-items: center; gap: 8px; }
+        .action-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .btn-primary { background-color: var(--accent); color: #000; border-color: var(--accent); font-weight: bold; }
+        .btn-primary:hover { background-color: var(--accent-hover); color: #000; }
+        
+        /* Panel Lateral Oculto (Off-Canvas) */
+        #sidebar { position: fixed; top: 0; right: -360px; width: 340px; height: 100%; background: rgba(10, 10, 12, 0.98); border-left: 1px solid #222; transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 200; padding: 25px; box-shadow: -10px 0 30px rgba(0,0,0,0.8); box-sizing: border-box; overflow-y: auto; }
+        #sidebar.active { right: 0; }
+        #close-sidebar { font-size: 32px; cursor: pointer; text-align: right; margin-bottom: 5px; color: #666; line-height: 1; transition: color 0.2s; display: block; }
+        #close-sidebar:hover { color: var(--accent); }
 
-        #main-container { display: flex; height: calc(100vh - 80px); }
-        
-        #data-panel { width: 320px; background: var(--panel); border-right: 1px solid #222; padding: 20px; overflow-y: auto; box-sizing: border-box; }
-        
         .db-session-btn { background: #111; border: 1px solid #333; color: #fff; width: 100%; text-align: left; padding: 12px; margin-bottom: 10px; cursor: pointer; font-family: monospace; font-size: 12px; border-radius: 4px; transition: border-color 0.2s; }
         .db-session-btn:hover { border-color: var(--accent); }
         
-        #score-panel { flex: 1; padding: 40px; overflow-y: auto; background: #e8e8e8; display: flex; flex-direction: column; align-items: center; }
+        input[type="file"] { display: none; }
 
-        .abc-container { background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: 100%; max-width: 900px; color: #000; margin-bottom: 20px; overflow-x: auto; }
-        .meta-info { color: #888; font-size: 12px; margin-bottom: 15px; line-height: 1.8; }
-        .meta-value { color: var(--accent); font-weight: bold; }
-        .abcjs-inline-audio { max-width: 900px; width: 100%; margin-bottom: 20px; }
+        /* Lienzo Principal */
+        #score-workspace { flex: 1; padding: 40px 20px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; }
+
+        .abc-container { background: #ffffff; padding: 40px; border-radius: 4px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); width: 100%; max-width: 1000px; color: #000; margin-bottom: 20px; overflow-x: auto; min-height: 400px; }
+        .abcjs-inline-audio { max-width: 1000px; width: 100%; margin-bottom: 20px; border-radius: 4px; overflow: hidden; }
+
+        /* Modo de Impresión / Exportación a PDF */
+        @media print {
+            body { background: #fff; margin: 0; padding: 0; }
+            #header, #sidebar, .abcjs-inline-audio { display: none !important; }
+            #score-workspace { padding: 0; display: block; }
+            .abc-container { box-shadow: none; max-width: 100%; width: 100%; padding: 0; border-radius: 0; margin: 0; page-break-inside: avoid; }
+        }
     </style>
 </head>
 <body>
 
     <div id="header">
-        <h1 class="title">ModuloScore <span id="live-status">ESPERANDO SEÑAL Z12...</span></h1>
+        <h1 class="title">ModuloScore <span id="live-status">ESPERANDO Z12...</span></h1>
         <div style="display:flex; gap:10px;">
-            <button class="upload-btn" onclick="loadFromDB()">⟳ Refrescar DB Local</button>
-            <label class="upload-btn" style="border-color:#555; color:#aaa;">
-                Importar JSON Físico
-                <input type="file" id="json-upload" accept=".json">
-            </label>
+            <button class="action-btn btn-primary" onclick="exportPDF()">🖨️ PDF</button>
+            <button class="action-btn" id="open-sidebar-btn">☰ Sesiones</button>
         </div>
     </div>
 
-    <div id="main-container">
-        <div id="data-panel">
-            <h3 style="color: var(--accent); margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px;">Tubería de Datos DB</h3>
-            <div id="db-list" style="margin-bottom: 30px; color: #666; font-size: 12px;">Consultando base de datos...</div>
-            
-            <h3 style="color: #fff; border-bottom: 1px solid #333; padding-bottom: 10px;">Traductor RAW (ABC)</h3>
-            <pre id="abc-raw" style="color: #888; font-size: 11px; white-space: pre-wrap; word-wrap: break-word;"></pre>
+    <div id="sidebar">
+        <span id="close-sidebar">×</span>
+        <h3 style="color: var(--accent); margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px;">Gestor de Sesiones</h3>
+        
+        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+            <button class="action-btn" onclick="loadFromDB()" style="flex: 1; justify-content: center; font-size: 11px;">⟳ Refrescar DB</button>
+            <label class="action-btn" style="flex: 1; justify-content: center; font-size: 11px;">
+                Cargar JSON
+                <input type="file" id="json-upload" accept=".json">
+            </label>
         </div>
 
-        <div id="score-panel">
-            <div id="audio-synth"></div>
-            <div id="sheet-music" class="abc-container">
-                <div style="text-align: center; color: #888; margin-top: 50px;">
-                    Selecciona una sesión de la base de datos lateral o comienza a tocar en Modulo12 para visualización en vivo.
-                </div>
+        <div id="db-list" style="margin-bottom: 30px; color: #666; font-size: 12px; min-height: 150px;">Consultando base de datos local...</div>
+        
+        <h3 style="color: #fff; border-bottom: 1px solid #333; padding-bottom: 10px; font-size: 14px;">Traductor RAW (ABC)</h3>
+        <pre id="abc-raw" style="color: #888; font-size: 10px; white-space: pre-wrap; word-wrap: break-word; background: #050508; padding: 10px; border-radius: 4px; border: 1px solid #222;"></pre>
+    </div>
+
+    <div id="score-workspace">
+        <div id="audio-synth"></div>
+        <div id="sheet-music" class="abc-container">
+            <div style="text-align: center; color: #aaa; margin-top: 80px; font-size: 16px;">
+                <p>El lienzo está vacío.</p>
+                <p style="font-size: 13px; margin-top: 10px;">Abre el <strong>Menú de Sesiones</strong> para cargar una captura local,<br>o inicia a tocar en <strong>Modulo12</strong> para renderizado en vivo.</p>
             </div>
         </div>
     </div>
 
     <script>
         'use strict';
+
+        // ==========================================
+        // UI & CONTROLES DE MENÚ
+        // ==========================================
+        const sidebar = document.getElementById('sidebar');
+        document.getElementById('open-sidebar-btn').onclick = () => {
+            sidebar.classList.add('active');
+            loadFromDB(); // Autocargar DB al abrir
+        };
+        document.getElementById('close-sidebar').onclick = () => sidebar.classList.remove('active');
+
+        function exportPDF() {
+            window.print();
+        }
 
         // ==========================================
         // 1. Z12 BROADCAST BUS (RECEPTOR EN VIVO)
@@ -121,9 +154,6 @@
 
         async function loadFromDB() {
             const listDiv = document.getElementById('db-list');
-            liveIndicator.textContent = 'ESPERANDO SEÑAL Z12...';
-            liveIndicator.classList.remove('active');
-
             try {
                 const sessions = await ModuloDB.getAllSessions();
                 if (sessions.length === 0) {
@@ -136,16 +166,17 @@
                     const s = sessions[i];
                     const btn = document.createElement('button');
                     btn.className = 'db-session-btn';
-                    btn.innerHTML = `<strong style="color:var(--accent)">${s.date}</strong><br>Perfil: ${s.profile}<br>Nodos: ${s.events ? s.events.length : 0}`;
+                    btn.innerHTML = `<strong style="color:var(--accent)">${s.date}</strong><br>Perfil: ${s.profile}<br>Eventos: ${s.events ? s.events.length : 0}`;
                     btn.onclick = () => {
-                        liveIndicator.textContent = 'LECTURA DB';
+                        liveIndicator.textContent = 'LECTURA DB LOCAL';
                         liveIndicator.classList.remove('active');
+                        sidebar.classList.remove('active'); // Cerrar menú al seleccionar para ver la partitura
                         processSession(s);
                     };
                     listDiv.appendChild(btn);
                 }
             } catch (err) {
-                listDiv.innerHTML = "Error al conectar con IndexedDB.";
+                listDiv.innerHTML = "Error al conectar con IndexedDB local.";
             }
         }
 
@@ -219,7 +250,7 @@
                 const visualObj = ABCJS.renderAbc("sheet-music", abcText, {
                     responsive: "resize",
                     add_classes: true,
-                    staffwidth: 800
+                    staffwidth: 900
                 });
 
                 if (ABCJS.synth.supportsAudio()) {
@@ -243,8 +274,9 @@
             const reader = new FileReader();
             reader.onload = (e) => {
                 try {
-                    liveIndicator.textContent = 'MODO ARCHIVO OFFLINE';
+                    liveIndicator.textContent = 'ARCHIVO OFFLINE';
                     liveIndicator.classList.remove('active');
+                    sidebar.classList.remove('active');
                     const data = JSON.parse(e.target.result);
                     const session = data.session || data; 
                     if (data.session_events) session.events = data.session_events;
