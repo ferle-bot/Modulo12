@@ -1,8 +1,20 @@
 {
   "metadata": {
-    "version": "3.0",
-    "tipo": "Catálogo Transmodal Z12 Funcional",
-    "descripcion": "Librería estática avanzada: Escalas, Modos, Campos Armónicos y Reglas de Tensión."
+    "version": "4.0",
+    "tipo": "Catálogo Transmodal Z12 Fractal",
+    "descripcion": "Librería estática avanzada: Modos, Campos Armónicos, Reglas de Tensión y Semillas de Recursividad Geométrica."
+  },
+  "geometria_fractal": {
+    "constantes": {
+      "phi": 1.6180339887,
+      "crecimiento_octava": 2.0,
+      "base_logaritmica": 2.7182818284
+    },
+    "reglas_iteracion": {
+      "profundidad_maxima": 4,
+      "decaimiento_opacidad": 0.4,
+      "decaimiento_radio": 0.618
+    }
   },
   "escalas": {
     "diatonicas": {
@@ -104,5 +116,12 @@
     "min7": ["7", "m7b5", "Maj7"],
     "7": ["Maj7", "min7", "mMaj7"],
     "resolucion_clasica": "distancia_quinta_descendente"
+  },
+  "armonicos_fisicos": {
+    "Serie Natural": {
+      "semilla_base": [0],
+      "nodos_recursivos": [0, 12, 19, 24, 28, 31, 34, 36],
+      "descripcion": "El vector de crecimiento fractal puro basado en la vibración acústica."
+    }
   }
 }
