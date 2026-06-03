@@ -1,8 +1,8 @@
 {
   "metadata": {
-    "version": "4.0",
-    "tipo": "Catálogo Transmodal Z12 Fractal",
-    "descripcion": "Librería estática avanzada: Modos, Campos Armónicos, Reglas de Tensión y Semillas de Recursividad Geométrica."
+    "version": "4.5",
+    "tipo": "Catálogo Transmodal Z12 Fractal y Colorimétrico",
+    "descripcion": "Librería estática avanzada: Modos, Campos Armónicos, Semillas Fractales, Mapeo HSL Interválico y Enrutamiento Improvisacional."
   },
   "geometria_fractal": {
     "constantes": {
@@ -14,59 +14,49 @@
       "profundidad_maxima": 4,
       "decaimiento_opacidad": 0.4,
       "decaimiento_radio": 0.618
+    },
+    "colorimetria_intervalica": {
+      "modelo": "HSL",
+      "explicacion": "Mapeo de tonos (H) basado en la consonancia acústica. Tónica = Cian, Quintas = Azules fríos, Terceras Mayores = Cálidos/Amarillo, Terceras Menores = Púrpura, Tritono = Rojo.",
+      "mapeo": {
+        "0": { "h": 180, "s": 100, "l": 50 },
+        "1": { "h": 330, "s": 80, "l": 50 },
+        "2": { "h": 200, "s": 70, "l": 60 },
+        "3": { "h": 280, "s": 90, "l": 55 },
+        "4": { "h": 50, "s": 100, "l": 50 },
+        "5": { "h": 160, "s": 80, "l": 60 },
+        "6": { "h": 0, "s": 100, "l": 50 },
+        "7": { "h": 220, "s": 100, "l": 55 },
+        "8": { "h": 300, "s": 80, "l": 45 },
+        "9": { "h": 40, "s": 90, "l": 55 },
+        "10": { "h": 260, "s": 80, "l": 60 },
+        "11": { "h": 20, "s": 90, "l": 50 }
+      }
     }
   },
   "escalas": {
     "diatonicas": {
-      "Mayor": {
-        "mask": [0, 2, 4, 5, 7, 9, 11],
-        "gravedad_base": 0.0,
-        "luminosidad": "brillante",
-        "funciones": {
-          "tonica": [0, 4, 7],
-          "subdominante": [5, 9],
-          "dominante": [7, 11]
-        },
-        "acordes_grado": ["Maj7", "min7", "min7", "Maj7", "7", "min7", "dim7"]
-      },
-      "Menor Natural": {
-        "mask": [0, 2, 3, 5, 7, 8, 10],
-        "gravedad_base": 0.2,
-        "luminosidad": "oscura",
-        "funciones": {
-          "tonica": [0, 3, 7],
-          "subdominante": [2, 5, 8],
-          "dominante": [7, 10]
-        },
-        "acordes_grado": ["min7", "dim7", "Maj7", "min7", "min7", "Maj7", "7"]
-      }
+      "Mayor (Jónica)": { "mask": [0, 2, 4, 5, 7, 9, 11], "gravedad_base": 0.0, "luminosidad": "brillante", "acordes_grado": ["Maj7", "min7", "min7", "Maj7", "7", "min7", "m7b5"] },
+      "Dórica": { "mask": [0, 2, 3, 5, 7, 9, 10], "gravedad_base": 0.3, "luminosidad": "neutra oscura", "acordes_grado": ["min7", "min7", "Maj7", "7", "min7", "m7b5", "Maj7"] },
+      "Frigia": { "mask": [0, 1, 3, 5, 7, 8, 10], "gravedad_base": 0.5, "luminosidad": "oscura", "acordes_grado": ["min7", "Maj7", "7", "min7", "m7b5", "Maj7", "min7"] },
+      "Lidia": { "mask": [0, 2, 4, 6, 7, 9, 11], "gravedad_base": 0.1, "luminosidad": "muy brillante", "acordes_grado": ["Maj7", "7", "min7", "m7b5", "Maj7", "min7", "min7"] },
+      "Mixolidia": { "mask": [0, 2, 4, 5, 7, 9, 10], "gravedad_base": 0.2, "luminosidad": "brillante tensa", "acordes_grado": ["7", "min7", "m7b5", "Maj7", "min7", "min7", "Maj7"] },
+      "Menor Natural (Eólica)": { "mask": [0, 2, 3, 5, 7, 8, 10], "gravedad_base": 0.2, "luminosidad": "oscura", "acordes_grado": ["min7", "m7b5", "Maj7", "min7", "min7", "Maj7", "7"] },
+      "Locria": { "mask": [0, 1, 3, 5, 6, 8, 10], "gravedad_base": 0.9, "luminosidad": "muy oscura inestable", "acordes_grado": ["m7b5", "Maj7", "min7", "min7", "Maj7", "7", "min7"] }
+    },
+    "pentatonicas_y_blues": {
+      "Pentatónica Mayor": { "mask": [0, 2, 4, 7, 9], "gravedad_base": 0.0, "luminosidad": "brillante" },
+      "Pentatónica Menor": { "mask": [0, 3, 5, 7, 10], "gravedad_base": 0.1, "luminosidad": "oscura" },
+      "Blues": { "mask": [0, 3, 5, 6, 7, 10], "gravedad_base": 0.4, "luminosidad": "tensa blues" }
     },
     "menor_armonica_y_modos": {
-      "Menor Armónica": {
-        "mask": [0, 2, 3, 5, 7, 8, 11],
-        "gravedad_base": 0.6,
-        "acordes_grado": ["mMaj7", "dim7", "augMaj7", "min7", "7", "Maj7", "dim7"]
-      },
-      "Frigia Mayor (Mixolidia b9 b13)": {
-        "mask": [0, 1, 4, 5, 7, 8, 10],
-        "gravedad_base": 0.8
-      }
+      "Menor Armónica": { "mask": [0, 2, 3, 5, 7, 8, 11], "gravedad_base": 0.6, "acordes_grado": ["mMaj7", "m7b5", "augMaj7", "min7", "7", "Maj7", "dim7"] },
+      "Frigia Mayor (Mixolidia b9 b13)": { "mask": [0, 1, 4, 5, 7, 8, 10], "gravedad_base": 0.8 }
     },
     "menor_melodica_y_modos": {
-      "Menor Melódica": {
-        "mask": [0, 2, 3, 5, 7, 9, 11],
-        "gravedad_base": 0.4,
-        "acordes_grado": ["mMaj7", "min7", "augMaj7", "7", "7", "m7b5", "m7b5"]
-      },
-      "Lidia Aumentada": {
-        "mask": [0, 2, 4, 6, 8, 9, 11],
-        "gravedad_base": 0.7
-      },
-      "Alterada (Super Locria)": {
-        "mask": [0, 1, 3, 4, 6, 8, 10],
-        "gravedad_base": 1.0,
-        "luminosidad": "muy oscura"
-      }
+      "Menor Melódica": { "mask": [0, 2, 3, 5, 7, 9, 11], "gravedad_base": 0.4, "acordes_grado": ["mMaj7", "min7", "augMaj7", "7", "7", "m7b5", "m7b5"] },
+      "Lidia Aumentada": { "mask": [0, 2, 4, 6, 8, 9, 11], "gravedad_base": 0.7 },
+      "Alterada (Super Locria)": { "mask": [0, 1, 3, 4, 6, 8, 10], "gravedad_base": 1.0, "luminosidad": "muy oscura" }
     },
     "bebop": {
       "Bebop Mayor": { "mask": [0, 2, 4, 5, 7, 8, 9, 11], "gravedad_base": 0.2 },
@@ -80,42 +70,42 @@
     }
   },
   "diccionario_acordes": {
-    "Maj7": {
-      "mask": [0, 4, 7, 11],
-      "tension": 0.0,
-      "extensiones": [9, 13],
-      "alteraciones": ["#11"]
-    },
-    "min7": {
-      "mask": [0, 3, 7, 10],
-      "tension": 0.1,
-      "extensiones": [9, 11, 13],
-      "alteraciones": []
-    },
-    "7": {
-      "mask": [0, 4, 7, 10],
-      "tension": 0.5,
-      "extensiones": [9, 13],
-      "alteraciones": ["b9", "#9", "#11", "b13"]
-    },
-    "mMaj7": {
-      "mask": [0, 3, 7, 11],
-      "tension": 0.4,
-      "extensiones": [9, 11],
-      "alteraciones": []
-    },
-    "dim7": {
-      "mask": [0, 3, 6, 9],
-      "tension": 0.9,
-      "extensiones": [],
-      "alteraciones": []
-    }
+    "May": { "mask": [0, 4, 7], "tension": 0.0, "extensiones": [9], "alteraciones": [] },
+    "min": { "mask": [0, 3, 7], "tension": 0.05, "extensiones": [9, 11], "alteraciones": [] },
+    "dim": { "mask": [0, 3, 6], "tension": 0.7, "extensiones": [], "alteraciones": [] },
+    "aug": { "mask": [0, 4, 8], "tension": 0.6, "extensiones": [9], "alteraciones": [] },
+    "sus2": { "mask": [0, 2, 7], "tension": 0.2, "extensiones": [], "alteraciones": [] },
+    "sus4": { "mask": [0, 5, 7], "tension": 0.3, "extensiones": [], "alteraciones": [] },
+    "Maj7": { "mask": [0, 4, 7, 11], "tension": 0.0, "extensiones": [9, 13], "alteraciones": ["#11"] },
+    "min7": { "mask": [0, 3, 7, 10], "tension": 0.1, "extensiones": [9, 11, 13], "alteraciones": [] },
+    "7": { "mask": [0, 4, 7, 10], "tension": 0.5, "extensiones": [9, 13], "alteraciones": ["b9", "#9", "#11", "b13"] },
+    "mMaj7": { "mask": [0, 3, 7, 11], "tension": 0.4, "extensiones": [9, 11], "alteraciones": [] },
+    "m7b5": { "mask": [0, 3, 6, 10], "tension": 0.75, "extensiones": [11], "alteraciones": [] },
+    "dim7": { "mask": [0, 3, 6, 9], "tension": 0.9, "extensiones": [], "alteraciones": [] },
+    "7sus4": { "mask": [0, 5, 7, 10], "tension": 0.35, "extensiones": [9, 13], "alteraciones": ["b9"] }
   },
   "reglas_movimiento": {
+    "May": ["min", "7", "Maj7"],
+    "min": ["dim", "7", "min7"],
+    "dim": ["May", "min"],
+    "aug": ["min", "May"],
+    "sus4": ["May", "7"],
     "Maj7": ["min7", "7", "dim7"],
-    "min7": ["7", "m7b5", "Maj7"],
-    "7": ["Maj7", "min7", "mMaj7"],
-    "resolucion_clasica": "distancia_quinta_descendente"
+    "min7": ["7", "m7b5", "Maj7", "min7"],
+    "7": ["May", "min", "Maj7", "mMaj7"],
+    "m7b5": ["7", "dim7"],
+    "dim7": ["May", "min", "m7b5"],
+    "mMaj7": ["min7", "7"]
+  },
+  "escalas_por_acorde": {
+    "May": ["Mayor (Jónica)", "Lidia", "Pentatónica Mayor"],
+    "min": ["Dórica", "Menor Natural (Eólica)", "Pentatónica Menor"],
+    "Maj7": ["Mayor (Jónica)", "Lidia"],
+    "min7": ["Dórica", "Frigia", "Menor Natural (Eólica)"],
+    "7": ["Mixolidia", "Alterada (Super Locria)", "Lidia Aumentada", "Disminuida (ST-T)", "Bebop Dominante"],
+    "m7b5": ["Locria", "Menor Melódica"],
+    "dim7": ["Disminuida (T-ST)", "Menor Armónica"],
+    "mMaj7": ["Menor Melódica", "Menor Armónica"]
   },
   "armonicos_fisicos": {
     "Serie Natural": {
