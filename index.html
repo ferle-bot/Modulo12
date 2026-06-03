@@ -634,7 +634,7 @@
         }
 
         // ==========================================
-        // 4. RENDERER (GEOMETRÍA MINIMALISTA Z12)
+        // 4. RENDERER (GEOMETRÍA Y COLORIMETRÍA HSL Z12)
         // ==========================================
         class Renderer {
             constructor(canvasId, stateManager) {
@@ -673,32 +673,37 @@
                 this.ctx.globalAlpha = 1; 
             }
 
-            drawFractalBranch(x, y, angle, radius, depth, maxDepth, decayR, decayA, baseColor) {
+            drawFractalBranch(x, y, angle, radius, depth, maxDepth, decayR, decayA, baseColorStr, hslObj) {
                 if (depth >= maxDepth) return;
                 
                 const nextRadius = radius * decayR;
                 const nextAngle1 = angle + (Math.PI / 4); 
                 const nextAngle2 = angle - (Math.PI / 4);
-                
                 const alpha = Math.pow(decayA, depth);
                 const strokeWidth = 1.5 / depth;
+
+                let branchColor = baseColorStr;
+                if (hslObj) {
+                    const newHue = (hslObj.h + (depth * 137.5)) % 360;
+                    branchColor = `hsl(${newHue}, ${hslObj.s}%, ${hslObj.l}%)`;
+                }
 
                 const nx1 = x + Math.cos(nextAngle1) * (radius * 1.5);
                 const ny1 = y + Math.sin(nextAngle1) * (radius * 1.5);
                 this.ctx.beginPath(); this.ctx.moveTo(x, y); this.ctx.lineTo(nx1, ny1);
-                this.ctx.strokeStyle = baseColor; this.ctx.globalAlpha = alpha;
+                this.ctx.strokeStyle = branchColor; this.ctx.globalAlpha = alpha;
                 this.ctx.lineWidth = strokeWidth; this.ctx.stroke(); this.ctx.globalAlpha = 1;
-                this.drawNode('', nx1, ny1, nextRadius, 'transparent', false, baseColor, alpha);
+                this.drawNode('', nx1, ny1, nextRadius, 'transparent', false, branchColor, alpha);
                 
                 const nx2 = x + Math.cos(nextAngle2) * (radius * 1.5);
                 const ny2 = y + Math.sin(nextAngle2) * (radius * 1.5);
                 this.ctx.beginPath(); this.ctx.moveTo(x, y); this.ctx.lineTo(nx2, ny2);
-                this.ctx.strokeStyle = baseColor; this.ctx.globalAlpha = alpha;
+                this.ctx.strokeStyle = branchColor; this.ctx.globalAlpha = alpha;
                 this.ctx.lineWidth = strokeWidth; this.ctx.stroke(); this.ctx.globalAlpha = 1;
-                this.drawNode('', nx2, ny2, nextRadius, 'transparent', false, baseColor, alpha);
+                this.drawNode('', nx2, ny2, nextRadius, 'transparent', false, branchColor, alpha);
 
-                this.drawFractalBranch(nx1, ny1, nextAngle1 - 0.2, nextRadius, depth + 1, maxDepth, decayR, decayA, baseColor);
-                this.drawFractalBranch(nx2, ny2, nextAngle2 + 0.2, nextRadius, depth + 1, maxDepth, decayR, decayA, baseColor);
+                this.drawFractalBranch(nx1, ny1, nextAngle1 - 0.2, nextRadius, depth + 1, maxDepth, decayR, decayA, baseColorStr, hslObj);
+                this.drawFractalBranch(nx2, ny2, nextAngle2 + 0.2, nextRadius, depth + 1, maxDepth, decayR, decayA, baseColorStr, hslObj);
             }
 
             drawMandalaSkeleton(cx, cy, radius, scaleMask, scaleRoot, isInferred = false) {
@@ -738,14 +743,16 @@
                 const r1 = dim * 0.20, r2 = dim * 0.30, r3 = dim * 0.42; 
                 
                 let fRules = { maxD: 0, decR: 0, decA: 0 };
+                let colorMap = null;
+
                 if (typeof Z12_LIBRARY !== 'undefined' && Z12_LIBRARY.geometria_fractal) {
                     const rules = Z12_LIBRARY.geometria_fractal.reglas_iteracion;
                     fRules = { maxD: rules.profundidad_maxima || 3, decR: rules.decaimiento_radio || 0.618, decA: rules.decaimiento_opacidad || 0.4 };
+                    colorMap = Z12_LIBRARY.geometria_fractal.colorimetria_intervalica?.mapeo;
                 }
-                
+
                 const isChromatic = scale_mask === 4095;
 
-                // Simple flat background for tension
                 if (tension_level > 0.6) {
                     this.ctx.fillStyle = 'rgba(255, 51, 51, 0.1)';
                     this.ctx.fillRect(0, 0, w, h);
@@ -762,21 +769,25 @@
                 if (active_mask === 0 || notes_detail.length === 0) return;
 
                 const rootNote = notes_detail[0];
-                let centerColor = 'var(--accent)'; 
+                let centerColorStr = '#ffffff';
+                let centerHslObj = null;
                 let isError = false;
                 
                 const activeReferenceMask = (!isChromatic) ? scale_mask : (inferredScale ? inferredScale.mask : 4095);
                 
                 if (activeReferenceMask !== 4095 && (activeReferenceMask & (1 << rootNote.pitch)) === 0) {
-                    centerColor = 'var(--alert)';
+                    centerColorStr = 'var(--alert)';
                     isError = true;
+                } else if (colorMap && colorMap["0"]) {
+                    centerHslObj = colorMap["0"];
+                    centerColorStr = `hsl(${centerHslObj.h}, ${centerHslObj.s}%, ${centerHslObj.l}%)`;
                 }
                 
-                this.drawNode(rootNote.name, cx, cy, 40, isError ? 'transparent' : '#fff', isError ? false : true, centerColor);
+                this.drawNode(rootNote.name, cx, cy, 40, isError ? 'transparent' : centerColorStr, isError ? false : true, centerColorStr);
                 
                 if (fRules.maxD > 0 && !isError) {
                     const baseAngle = -Math.PI/2; 
-                    this.drawFractalBranch(cx, cy, baseAngle, 40, 1, fRules.maxD, fRules.decR, fRules.decA, '#ffffff');
+                    this.drawFractalBranch(cx, cy, baseAngle, 40, 1, fRules.maxD, fRules.decR, fRules.decA, centerColorStr, centerHslObj);
                 }
 
                 const planets = [], moons = [];
@@ -792,7 +803,6 @@
                     }
                 }
 
-                // Draw active polygon
                 if (planets.length > 0) {
                     this.ctx.beginPath();
                     const rootAngle = (rootNote.pitch * Math.PI*2)/12 - Math.PI/2;
@@ -820,20 +830,28 @@
                     const angle = (n.pitch * Math.PI*2)/12 - Math.PI/2;
                     const nx = cx + Math.cos(angle)*r1, ny = cy + Math.sin(angle)*r1;
                     
-                    let nodeColor = 'var(--accent)'; 
+                    let nodeColorStr = '#ffffff'; 
+                    let nodeHslObj = null;
                     let nError = false;
+                    
                     if (activeReferenceMask !== 4095 && (activeReferenceMask & (1 << n.pitch)) === 0) {
-                        nodeColor = 'var(--alert)'; 
+                        nodeColorStr = 'var(--alert)'; 
                         nError = true;
+                    } else if (colorMap) {
+                        const interval = (n.pitch - rootNote.pitch + 12) % 12;
+                        if (colorMap[interval.toString()]) {
+                            nodeHslObj = colorMap[interval.toString()];
+                            nodeColorStr = `hsl(${nodeHslObj.h}, ${nodeHslObj.s}%, ${nodeHslObj.l}%)`;
+                        }
                     }
 
                     this.ctx.beginPath(); this.ctx.moveTo(cx, cy); this.ctx.lineTo(nx, ny); 
-                    this.ctx.strokeStyle = nodeColor; this.ctx.globalAlpha = 0.6;
+                    this.ctx.strokeStyle = nodeColorStr; this.ctx.globalAlpha = 0.6;
                     this.ctx.lineWidth = 1.5; this.ctx.stroke(); this.ctx.globalAlpha = 1;
-                    this.drawNode(n.name, nx, ny, 26, nError ? 'transparent' : '#fff', nError ? false : true, nodeColor);
+                    this.drawNode(n.name, nx, ny, 26, nError ? 'transparent' : nodeColorStr, nError ? false : true, nodeColorStr);
                     
                     if (fRules.maxD > 0 && !nError) {
-                        this.drawFractalBranch(nx, ny, angle, 26, 2, fRules.maxD, fRules.decR, fRules.decA, '#ffffff');
+                        this.drawFractalBranch(nx, ny, angle, 26, 2, fRules.maxD, fRules.decR, fRules.decA, nodeColorStr, nodeHslObj);
                     }
                 });
             }
@@ -921,7 +939,7 @@
                 ui.sidebar.classList.remove('active'); 
                 ui.overlay.style.display = 'flex'; 
                 ui.preConfigBox.style.display = 'block'; 
-                ui.start.style.display = 'block'; // Reactivación del botón
+                ui.start.style.display = 'block'; 
             };
             
             ui.clear.onclick = () => { stateManager.clearHistory(); ui.sidebar.classList.remove('active'); };
