@@ -912,7 +912,18 @@
 
             ui.menu.onclick = () => ui.sidebar.classList.add('active'); ui.closeMenu.onclick = () => ui.sidebar.classList.remove('active');
             ui.pause.onclick = async () => { const isP = stateManager.state.status === 'paused'; await audioEngine.setPause(!isP); ui.pause.textContent = isP ? "Pausar Detección" : "Reanudar Escucha"; ui.pause.style.backgroundColor = isP ? "var(--accent)" : "#ffaa00"; ui.sidebar.classList.remove('active'); };
-            ui.stop.onclick = () => { audioEngine.stop(); ui.pause.textContent = "Pausar Detección"; ui.pause.style.backgroundColor = "var(--accent)"; ui.sidebar.classList.remove('active'); ui.overlay.style.display = 'flex'; ui.preConfigBox.style.display = 'block'; };
+            
+            // CORE INJECTION: FIX BUTTON LIFECYCLE
+            ui.stop.onclick = () => { 
+                audioEngine.stop(); 
+                ui.pause.textContent = "Pausar Detección"; 
+                ui.pause.style.backgroundColor = "var(--accent)"; 
+                ui.sidebar.classList.remove('active'); 
+                ui.overlay.style.display = 'flex'; 
+                ui.preConfigBox.style.display = 'block'; 
+                ui.start.style.display = 'block'; // Reactivación del botón
+            };
+            
             ui.clear.onclick = () => { stateManager.clearHistory(); ui.sidebar.classList.remove('active'); };
             ui.profilerSkip.onclick = () => { audioEngine.forceProfilerSkip(); };
 
