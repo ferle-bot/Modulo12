@@ -434,7 +434,16 @@
                         const events = this.state.current_session.events;
                         if (events.length === 0 || events[events.length - 1].mask !== this.state.active_mask) {
                             const time = new Date().toLocaleTimeString('es-MX', { hour12: false, hour: '2-digit', minute: '2-digit', second:'2-digit' });
-                            events.push({ mask: this.state.active_mask, name, time, midi_notes: this.state.notes_detail.map(n => n.midi) });
+                            
+                            // INYECCIÓN DE TIMESTAMP (FASE C - Cuantización)
+                            events.push({ 
+                                mask: this.state.active_mask, 
+                                name, 
+                                time, 
+                                timestamp: Date.now(), 
+                                midi_notes: this.state.notes_detail.map(n => n.midi) 
+                            });
+                            
                             ModuloDB.saveSession(this.state.current_session); 
                             
                             this.bus.postMessage({ type: 'SESSION_UPDATE', session: this.state.current_session });
