@@ -10,7 +10,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
-        <style>
+    <style>
         :root { --bg-color: #050508; --accent: #00ffcc; --accent-hover: #00e6b8; --alert: #ff3300; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; background-color: var(--bg-color); overflow: hidden; display: flex; justify-content: center; align-items: center; font-family: monospace; user-select: none; color: #fff; touch-action: none; overscroll-behavior: none; }
         canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; transition: background 0.3s; touch-action: none; }
@@ -374,7 +374,6 @@
                 this.state.scale_mask = HarmonyEngine.getScaleMask(this.state.scale_root, this.state.scale_type, Z12_LIBRARY);
                 this.listeners = [];
                 
-                // INJECTION: Z12 Broadcast Bus for Multi-Tab Interoperability
                 this.bus = new BroadcastChannel('z12_composition_bus');
             }
             startNewSession() {
@@ -438,7 +437,6 @@
                             events.push({ mask: this.state.active_mask, name, time, midi_notes: this.state.notes_detail.map(n => n.midi) });
                             ModuloDB.saveSession(this.state.current_session); 
                             
-                            // INJECTION: Broadcast the session update across tabs instantly
                             this.bus.postMessage({ type: 'SESSION_UPDATE', session: this.state.current_session });
                         }
                     }
@@ -635,7 +633,7 @@
             }
         }
 
-                // ==========================================
+        // ==========================================
         // 4. RENDERER (FRACTAL GEOMETRY Z12)
         // ==========================================
         class Renderer {
@@ -665,20 +663,16 @@
                 this.ctx.globalAlpha = 1; 
             }
 
-            // INJECTION: Ecuación Recursiva para Generación de Fractales Armónicos
             drawFractalBranch(x, y, angle, radius, depth, maxDepth, decayR, decayA, baseColor) {
                 if (depth >= maxDepth) return;
                 
-                // Aplicación de la Proporción Áurea y decaimiento logarítmico
                 const nextRadius = radius * decayR;
-                // Bifurcación en ángulo áureo
                 const nextAngle1 = angle + (Math.PI / 4); 
                 const nextAngle2 = angle - (Math.PI / 4);
                 
                 const alpha = Math.pow(decayA, depth);
                 const strokeWidth = 1.5 / (depth + 1);
 
-                // Rama 1
                 const nx1 = x + Math.cos(nextAngle1) * (radius * 1.5);
                 const ny1 = y + Math.sin(nextAngle1) * (radius * 1.5);
                 this.ctx.beginPath(); this.ctx.moveTo(x, y); this.ctx.lineTo(nx1, ny1);
@@ -686,7 +680,6 @@
                 this.ctx.lineWidth = strokeWidth; this.ctx.stroke(); this.ctx.globalAlpha = 1;
                 this.drawNode('', nx1, ny1, nextRadius, baseColor, false, 5, null, alpha);
                 
-                // Rama 2
                 const nx2 = x + Math.cos(nextAngle2) * (radius * 1.5);
                 const ny2 = y + Math.sin(nextAngle2) * (radius * 1.5);
                 this.ctx.beginPath(); this.ctx.moveTo(x, y); this.ctx.lineTo(nx2, ny2);
@@ -694,7 +687,6 @@
                 this.ctx.lineWidth = strokeWidth; this.ctx.stroke(); this.ctx.globalAlpha = 1;
                 this.drawNode('', nx2, ny2, nextRadius, baseColor, false, 5, null, alpha);
 
-                // Llamadas recursivas (Árbol Binario de Cantor / Resonancia)
                 this.drawFractalBranch(nx1, ny1, nextAngle1 - 0.2, nextRadius, depth + 1, maxDepth, decayR, decayA, baseColor);
                 this.drawFractalBranch(nx2, ny2, nextAngle2 + 0.2, nextRadius, depth + 1, maxDepth, decayR, decayA, baseColor);
             }
@@ -735,7 +727,6 @@
                 const cx = w / 2, cy = h / 2, dim = Math.min(w, h);
                 const r1 = dim * 0.20, r2 = dim * 0.30, r3 = dim * 0.42; 
                 
-                // Lector de Reglas de Semilla Fractal (JSON)
                 let fRules = { maxD: 0, decR: 0, decA: 0 };
                 if (typeof Z12_LIBRARY !== 'undefined' && Z12_LIBRARY.geometria_fractal) {
                     const rules = Z12_LIBRARY.geometria_fractal.reglas_iteracion;
@@ -771,10 +762,8 @@
                     centerColor = 'var(--alert)'; 
                 }
                 
-                // Semilla de Origen Fractal
                 this.drawNode(rootNote.name, cx, cy, 40, centerColor, true, 30, '#fff');
                 
-                // Disparo de Iteración Geométrica
                 if (fRules.maxD > 0 && centerColor === 'var(--accent)') {
                     const baseAngle = -Math.PI/2; 
                     this.drawFractalBranch(cx, cy, baseAngle, 40, 1, fRules.maxD, fRules.decR, fRules.decA, centerColor);
@@ -815,7 +804,6 @@
                     this.ctx.lineWidth = 2; this.ctx.stroke(); this.ctx.globalAlpha = 1;
                     this.drawNode(n.name, nx, ny, 26, nodeColor, true, 15, '#fff');
                     
-                    // Nodos secundarios detonan sus propias micro-espirales
                     if (fRules.maxD > 0 && nodeColor === 'var(--accent)') {
                         this.drawFractalBranch(nx, ny, angle, 26, 2, fRules.maxD, fRules.decR, fRules.decA, nodeColor);
                     }
@@ -836,7 +824,6 @@
                 });
             }
         }
-
 
         // ==========================================
         // 5. ASYNC INIT & UI BINDING
