@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Modulo12 - Inference Engine Z12</title>
+    <title>Modulo12 - Motor Fractal Z12</title>
     
     <link rel="manifest" href="./manifest.json">
-    <meta name="theme-color" content="#050508">
+    <meta name="theme-color" content="#041a24">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
     <style>
-        :root { --bg-color: #050508; --accent: #00ffcc; --accent-hover: #00e6b8; --alert: #ff3300; }
+        :root { --bg-color: #041a24; --accent: #ffffff; --accent-hover: #e0e0e0; --alert: #ff3333; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; background-color: var(--bg-color); overflow: hidden; display: flex; justify-content: center; align-items: center; font-family: monospace; user-select: none; color: #fff; touch-action: none; overscroll-behavior: none; }
         canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; transition: background 0.3s; touch-action: none; }
         
@@ -20,7 +20,7 @@
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; border: 1px solid #0a0a0e; }
         ::-webkit-scrollbar-thumb:hover { background: #555; }
 
-        #debug-panel { position: absolute; top: 20px; left: 20px; background: rgba(5, 5, 8, 0.85); padding: 18px; border-radius: 8px; pointer-events: none; border: 1px solid #1a1a24; z-index: 10; min-width: 260px; backdrop-filter: blur(8px); box-shadow: 0 4px 15px rgba(0,0,0,0.5); line-height: 1.5; }
+        #debug-panel { position: absolute; top: 20px; left: 20px; background: rgba(4, 26, 36, 0.85); padding: 18px; border-radius: 8px; pointer-events: none; border: 1px solid #1a1a24; z-index: 10; min-width: 260px; backdrop-filter: blur(8px); box-shadow: 0 4px 15px rgba(0,0,0,0.5); line-height: 1.5; }
         
         #hud-indicators { position: absolute; top: 28px; right: 70px; display: flex; gap: 12px; z-index: 30; align-items: center; }
         .led-indicator { width: 10px; height: 10px; border-radius: 50%; background: #222; border: 1px solid #111; box-shadow: 0 0 3px #000 inset; transition: background 0.05s; }
@@ -29,9 +29,9 @@
         .led-rec.active { background: var(--alert); box-shadow: 0 0 10px var(--alert); border-color: var(--alert); animation: flash 1s infinite; }
         @keyframes flash { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
 
-        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 5, 8, 0.98); display: flex; justify-content: center; align-items: center; z-index: 20; flex-direction: column; touch-action: none; }
+        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(4, 26, 36, 0.98); display: flex; justify-content: center; align-items: center; z-index: 20; flex-direction: column; touch-action: none; }
         
-        button.primary-btn { background-color: var(--accent); color: #000; border: none; padding: 15px 40px; font-size: 18px; font-weight: bold; cursor: pointer; border-radius: 4px; box-shadow: 0 0 20px rgba(0, 255, 204, 0.3); transition: all 0.2s ease; font-family: monospace; letter-spacing: 1px; margin-top: 15px; }
+        button.primary-btn { background-color: var(--accent); color: #000; border: none; padding: 15px 40px; font-size: 18px; font-weight: bold; cursor: pointer; border-radius: 4px; box-shadow: 0 0 20px rgba(255, 255, 255, 0.3); transition: all 0.2s ease; font-family: monospace; letter-spacing: 1px; margin-top: 15px; }
         button.primary-btn:hover { background-color: var(--accent-hover); transform: scale(1.02); }
         
         .menu-action-btn { padding: 12px; font-size: 14px; width: 100%; margin-bottom: 8px; text-align: center; font-family: monospace; border-radius: 4px; border: none; cursor: pointer; transition: all 0.2s; }
@@ -59,7 +59,7 @@
         input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #333; border-radius: 2px; }
         input[type=range]::-webkit-slider-thumb { height: 16px; width: 16px; border-radius: 50%; background: var(--accent); cursor: pointer; -webkit-appearance: none; margin-top: -6px; }
         
-        .modal-bg { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 5, 8, 0.98); z-index: 9999; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
+        .modal-bg { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(4, 26, 36, 0.98); z-index: 9999; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
         #session-container { width: 95%; max-width: 850px; height: 90%; background: #0a0a0e; border: 1px solid #2a2a35; border-radius: 12px; padding: 30px; display: flex; flex-direction: column; box-sizing: border-box; box-shadow: 0 20px 60px rgba(0,0,0,0.9); }
         #session-content { flex: 1; overflow-y: auto; margin-top: 15px; padding-right: 10px; }
         .session-block { border: 1px solid #1a1a24; background: #07070a; margin-bottom: 15px; border-radius: 8px; padding: 20px; transition: border-color 0.2s; } .session-block:hover { border-color: #333; }
@@ -67,12 +67,12 @@
         .session-title { color: var(--accent); font-size: 16px; font-weight: bold; margin: 0; letter-spacing: 0.5px;} .session-controls { display: flex; gap: 8px; flex-wrap: wrap;}
         
         #profiler-modal { z-index: 10000; }
-        #profiler-box { background: #0a0a0e; border: 1px solid var(--accent); border-radius: 8px; padding: 30px; text-align: center; box-shadow: 0 0 40px rgba(0, 255, 204, 0.15); max-width: 450px; width: 90%; }
+        #profiler-box { background: #0a0a0e; border: 1px solid var(--accent); border-radius: 8px; padding: 30px; text-align: center; box-shadow: 0 0 40px rgba(255, 255, 255, 0.15); max-width: 450px; width: 90%; }
         .profiler-target { font-size: 28px; color: var(--accent); font-weight: bold; margin: 15px 0; letter-spacing: 1px; }
         .profiler-strikes { display: flex; justify-content: center; gap: 15px; margin-bottom: 25px; }
         .strike-dot { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #333; background: #111; transition: all 0.2s; } .strike-dot.active { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 15px var(--accent); }
         .profiler-bar-bg { background: #222; height: 4px; border-radius: 2px; overflow: hidden; margin-bottom: 20px; width: 100%; } #profiler-bar-fill { background: var(--accent); height: 100%; width: 0%; transition: width 0.3s; }
-        .vu-meter-bg { background: #111; height: 12px; border-radius: 6px; overflow: hidden; width: 100%; margin: 15px 0; border: 1px solid #333; } .vu-meter-fill { background: linear-gradient(90deg, var(--accent), #ffff00, var(--alert)); height: 100%; width: 0%; transition: width 0.05s linear; }
+        .vu-meter-bg { background: #111; height: 12px; border-radius: 6px; overflow: hidden; width: 100%; margin: 15px 0; border: 1px solid #333; } .vu-meter-fill { background: linear-gradient(90deg, #00ffcc, #ffff00, var(--alert)); height: 100%; width: 0%; transition: width 0.05s linear; }
     </style>
 </head>
 <body>
@@ -162,7 +162,7 @@
     </div>
 
     <div id="overlay">
-        <h1 style="margin-bottom: 10px; color: var(--accent); letter-spacing: 4px; font-size: 3rem; text-shadow: 0 0 20px rgba(0,255,204,0.3);">Modulo12</h1>
+        <h1 style="margin-bottom: 10px; color: var(--accent); letter-spacing: 4px; font-size: 3rem; text-shadow: 0 0 20px rgba(255,255,255,0.3);">Modulo12</h1>
         <p style="color: #888; margin-bottom: 40px; font-size: 14px;">Inference & Composition Engine</p>
         
         <div id="pre-config-box" style="width: 80%; max-width: 320px; text-align: left;">
@@ -634,7 +634,7 @@
         }
 
         // ==========================================
-        // 4. RENDERER (FRACTAL GEOMETRY Z12)
+        // 4. RENDERER (GEOMETRÍA MINIMALISTA Z12)
         // ==========================================
         class Renderer {
             constructor(canvasId, stateManager) {
@@ -654,12 +654,22 @@
                 this.draw(state);
             }
             
-            drawNode(n, x, y, size, fillCol, textDark, blur, stroke, alpha = 1) {
-                this.ctx.globalAlpha = alpha; this.ctx.beginPath(); this.ctx.arc(x, y, size, 0, Math.PI * 2);
-                this.ctx.fillStyle = fillCol; this.ctx.shadowBlur = blur; this.ctx.shadowColor = fillCol; this.ctx.fill();
-                if(stroke) { this.ctx.lineWidth = 2; this.ctx.strokeStyle = stroke; this.ctx.stroke(); }
-                this.ctx.fillStyle = textDark ? '#000' : '#fff'; this.ctx.font = `bold ${size * 0.55}px monospace`; 
-                this.ctx.textAlign = 'center'; this.ctx.textBaseline = 'middle'; this.ctx.shadowBlur = 0; this.ctx.fillText(n, x, y);
+            drawNode(n, x, y, size, fillCol, textDark, stroke, alpha = 1) {
+                this.ctx.globalAlpha = alpha; 
+                this.ctx.beginPath(); 
+                this.ctx.arc(x, y, size, 0, Math.PI * 2);
+                this.ctx.fillStyle = fillCol; 
+                this.ctx.fill();
+                if(stroke) { 
+                    this.ctx.lineWidth = 1.5; 
+                    this.ctx.strokeStyle = stroke; 
+                    this.ctx.stroke(); 
+                }
+                this.ctx.fillStyle = textDark ? '#000' : '#fff'; 
+                this.ctx.font = `bold ${size * 0.55}px monospace`; 
+                this.ctx.textAlign = 'center'; 
+                this.ctx.textBaseline = 'middle'; 
+                this.ctx.fillText(n, x, y);
                 this.ctx.globalAlpha = 1; 
             }
 
@@ -671,21 +681,21 @@
                 const nextAngle2 = angle - (Math.PI / 4);
                 
                 const alpha = Math.pow(decayA, depth);
-                const strokeWidth = 1.5 / (depth + 1);
+                const strokeWidth = 1.5 / depth;
 
                 const nx1 = x + Math.cos(nextAngle1) * (radius * 1.5);
                 const ny1 = y + Math.sin(nextAngle1) * (radius * 1.5);
                 this.ctx.beginPath(); this.ctx.moveTo(x, y); this.ctx.lineTo(nx1, ny1);
                 this.ctx.strokeStyle = baseColor; this.ctx.globalAlpha = alpha;
                 this.ctx.lineWidth = strokeWidth; this.ctx.stroke(); this.ctx.globalAlpha = 1;
-                this.drawNode('', nx1, ny1, nextRadius, baseColor, false, 5, null, alpha);
+                this.drawNode('', nx1, ny1, nextRadius, 'transparent', false, baseColor, alpha);
                 
                 const nx2 = x + Math.cos(nextAngle2) * (radius * 1.5);
                 const ny2 = y + Math.sin(nextAngle2) * (radius * 1.5);
                 this.ctx.beginPath(); this.ctx.moveTo(x, y); this.ctx.lineTo(nx2, ny2);
                 this.ctx.strokeStyle = baseColor; this.ctx.globalAlpha = alpha;
                 this.ctx.lineWidth = strokeWidth; this.ctx.stroke(); this.ctx.globalAlpha = 1;
-                this.drawNode('', nx2, ny2, nextRadius, baseColor, false, 5, null, alpha);
+                this.drawNode('', nx2, ny2, nextRadius, 'transparent', false, baseColor, alpha);
 
                 this.drawFractalBranch(nx1, ny1, nextAngle1 - 0.2, nextRadius, depth + 1, maxDepth, decayR, decayA, baseColor);
                 this.drawFractalBranch(nx2, ny2, nextAngle2 + 0.2, nextRadius, depth + 1, maxDepth, decayR, decayA, baseColor);
@@ -705,7 +715,7 @@
                     this.ctx.moveTo(scaleNodes[0].x, scaleNodes[0].y);
                     for(let i=1; i<scaleNodes.length; i++) this.ctx.lineTo(scaleNodes[i].x, scaleNodes[i].y);
                     this.ctx.closePath();
-                    this.ctx.strokeStyle = isInferred ? 'rgba(255, 204, 0, 0.15)' : 'rgba(0, 255, 204, 0.15)'; 
+                    this.ctx.strokeStyle = isInferred ? 'rgba(255, 204, 0, 0.2)' : 'rgba(0, 170, 255, 0.2)'; 
                     this.ctx.lineWidth = 1; this.ctx.stroke();
                 }
 
@@ -714,9 +724,9 @@
                     const nx = cx + Math.cos(angle)*radius; const ny = cy + Math.sin(angle)*radius;
                     const name = HarmonyEngine.getNoteName(i, scaleRoot);
                     if ((scaleMask & (1 << i)) !== 0) {
-                        this.drawNode(name, nx, ny, 14, 'transparent', false, 0, isInferred ? 'rgba(255, 204, 0, 0.3)' : 'rgba(0, 255, 204, 0.3)', 1);
+                        this.drawNode(name, nx, ny, 14, 'transparent', false, isInferred ? 'rgba(255, 204, 0, 0.4)' : 'rgba(0, 170, 255, 0.4)', 1);
                     } else {
-                        this.drawNode(name, nx, ny, 14, 'transparent', false, 0, 'rgba(255, 255, 255, 0.05)', 0.5);
+                        this.drawNode(name, nx, ny, 14, 'transparent', false, 'rgba(255, 255, 255, 0.05)', 0.5);
                     }
                 }
             }
@@ -735,11 +745,9 @@
                 
                 const isChromatic = scale_mask === 4095;
 
+                // Simple flat background for tension
                 if (tension_level > 0.6) {
-                    const glow = this.ctx.createRadialGradient(cx, cy, 0, cx, cy, dim);
-                    glow.addColorStop(0, 'rgba(255, 51, 0, 0.15)');
-                    glow.addColorStop(1, 'transparent');
-                    this.ctx.fillStyle = glow;
+                    this.ctx.fillStyle = 'rgba(255, 51, 51, 0.1)';
                     this.ctx.fillRect(0, 0, w, h);
                 }
 
@@ -755,24 +763,25 @@
 
                 const rootNote = notes_detail[0];
                 let centerColor = 'var(--accent)'; 
+                let isError = false;
                 
                 const activeReferenceMask = (!isChromatic) ? scale_mask : (inferredScale ? inferredScale.mask : 4095);
                 
                 if (activeReferenceMask !== 4095 && (activeReferenceMask & (1 << rootNote.pitch)) === 0) {
-                    centerColor = 'var(--alert)'; 
+                    centerColor = 'var(--alert)';
+                    isError = true;
                 }
                 
-                this.drawNode(rootNote.name, cx, cy, 40, centerColor, true, 30, '#fff');
+                this.drawNode(rootNote.name, cx, cy, 40, isError ? 'transparent' : '#fff', isError ? false : true, centerColor);
                 
-                if (fRules.maxD > 0 && centerColor === 'var(--accent)') {
+                if (fRules.maxD > 0 && !isError) {
                     const baseAngle = -Math.PI/2; 
-                    this.drawFractalBranch(cx, cy, baseAngle, 40, 1, fRules.maxD, fRules.decR, fRules.decA, centerColor);
+                    this.drawFractalBranch(cx, cy, baseAngle, 40, 1, fRules.maxD, fRules.decR, fRules.decA, '#ffffff');
                 }
 
                 const planets = [], moons = [];
                 for(let i=0; i<12; i++) {
                     if (i === rootNote.pitch) continue;
-                    
                     const refRoot = (!isChromatic) ? scale_root : (inferredScale ? inferredScale.root : 0);
                     const sName = HarmonyEngine.getNoteName(i, refRoot);
                     
@@ -783,13 +792,28 @@
                     }
                 }
 
+                // Draw active polygon
+                if (planets.length > 0) {
+                    this.ctx.beginPath();
+                    const rootAngle = (rootNote.pitch * Math.PI*2)/12 - Math.PI/2;
+                    this.ctx.moveTo(cx + Math.cos(rootAngle)*r1, cy + Math.sin(rootAngle)*r1);
+                    planets.forEach(n => {
+                        const angle = (n.pitch * Math.PI*2)/12 - Math.PI/2;
+                        this.ctx.lineTo(cx + Math.cos(angle)*r1, cy + Math.sin(angle)*r1);
+                    });
+                    this.ctx.closePath();
+                    this.ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+                    this.ctx.lineWidth = 1.5;
+                    this.ctx.stroke();
+                }
+
                 moons.forEach(n => {
                     const angle = (n.pitch * Math.PI*2)/12 - Math.PI/2;
                     const nx = cx + Math.cos(angle)*r2, ny = cy + Math.sin(angle)*r2;
                     this.ctx.beginPath(); this.ctx.moveTo(cx, cy); this.ctx.lineTo(nx, ny); 
-                    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'; this.ctx.setLineDash([4, 6]);
+                    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)'; this.ctx.setLineDash([4, 6]);
                     this.ctx.lineWidth = 1; this.ctx.stroke(); this.ctx.setLineDash([]);
-                    this.drawNode(n.name, nx, ny, 18, 'transparent', false, 5, 'rgba(255, 255, 255, 0.5)', 0.8);
+                    this.drawNode(n.name, nx, ny, 18, 'transparent', false, 'rgba(255, 255, 255, 0.6)', 0.8);
                 });
 
                 planets.forEach(n => {
@@ -797,29 +821,33 @@
                     const nx = cx + Math.cos(angle)*r1, ny = cy + Math.sin(angle)*r1;
                     
                     let nodeColor = 'var(--accent)'; 
-                    if (activeReferenceMask !== 4095 && (activeReferenceMask & (1 << n.pitch)) === 0) nodeColor = 'var(--alert)'; 
+                    let nError = false;
+                    if (activeReferenceMask !== 4095 && (activeReferenceMask & (1 << n.pitch)) === 0) {
+                        nodeColor = 'var(--alert)'; 
+                        nError = true;
+                    }
 
                     this.ctx.beginPath(); this.ctx.moveTo(cx, cy); this.ctx.lineTo(nx, ny); 
-                    this.ctx.strokeStyle = nodeColor; this.ctx.globalAlpha = 0.5;
-                    this.ctx.lineWidth = 2; this.ctx.stroke(); this.ctx.globalAlpha = 1;
-                    this.drawNode(n.name, nx, ny, 26, nodeColor, true, 15, '#fff');
+                    this.ctx.strokeStyle = nodeColor; this.ctx.globalAlpha = 0.6;
+                    this.ctx.lineWidth = 1.5; this.ctx.stroke(); this.ctx.globalAlpha = 1;
+                    this.drawNode(n.name, nx, ny, 26, nError ? 'transparent' : '#fff', nError ? false : true, nodeColor);
                     
-                    if (fRules.maxD > 0 && nodeColor === 'var(--accent)') {
-                        this.drawFractalBranch(nx, ny, angle, 26, 2, fRules.maxD, fRules.decR, fRules.decA, nodeColor);
+                    if (fRules.maxD > 0 && !nError) {
+                        this.drawFractalBranch(nx, ny, angle, 26, 2, fRules.maxD, fRules.decR, fRules.decA, '#ffffff');
                     }
                 });
             }
 
             drawLinearMap(state) {
                 const w = window.innerWidth, h = window.innerHeight; this.ctx.clearRect(0, 0, w, h);
-                const { active_mask, notes_detail, color } = state, rgb = `rgb(${color.r},${color.g},${color.b})`, octaves = [2, 3, 4, 5, 6], keyW = w / 14, rowH = h / (octaves.length + 2);
-                this.ctx.fillStyle = '#222'; this.ctx.font = '10px monospace'; this.ctx.textAlign = 'right';
+                const { active_mask, notes_detail } = state, octaves = [2, 3, 4, 5, 6], keyW = w / 14, rowH = h / (octaves.length + 2);
+                this.ctx.fillStyle = '#444'; this.ctx.font = '10px monospace'; this.ctx.textAlign = 'right';
                 octaves.forEach((oct, i) => { const y = h - (i*rowH) - rowH*1.5; this.ctx.fillText(`Oct ${oct}`, 40, y + 4); this.ctx.beginPath(); this.ctx.moveTo(50, y); this.ctx.lineTo(w, y); this.ctx.strokeStyle = '#222'; this.ctx.lineWidth = 1; this.ctx.stroke(); });
                 if (active_mask > 0) notes_detail.forEach(note => {
                     if(note.octave >= 2 && note.octave <= 6) {
                         const x = 70 + (note.pitch * keyW), y = h - ((note.octave - 2)*rowH) - rowH*1.5;
-                        this.drawNode(note.name, x, y, 20, rgb, true, 15, '#fff');
-                        this.ctx.beginPath(); this.ctx.moveTo(x, y+20); this.ctx.lineTo(x, h); this.ctx.strokeStyle = `rgba(${color.r},${color.g},${color.b},0.2)`; this.ctx.lineWidth = 2; this.ctx.stroke();
+                        this.drawNode(note.name, x, y, 20, '#fff', true, '#fff');
+                        this.ctx.beginPath(); this.ctx.moveTo(x, y+20); this.ctx.lineTo(x, h); this.ctx.strokeStyle = `rgba(255,255,255,0.3)`; this.ctx.lineWidth = 1.5; this.ctx.stroke();
                     }
                 });
             }
