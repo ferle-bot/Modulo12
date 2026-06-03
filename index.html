@@ -635,20 +635,25 @@
             }
         }
 
-        // ==========================================
-        // 4. RENDERER (VISUAL MANDALA & SUGGESTIONS)
+                // ==========================================
+        // 4. RENDERER (FRACTAL GEOMETRY Z12)
         // ==========================================
         class Renderer {
             constructor(canvasId, stateManager) {
-                this.canvas = document.getElementById(canvasId); this.ctx = this.canvas.getContext('2d');
-                stateManager.subscribe(s => this.draw(s)); window.addEventListener('resize', () => this.resize(stateManager.state));
+                this.canvas = document.getElementById(canvasId); 
+                this.ctx = this.canvas.getContext('2d');
+                stateManager.subscribe(s => this.draw(s)); 
+                window.addEventListener('resize', () => this.resize(stateManager.state));
                 this.resize(stateManager.state);
             }
             resize(state) {
                 const dpr = window.devicePixelRatio || 1;
-                this.canvas.width = window.innerWidth * dpr; this.canvas.height = window.innerHeight * dpr;
-                this.canvas.style.width = `${window.innerWidth}px`; this.canvas.style.height = `${window.innerHeight}px`;
-                this.ctx.scale(dpr, dpr); this.draw(state);
+                this.canvas.width = window.innerWidth * dpr; 
+                this.canvas.height = window.innerHeight * dpr;
+                this.canvas.style.width = `${window.innerWidth}px`; 
+                this.canvas.style.height = `${window.innerHeight}px`;
+                this.ctx.scale(dpr, dpr); 
+                this.draw(state);
             }
             
             drawNode(n, x, y, size, fillCol, textDark, blur, stroke, alpha = 1) {
@@ -658,6 +663,40 @@
                 this.ctx.fillStyle = textDark ? '#000' : '#fff'; this.ctx.font = `bold ${size * 0.55}px monospace`; 
                 this.ctx.textAlign = 'center'; this.ctx.textBaseline = 'middle'; this.ctx.shadowBlur = 0; this.ctx.fillText(n, x, y);
                 this.ctx.globalAlpha = 1; 
+            }
+
+            // INJECTION: Ecuación Recursiva para Generación de Fractales Armónicos
+            drawFractalBranch(x, y, angle, radius, depth, maxDepth, decayR, decayA, baseColor) {
+                if (depth >= maxDepth) return;
+                
+                // Aplicación de la Proporción Áurea y decaimiento logarítmico
+                const nextRadius = radius * decayR;
+                // Bifurcación en ángulo áureo
+                const nextAngle1 = angle + (Math.PI / 4); 
+                const nextAngle2 = angle - (Math.PI / 4);
+                
+                const alpha = Math.pow(decayA, depth);
+                const strokeWidth = 1.5 / (depth + 1);
+
+                // Rama 1
+                const nx1 = x + Math.cos(nextAngle1) * (radius * 1.5);
+                const ny1 = y + Math.sin(nextAngle1) * (radius * 1.5);
+                this.ctx.beginPath(); this.ctx.moveTo(x, y); this.ctx.lineTo(nx1, ny1);
+                this.ctx.strokeStyle = baseColor; this.ctx.globalAlpha = alpha;
+                this.ctx.lineWidth = strokeWidth; this.ctx.stroke(); this.ctx.globalAlpha = 1;
+                this.drawNode('', nx1, ny1, nextRadius, baseColor, false, 5, null, alpha);
+                
+                // Rama 2
+                const nx2 = x + Math.cos(nextAngle2) * (radius * 1.5);
+                const ny2 = y + Math.sin(nextAngle2) * (radius * 1.5);
+                this.ctx.beginPath(); this.ctx.moveTo(x, y); this.ctx.lineTo(nx2, ny2);
+                this.ctx.strokeStyle = baseColor; this.ctx.globalAlpha = alpha;
+                this.ctx.lineWidth = strokeWidth; this.ctx.stroke(); this.ctx.globalAlpha = 1;
+                this.drawNode('', nx2, ny2, nextRadius, baseColor, false, 5, null, alpha);
+
+                // Llamadas recursivas (Árbol Binario de Cantor / Resonancia)
+                this.drawFractalBranch(nx1, ny1, nextAngle1 - 0.2, nextRadius, depth + 1, maxDepth, decayR, decayA, baseColor);
+                this.drawFractalBranch(nx2, ny2, nextAngle2 + 0.2, nextRadius, depth + 1, maxDepth, decayR, decayA, baseColor);
             }
 
             drawMandalaSkeleton(cx, cy, radius, scaleMask, scaleRoot, isInferred = false) {
@@ -696,6 +735,13 @@
                 const cx = w / 2, cy = h / 2, dim = Math.min(w, h);
                 const r1 = dim * 0.20, r2 = dim * 0.30, r3 = dim * 0.42; 
                 
+                // Lector de Reglas de Semilla Fractal (JSON)
+                let fRules = { maxD: 0, decR: 0, decA: 0 };
+                if (typeof Z12_LIBRARY !== 'undefined' && Z12_LIBRARY.geometria_fractal) {
+                    const rules = Z12_LIBRARY.geometria_fractal.reglas_iteracion;
+                    fRules = { maxD: rules.profundidad_maxima || 3, decR: rules.decaimiento_radio || 0.618, decA: rules.decaimiento_opacidad || 0.4 };
+                }
+                
                 const isChromatic = scale_mask === 4095;
 
                 if (tension_level > 0.6) {
@@ -724,7 +770,15 @@
                 if (activeReferenceMask !== 4095 && (activeReferenceMask & (1 << rootNote.pitch)) === 0) {
                     centerColor = 'var(--alert)'; 
                 }
+                
+                // Semilla de Origen Fractal
                 this.drawNode(rootNote.name, cx, cy, 40, centerColor, true, 30, '#fff');
+                
+                // Disparo de Iteración Geométrica
+                if (fRules.maxD > 0 && centerColor === 'var(--accent)') {
+                    const baseAngle = -Math.PI/2; 
+                    this.drawFractalBranch(cx, cy, baseAngle, 40, 1, fRules.maxD, fRules.decR, fRules.decA, centerColor);
+                }
 
                 const planets = [], moons = [];
                 for(let i=0; i<12; i++) {
@@ -760,6 +814,11 @@
                     this.ctx.strokeStyle = nodeColor; this.ctx.globalAlpha = 0.5;
                     this.ctx.lineWidth = 2; this.ctx.stroke(); this.ctx.globalAlpha = 1;
                     this.drawNode(n.name, nx, ny, 26, nodeColor, true, 15, '#fff');
+                    
+                    // Nodos secundarios detonan sus propias micro-espirales
+                    if (fRules.maxD > 0 && nodeColor === 'var(--accent)') {
+                        this.drawFractalBranch(nx, ny, angle, 26, 2, fRules.maxD, fRules.decR, fRules.decA, nodeColor);
+                    }
                 });
             }
 
@@ -777,6 +836,7 @@
                 });
             }
         }
+
 
         // ==========================================
         // 5. ASYNC INIT & UI BINDING
